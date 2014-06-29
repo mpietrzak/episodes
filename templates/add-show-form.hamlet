@@ -1,0 +1,6 @@
+
+
+<form .form-horizontal role="form" method="post" action="@{AddShowR}" enctype="#{formEnctype}">
+    ^{formWidget}
+
+

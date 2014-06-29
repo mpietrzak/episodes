@@ -1,0 +1,44 @@
+
+
+
+
+<nav class="navbar navbar-default navbar-static-top" role="navigation">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                <span class="sr-only">Toggle navigation
+                <span class="icon-bar">
+                <span class="icon-bar">
+                <span class="icon-bar">
+            <a class="navbar-brand" href="@{HomeR}">Episodes
+
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+            <ul class="nav navbar-nav">
+                <li>
+                    <a href="@{CalendarR}">Calendar
+                <li>
+                    <a href="@{ShowsR}">Shows
+                <li>
+                    <a href="@{AddShowR}">Add Show
+            <form class="navbar-form navbar-left" role="search">
+                <div class="form-group">
+                    <input type="text" class="form-control" placeholder="Search">
+                <button type="submit" class="btn btn-default">Submit
+            <ul class="nav navbar-nav navbar-right">
+                $maybe a <- ma
+                    <li>
+                        <a href="@{AuthR LogoutR}">Logout
+                    <li>
+                        <a href="@{ProfileR}">Profile
+                $nothing
+                    <li>
+                        <a href="@{AuthR LoginR}">Login
+                <li>
+                    <a href="#">About
+
+<div class="container-fluid">
+    $maybe msg <- mmsg
+        <div #message>#{msg}
+
+    ^{widget}
+

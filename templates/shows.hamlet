@@ -1,0 +1,11 @@
+
+<h2>Shows
+
+
+<table>
+    <tbody>
+        $forall Entity key val <- showEntities
+            <tr>
+                <td>
+                    <a href="@{ShowDetailsR key}">#{showTitle val}
+

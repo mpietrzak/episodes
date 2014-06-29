@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+
+<Show>
+    <name>The Test</name>
+    <totalseasons>1</totalseasons>
+    <showid>10281</showid>
+    <showlink>http://tvrage.com/shows/id-10281</showlink>
+    <started>Apr/23/2001</started>
+    <ended>Nov/09/2001</ended>
+    <image>http://images.tvrage.com/shows/11/10281.jpg</image>
+    <origin_country>US</origin_country>
+    <status>Canceled/Ended</status>
+    <classification>Talk Shows</classification>
+    <runtime>30</runtime>
+    <network country="US">FX</network>
+    <airtime>23:00</airtime>
+    <airday>Weekdays</airday>
+    <timezone>GMT-5 +DST</timezone>
+    <Episodelist>
+
+        <Season no="1">
+            <episode>
+                <epnum>1</epnum>
+                <seasonnum>01</seasonnum>
+                <prodnum></prodnum>
+                <airdate>2001-03-21</airdate>
+                <link>http://www.tvrage.com/shows/id-10281/episodes/788866</link>
+                <title>The Gossip Test</title>
+            </episode>
+            <episode><epnum>2</epnum><seasonnum>02</seasonnum><prodnum></prodnum><airdate>2001-05-05</airdate><link>http://www.tvrage.com/shows/id-10281/episodes/788867</link><title>The Fidelity Test</title></episode>
+            <episode><epnum>5</epnum><seasonnum>05</seasonnum><prodnum></prodnum><airdate>2001-05-19</airdate><link>http://www.tvrage.com/shows/id-10281/episodes/1064910633</link><title>The Dating Test</title></episode>
+            <episode><epnum>12</epnum><seasonnum>12</seasonnum><prodnum></prodnum><airdate>2001-11-08</airdate><link>http://www.tvrage.com/shows/id-10281/episodes/1064910634</link><title>The Cojines Test</title></episode>
+            <episode><epnum>22</epnum><seasonnum>22</seasonnum><prodnum></prodnum><airdate>2001-00-00</airdate><link>http://www.tvrage.com/shows/id-10281/episodes/1064910635</link><title>The Debt Test</title></episode>
+            <episode><epnum>81</epnum><seasonnum>81</seasonnum><prodnum></prodnum><airdate>2001-00-00</airdate><link>http://www.tvrage.com/shows/id-10281/episodes/1064910636</link><title>The Party Guest Test</title></episode>
+        </Season>
+
+    </Episodelist>
+
+</Show>

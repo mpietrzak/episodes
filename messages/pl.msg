@@ -1,0 +1,2 @@
+Hello: Cześć
+Search: Szukaj

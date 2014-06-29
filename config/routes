@@ -1,0 +1,14 @@
+/static      StaticR  Static  getStatic
+/auth        AuthR    Auth    getAuth
+/fay-command FaySiteR FaySite getFaySite
+
+/favicon.ico FaviconR GET
+/robots.txt RobotsR GET
+
+/ HomeR GET POST
+/month CalendarR GET
+/shows ShowsR GET
+/add-show AddShowR GET POST
+/add-tvr-show AddTVRShowR POST
+/show/#ShowId ShowDetailsR GET
+/profile ProfileR GET

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<Results>
+	<show>
+		<showid>30909</showid>
+		<name>Hannibal</name>
+		<link>http://www.tvrage.com/Hannibal</link>
+		<country>US</country>
+		<started>2013</started>
+		<ended>0</ended>
+		<seasons>2</seasons>
+		<status>Returning Series</status>
+		<classification>Scripted</classification>
+		<genres><genre>Drama</genre><genre>Thriller</genre></genres>
+	</show>
+	<show>
+		<showid>39259</showid>
+		<name>Hannibal (2014)</name>
+		<link>http://www.tvrage.com/shows/id-39259</link>
+		<country>US</country>
+		<started>2014</started>
+		<ended>0</ended>
+		<seasons>1</seasons>
+		<status>In Development</status>
+		<classification>Mini-Series</classification>
+		<genres><genre>Crime</genre><genre>Drama</genre><genre>Thriller</genre></genres>
+	</show>
+	<show>
+		<showid>26117</showid>
+		<name>On Hannibal&#39;s Trail</name>
+		<link>http://www.tvrage.com/On_Hannibals_Trail</link>
+		<country>UK</country>
+		<started>2010</started>
+		<ended>0</ended>
+		<seasons>1</seasons>
+		<status>New Series</status>
+		<classification>Documentary</classification>
+		<genres><genre>Adventure</genre><genre>Lifestyle</genre><genre>Travel</genre></genres>
+	</show>
+	<show>
+		<showid>41682</showid>
+		<name>Hannibal Buress Live From Chicago</name>
+		<link>http://www.tvrage.com/shows/id-41682</link>
+		<country>US</country>
+		<started>2014</started>
+		<ended>0</ended>
+		<seasons>1</seasons>
+		<status>New Series</status>
+		<classification>Reality</classification>
+		<genres><genre>Comedy</genre><genre>Sketch/Improv</genre></genres>
+	</show>
+	<show>
+		<showid>6907</showid>
+		<name>Mechannibals</name>
+		<link>http://www.tvrage.com/shows/id-6907</link>
+		<country>UK</country>
+		<started>2005</started>
+		<ended>2005</ended>
+		<seasons>1</seasons>
+		<status>Canceled/Ended</status>
+		<classification>Variety</classification>
+		<genres></genres>
+	</show>
+</Results>

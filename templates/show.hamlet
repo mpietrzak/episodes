@@ -1,0 +1,10 @@
+
+<h2>#{showTitle show_}
+
+$forall seasonEntity <- showSeasons
+    $with season <- entityVal seasonEntity
+        <p>Season #{seasonNumber season}
+
+        $forall episode <- episodesBySeason (entityKey seasonEntity)
+            <p>Episode: #{seasonNumber season} #{episodeNumber episode}: #{episodeTitle episode}
+
