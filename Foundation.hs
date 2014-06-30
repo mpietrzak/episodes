@@ -19,6 +19,9 @@ import Model
 import Text.Hamlet (hamletFile)
 import Yesod.Fay
 import Yesod.Core.Types (Logger)
+import Data.Time.LocalTime (TimeZone)
+import Episodes.Time (NamedTimeZone)
+
 
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
@@ -32,6 +35,7 @@ data App = App
     , persistConfig :: Settings.PersistConf
     , fayCommandHandler :: CommandHandler App
     , appLogger :: Logger
+    , commonTimeZones :: [NamedTimeZone]
     }
 
 instance HasHttpManager App where

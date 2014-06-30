@@ -88,6 +88,8 @@ library
                  , unordered-containers          >= 0.2
                  , xml-conduit
                  , HTTP
+                 , timezone-series
+                 , timezone-olson
 
 
 executable         episodes

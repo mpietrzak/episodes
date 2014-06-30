@@ -34,6 +34,9 @@ import Handler.Calendar
 import Handler.Shows
 import Handler.Users
 
+import Episodes.Time (loadCommonTimezones)
+
+
 -- This line actually creates our YesodDispatch instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see the
 -- comments there for more details.
@@ -86,8 +89,10 @@ makeFoundation conf = do
             updateLoop
     _ <- forkIO updateLoop
 
+    _timezones <- loadCommonTimezones
+
     let logger = Yesod.Core.Types.Logger loggerSet' getter
-        foundation = App conf s p manager dbconf onCommand logger
+        foundation = App conf s p manager dbconf onCommand logger _timezones
 
     -- Perform database migration using our application's logging settings.
     runLoggingT

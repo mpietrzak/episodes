@@ -1,14 +1,23 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Episodes.Time (
+    NamedTimeZone(..),
     commonTimezoneNames,
     loadCommonTimezones
 ) where
 
 
+import Data.Maybe
 import Data.Text (Text)
 import Data.Time.LocalTime (TimeZone)
-import Prelude (IO, return)
+import Prelude
+import qualified Data.Text as T
+import qualified Data.Time.LocalTime.TimeZone.Series as TS
+import qualified Data.Time.LocalTime.TimeZone.Olson as TO
+
+
+data NamedTimeZone = NamedTimeZone { ntzName :: Text
+                                   , ntzTimeZone :: TimeZone }
 
 
 commonTimezoneNames :: [Text]
@@ -446,6 +455,18 @@ commonTimezoneNames = [
     "UTC"]
 
 
-loadCommonTimezones :: IO [TimeZone]
-loadCommonTimezones = return []
+loadTimezone :: Text -> IO (Maybe NamedTimeZone)
+loadTimezone name = do
+    let path = "/usr/share/zoneinfo/" ++ (T.unpack name)
+    tzs <- TO.getTimeZoneSeriesFromOlsonFile path
+    let tz = TS.tzsTimeZone tzs
+    let ntz = NamedTimeZone name tz
+    return (Just ntz)
+
+
+loadCommonTimezones :: IO [NamedTimeZone]
+loadCommonTimezones = do
+    maybeTimezones <- sequence (map loadTimezone commonTimezoneNames)
+    return (catMaybes maybeTimezones)
+
 
