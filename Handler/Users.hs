@@ -1,39 +1,43 @@
 {-# LANGUAGE TupleSections, OverloadedStrings #-}
 module Handler.Users where
 
-import Import
+
+import           Import
+
+import           Control.Applicative ((<*))
+import           Yesod.Auth (requireAuthId)
+import           Yesod.Form.Bootstrap3
+import qualified Data.Text as T
+
+
+data ProfileForm = ProfileForm { profileFormTimezone :: Text }
+
+
+textFieldSettings :: Text -> Text -> FieldSettings site
+textFieldSettings labelText placeholderText =
+    withPlaceholder placeholderText $ bfs labelText
+
+
+bootstrapFormLayout :: BootstrapFormLayout
+bootstrapFormLayout = BootstrapHorizontalForm labelOffset labelSize inputOffset inputSize
+    where
+        labelOffset = ColSm 1
+        labelSize = ColSm 2
+        inputOffset = ColSm 0
+        inputSize = ColSm 6
+
+
+profileForm :: Html -> MForm Handler (FormResult ProfileForm, Widget)
+profileForm = renderBootstrap3 bootstrapFormLayout $ ProfileForm
+    <$> areq (selectFieldList tzOpts) (bfs ("Timezone" :: T.Text)) Nothing
+    <* bootstrapSubmit (BootstrapSubmit ("Save" :: T.Text) "btn btn-default" [])
+    where
+        tzOpts = [("Europe/Warsaw", "Europe/Warsaw")] :: [(T.Text, T.Text)]
 
 
 getProfileR :: Handler Html
 getProfileR = do
+    authId <- requireAuthId
+    (formWidget, formEnctype) <- generateFormPost profileForm
     defaultLayout $ do
         $(widgetFile "profile")
-
-
---getHomeR :: Handler Html
---getHomeR = do
---    (formWidget, formEnctype) <- generateFormPost sampleForm
---    let submission = Nothing :: Maybe (FileInfo, Text)
---        handlerName = "getHomeR" :: Text
---    defaultLayout $ do
---        aDomId <- newIdent
---        setTitle "Welcome To Yesod!"
---        $(widgetFile "homepage")
-
---postHomeR :: Handler Html
---postHomeR = do
---    ((result, formWidget), formEnctype) <- runFormPost sampleForm
---    let handlerName = "postHomeR" :: Text
---        submission = case result of
---            FormSuccess res -> Just res
---            _ -> Nothing
-
---    defaultLayout $ do
---        aDomId <- newIdent
---        setTitle "Welcome To Yesod!"
---        $(widgetFile "homepage")
-
---sampleForm :: Form (FileInfo, Text)
---sampleForm = renderDivs $ (,)
---    <$> fileAFormReq "Choose a file"
---    <*> areq textField "What's on the file?" Nothing

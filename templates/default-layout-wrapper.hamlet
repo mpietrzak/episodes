@@ -1,5 +1,5 @@
 $newline always
-\<!doctype html>
+$doctype 5
 <html>
     <head>
         <meta charset="UTF-8">
