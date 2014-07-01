@@ -52,3 +52,18 @@ getProfileR = do
         $(widgetFile "profile")
 
 
+postProfileR :: Handler Html
+postProfileR = do
+    authId <- requireAuthId
+    app <- getYesod
+    let timezones = commonTimeZones app
+    let tzOpts = map timeZoneToTzOpt timezones
+    ((formResult, formWidget), formEnctype) <- runFormPost (profileForm tzOpts)
+    case formResult of
+        FormSuccess searchShow -> do
+            -- save to DB
+            redirect HomeR
+        _ -> do
+            defaultLayout $ do
+                $(widgetFile "profile")
+

@@ -11,4 +11,4 @@
 /add-show AddShowR GET POST
 /add-tvr-show AddTVRShowR POST
 /show/#ShowId ShowDetailsR GET
-/profile ProfileR GET
+/profile ProfileR GET POST

@@ -1,5 +1,5 @@
 
 <div>
-    <form .form-horizontal role="form" method="post" action="@{AddShowR}" enctype="#{formEnctype}">
+    <form .form-horizontal role="form" method="post" action="@{ProfileR}" enctype="#{formEnctype}">
         ^{formWidget}
 
