@@ -16,6 +16,7 @@ import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Format as T
 import qualified TVRage as TVR
 import qualified Data.Map as M
+import qualified Data.Set as S
 
 
 -- Show searching parameters.
@@ -55,6 +56,11 @@ addTVRageShowForm  = renderBootstrap3 bootstrapFormLayout $ AddTVRageShow
 getShowsR :: Handler Html
 getShowsR = do
     showEntities :: [Entity Show] <- runDB $ selectList [] [Asc ShowTitle]
+    mAuthId <- maybeAuthId
+    subscriptions <- case mAuthId of
+        Nothing -> return []
+        Just authId -> runDB $ selectList [SubscriptionUser ==. authId] []
+    let subscribedShowKeys = S.fromList $ map (\s -> (subscriptionShow $ entityVal s)) subscriptions
     defaultLayout $ do
         setTitle "Shows"
         $(widgetFile "shows")
@@ -169,3 +175,23 @@ postAddTVRShowR = do
             $(logDebug) "invalid form"
             redirect ShowsR
 
+
+-- User clicks "subscribe" next to show title.
+getSubscribeShowR :: ShowId -> Handler Html
+getSubscribeShowR showId = do
+    authId <- requireAuthId
+    mSubscription <- runDB $ getBy $ UniqueSubscriptionUserShow authId showId
+    case mSubscription of
+        Just _ -> return ()
+        Nothing -> runDB $ insert_ $ Subscription { subscriptionUser = authId, subscriptionShow = showId }
+    redirect ShowsR
+
+
+getUnsubscribeShowR :: ShowId -> Handler Html
+getUnsubscribeShowR showId = do
+    authId <- requireAuthId
+    mSubscription <- runDB $ getBy $ UniqueSubscriptionUserShow authId showId
+    case mSubscription of
+        Just (Entity subscriptionId _) -> runDB $ delete subscriptionId
+        Nothing -> return ()
+    redirect ShowsR

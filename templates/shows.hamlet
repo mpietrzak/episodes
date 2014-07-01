@@ -8,4 +8,16 @@
             <tr>
                 <td>
                     <a href="@{ShowDetailsR key}">#{showTitle val}
-
+                    (#
+                    $case mAuthId
+                        $of Just _
+                            $if (S.member key subscribedShowKeys)
+                                \<small>
+                                    <a href="@{UnsubscribeShowR key}">Unsubscribe#
+                            $else
+                                \<small>
+                                    <a href="@{SubscribeShowR key}">Subscribe#
+                        $of _
+                            \<small>
+                                <a href="@{SubscribeShowR key}">Subscribe#
+                    \)

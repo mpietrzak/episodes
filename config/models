@@ -32,6 +32,7 @@ Episode
 Subscription
 	user UserId
 	show ShowId
+    UniqueSubscriptionUserShow user show
 
 EpisodeStatus
     user UserId
@@ -41,4 +42,5 @@ EpisodeStatus
 
 Profile
     user UserId
+    timezone Text
     UniqueProfileUser user
