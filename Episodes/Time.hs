@@ -457,7 +457,7 @@ commonTimezoneNames = [
 
 loadTimezone :: Text -> IO (Maybe NamedTimeZone)
 loadTimezone name = do
-    let path = "/usr/share/zoneinfo/" ++ (T.unpack name)
+    let path = "/usr/share/zoneinfo/" ++ T.unpack name
     tzs <- TO.getTimeZoneSeriesFromOlsonFile path
     let tz = TS.tzsTimeZone tzs
     let ntz = NamedTimeZone name tz
@@ -466,7 +466,7 @@ loadTimezone name = do
 
 loadCommonTimezones :: IO [NamedTimeZone]
 loadCommonTimezones = do
-    maybeTimezones <- sequence (map loadTimezone commonTimezoneNames)
+    maybeTimezones <- mapM loadTimezone commonTimezoneNames
     return (catMaybes maybeTimezones)
 
 

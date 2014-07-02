@@ -90,13 +90,9 @@ postProfileR = do
                                  , profileUser = authId }
             -- we either replace if found earlier, or insert if not found earlier
             case mEntProfile of
-                Just (Entity profileKey _) -> do
-                    runDB $ replace profileKey newProfile
-                _ -> do
-                    runDB $ insert_ newProfile
+                Just (Entity profileKey _) -> runDB $ replace profileKey newProfile
+                _ -> runDB $ insert_ newProfile
             redirect HomeR
-        _ -> do
-            defaultLayout $ do
-                $(widgetFile "profile")
+        _ -> defaultLayout $ $(widgetFile "profile")
 
 

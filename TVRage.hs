@@ -15,8 +15,9 @@ import Control.Applicative
 import Data.Text (Text)
 import Options
 import Prelude hiding (Show, shows)
-import Text.XML.Cursor (($//), ($/), ($.//), (&/), (&.//), (&|))
+import Text.XML.Cursor (($//), ($/), (&/))
 import Data.Maybe (catMaybes)
+import Data.Time.Clock
 import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.Text as T
 import qualified Data.Text.Read as T
@@ -47,7 +48,8 @@ data Show = Show
 
 data Episode = Episode
     { episodeNumber :: Integer
-    , episodeTitle :: Text }
+    , episodeTitle :: Text
+    , episodeAirDateTime :: UTCTime }
     deriving (Prelude.Show)
 
 
