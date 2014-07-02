@@ -7,6 +7,7 @@
 
 / HomeR GET POST
 /month CalendarR GET
+/month/#Int/#Int CalendarMonthR GET
 /shows ShowsR GET
 /add-show AddShowR GET POST
 /add-tvr-show AddTVRShowR POST

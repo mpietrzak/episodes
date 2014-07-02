@@ -25,6 +25,7 @@ import System.Log.FastLogger (newStdoutLoggerSet, defaultBufSize, flushLogStr)
 import Network.Wai.Logger (clockDateCacher)
 import Data.Default (def)
 import Yesod.Core.Types (loggerSet, Logger (Logger))
+import qualified Data.Map as M
 
 -- Import all relevant handler modules here.
 -- Don't forget to add new modules to your cabal file!
@@ -34,7 +35,7 @@ import Handler.Calendar
 import Handler.Shows
 import Handler.Users
 
-import Episodes.Time (loadCommonTimezones)
+import Episodes.Time (NamedTimeZone(..), loadCommonTimezones)
 
 
 -- This line actually creates our YesodDispatch instance. It is the second half
@@ -90,9 +91,10 @@ makeFoundation conf = do
     _ <- forkIO updateLoop
 
     _timezones <- loadCommonTimezones
+    let _timezoneMap = M.fromList $ map (\ntz -> (ntzName ntz, ntzTimeZone ntz)) _timezones
 
     let logger = Yesod.Core.Types.Logger loggerSet' getter
-        foundation = App conf s p manager dbconf onCommand logger _timezones
+        foundation = App conf s p manager dbconf onCommand logger _timezones _timezoneMap
 
     -- Perform database migration using our application's logging settings.
     runLoggingT

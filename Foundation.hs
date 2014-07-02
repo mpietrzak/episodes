@@ -20,7 +20,13 @@ import Text.Hamlet (hamletFile)
 import Yesod.Fay
 import Yesod.Core.Types (Logger)
 import Data.Time.LocalTime (TimeZone)
+import Data.Text (Text)
+import Data.Map (Map)
+import qualified Data.Map as M
+
 import Episodes.Time (NamedTimeZone)
+
+
 
 
 -- | The site argument for your application. This can be a good place to
@@ -36,6 +42,7 @@ data App = App
     , fayCommandHandler :: CommandHandler App
     , appLogger :: Logger
     , commonTimeZones :: [NamedTimeZone]
+    , commonTimeZoneMap :: Map Text TimeZone
     }
 
 instance HasHttpManager App where
