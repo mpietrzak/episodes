@@ -7,13 +7,10 @@ import           Import
 import           Control.Applicative ((<*))
 import           Data.Function (on)
 import           Data.List (sortBy)
-import           Data.Ord (compare)
 import           Yesod.Auth
 import           Yesod.Form.Bootstrap3
 import qualified Data.Text as T
 import qualified Data.Text.Read as T
-import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Format as T
 import qualified TVRage as TVR
 import qualified Data.Map as M
 import qualified Data.Set as S
