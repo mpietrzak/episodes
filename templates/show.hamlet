@@ -1,10 +1,30 @@
 
 <h2>#{showTitle show_}
 
-$forall seasonEntity <- showSeasons
-    $with season <- entityVal seasonEntity
-        <p>Season #{seasonNumber season}
 
-        $forall episode <- episodesBySeason (entityKey seasonEntity)
-            <p>Episode: #{seasonNumber season} #{episodeNumber episode}: #{episodeTitle episode}
+<table class="show-details">
+    <tbody>
+        <tr>
+            <td colspan="5" class="show-title">
+                #{showTitle show_}
+
+        $forall seasonEntity <- showSeasons
+            $with season <- entityVal seasonEntity
+                <tr>
+                    <td colspan="5" class="show-season">
+                        Season #{seasonNumber season}
+
+                $forall episode <- episodesBySeason (entityKey seasonEntity)
+                    <tr>
+                        <td>
+                            #{formatEpisodeCode (seasonNumber season) (episodeNumber episode)}
+                        <td colspan="3">
+                            #{episodeTitle episode}
+                        <td>
+                            #{formatInUserTimeZone (episodeAirDateTime episode)}
+
+
+
+$maybe tvRageId <- showTvRageId show_
+    <p style="font-size: 75%">TVRage Id: #{tvRageId}
 

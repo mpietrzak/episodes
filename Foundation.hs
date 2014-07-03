@@ -1,28 +1,28 @@
 module Foundation where
 
+import Control.Applicative ((<$>))
+import Data.Text (Text)
+import Data.Time.LocalTime (TimeZone)
+import Database.Persist.Sql (SqlPersistT)
+import Model
+import Network.HTTP.Client.Conduit (Manager, HasHttpManager (getHttpManager))
 import Prelude
+import Settings (widgetFile, Extra (..))
+import Settings.Development (development)
+import Settings.StaticFiles
+import Text.Hamlet (hamletFile)
 import Yesod
-import Yesod.Static
 import Yesod.Auth
 import Yesod.Auth.BrowserId
 import Yesod.Auth.GoogleEmail2
+import Yesod.Core.Types (Logger)
 import Yesod.Default.Config
 import Yesod.Default.Util (addStaticContentExternal)
-import Network.HTTP.Client.Conduit (Manager, HasHttpManager (getHttpManager))
-import qualified Settings
-import Settings.Development (development)
-import qualified Database.Persist
-import Database.Persist.Sql (SqlPersistT)
-import Settings.StaticFiles
-import Settings (widgetFile, Extra (..))
-import Model
-import Text.Hamlet (hamletFile)
 import Yesod.Fay
-import Yesod.Core.Types (Logger)
-import Data.Time.LocalTime (TimeZone)
-import Data.Text (Text)
-import Data.Map (Map)
+import Yesod.Static
 import qualified Data.Map as M
+import qualified Database.Persist
+import qualified Settings
 
 import Episodes.Time (NamedTimeZone)
 
@@ -42,7 +42,7 @@ data App = App
     , fayCommandHandler :: CommandHandler App
     , appLogger :: Logger
     , commonTimeZones :: [NamedTimeZone]
-    , commonTimeZoneMap :: Map Text TimeZone
+    , commonTimeZoneMap :: M.Map Text TimeZone
     }
 
 instance HasHttpManager App where
@@ -69,7 +69,7 @@ instance Yesod App where
 
     -- Store session data on the client in encrypted cookies,
     -- default session idle timeout is 120 minutes
-    makeSessionBackend _ = fmap Just $ defaultClientSessionBackend
+    makeSessionBackend _ = Just <$> defaultClientSessionBackend
         120    -- timeout in minutes
         "config/client_session_key.aes"
 

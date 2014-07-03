@@ -12,19 +12,23 @@ module TVRage (
 
 
 import Control.Applicative
+import Data.Char
+import Data.Maybe (mapMaybe)
 import Data.Text (Text)
+import Data.Time.Clock
+import Data.Time.LocalTime
 import Options
 import Prelude hiding (Show, shows)
 import Text.XML.Cursor (($//), ($/), (&/))
-import Data.Maybe (catMaybes)
-import Data.Time.Clock
+import System.Locale (defaultTimeLocale)
 import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.Text as T
 import qualified Data.Text.Read as T
+import qualified Data.Time.Format as DTF
 import qualified Debug.Trace as Trace
 import qualified Network.HTTP as HTTP
 import qualified Network.URI as NU
-import qualified Prelude as Prelude
+import qualified Prelude
 import qualified Text.XML as XML
 import qualified Text.XML.Cursor as XML
 
@@ -83,7 +87,7 @@ instance Options FullShowInfoOptions where
 
 traceValue :: Prelude.Show x => String -> x -> x
 traceValue msg x =
-    Trace.trace (msg ++ ": " ++ (show x)) x
+    Trace.trace (msg ++ ": " ++ show x) x
 
 
 getRequest :: String -> HTTP.Request BL.ByteString
@@ -94,7 +98,7 @@ getRequest urlString =
 
 
 -- Fetch HTTP resource, return as lazy byte string.
-httpGet :: String -> IO (BL.ByteString)
+httpGet :: String -> IO BL.ByteString
 httpGet url = do
     let req = getRequest url :: HTTP.Request BL.ByteString
     rsp <- HTTP.simpleHTTP req
@@ -121,39 +125,54 @@ parseSearchResponse resp =
 
 searchShows :: Text -> IO [Show]
 searchShows search = parseSearchResponse <$> httpGet url
-    where url = "http://services.tvrage.com/feeds/search.php?show=" ++ (T.unpack search)
+    where url = "http://services.tvrage.com/feeds/search.php?show=" ++ T.unpack search
 
 
-extractEpisodeFromEpisodeCurs :: XML.Cursor -> Maybe Episode
-extractEpisodeFromEpisodeCurs _curs = _maybeEpisode
+-- Parse TV Rage's date time into
+parseTVRageAirDateTime :: Text -> Text -> Maybe LocalTime
+parseTVRageAirDateTime dateText timeText = mt
     where
-        _episodeTitle = traceValue "_episodeTitle" $ T.concat $ _curs $/ XML.element "title" &/ XML.content
-        _episodeNumberText = T.concat $ _curs $/ XML.element "epnum" &/ XML.content
-        _maybeEpisodeNumber = traceValue "_maybeEpisodeNumber" $ case (T.decimal _episodeNumberText) of
+        fmt = "%Y-%m-%dT%H:%M"
+        dateTimeText = T.concat [dateText, "T", timeText]
+        dateTimeString = T.unpack dateTimeText
+        timeLocale = defaultTimeLocale
+        mt = DTF.parseTime timeLocale fmt dateTimeString
+
+
+extractEpisodeFromEpisodeCurs :: TimeZone -> Text -> XML.Cursor -> Maybe Episode
+extractEpisodeFromEpisodeCurs showTimeZone showAirTimeText _curs = _maybeEpisode
+    where
+        _episodeTitle = T.concat $ _curs $/ XML.element "title" &/ XML.content
+        _episodeNumberText = T.concat $ _curs $/ XML.element "seasonnum" &/ XML.content
+        _maybeEpisodeNumber = case T.decimal _episodeNumberText of
             Left _ -> Nothing
             Right (_n, _) -> Just _n
-        _maybeEpisode = case _maybeEpisodeNumber of
-            Nothing -> Nothing
-            Just _n -> Just Episode
+        airDateText = T.concat $ _curs $/ XML.element "airdate" &/ XML.content
+        _maybeEpisodeAirLocalDateTime = parseTVRageAirDateTime airDateText showAirTimeText
+        _maybeEpisodeAirDateTime = localTimeToUTC showTimeZone <$> _maybeEpisodeAirLocalDateTime
+        _maybeEpisode = case (_maybeEpisodeNumber, _maybeEpisodeAirDateTime) of
+            (Just _n, Just _episodeAirDateTime) -> Just Episode
                 { episodeNumber = _n
-                , episodeTitle = _episodeTitle }
+                , episodeTitle = _episodeTitle
+                , episodeAirDateTime = _episodeAirDateTime }
+            _ -> Nothing
 
 
-extractSeasonEpisodesFromSeasonCurs :: XML.Cursor -> [Episode]
-extractSeasonEpisodesFromSeasonCurs _seasonCurs =
-    catMaybes $ map extractEpisodeFromEpisodeCurs _episodeCursors
+extractSeasonEpisodesFromSeasonCurs :: TimeZone -> Text -> XML.Cursor -> [Episode]
+extractSeasonEpisodesFromSeasonCurs showTimeZone showAirTimeText _seasonCurs =
+    mapMaybe (extractEpisodeFromEpisodeCurs showTimeZone showAirTimeText) _episodeCursors
     where
         _episodeCursors = _seasonCurs $/ XML.element "episode"
 
 
-extractSeasonFromSeasonCurs :: XML.Cursor -> Maybe Season
-extractSeasonFromSeasonCurs _curs = _maybeSeason
+extractSeasonFromSeasonCurs :: TimeZone -> Text -> XML.Cursor -> Maybe Season
+extractSeasonFromSeasonCurs showTimeZone showAirTimeText _curs = _maybeSeason
     where
         _seasonNumberText = T.concat $ XML.attribute "no" _curs
-        _maybeSeasonNumber = Trace.trace ("_seasonNumberText: " ++ (show _seasonNumberText)) $ case (T.decimal _seasonNumberText) of
+        _maybeSeasonNumber = Trace.trace ("_seasonNumberText: " ++ show _seasonNumberText) $ case T.decimal _seasonNumberText of
             Left _ -> Nothing
             Right (_n, _) -> Just _n
-        _episodes = extractSeasonEpisodesFromSeasonCurs _curs
+        _episodes = extractSeasonEpisodesFromSeasonCurs showTimeZone showAirTimeText _curs
         _maybeSeason = case _maybeSeasonNumber of
             Nothing -> Nothing
             Just _n -> Just Season
@@ -161,11 +180,24 @@ extractSeasonFromSeasonCurs _curs = _maybeSeason
                 , seasonEpisodes = _episodes }
 
 
-extractSeasonsFromFullShowInfoCurs :: XML.Cursor -> [Season]
-extractSeasonsFromFullShowInfoCurs fullShowInfoCurs =
-    catMaybes $ map extractSeasonFromSeasonCurs seasonCursors
+extractSeasonsFromFullShowInfoCurs :: TimeZone -> Text -> XML.Cursor -> [Season]
+extractSeasonsFromFullShowInfoCurs showTimeZone showAirTimeText fullShowInfoCurs =
+    mapMaybe (extractSeasonFromSeasonCurs showTimeZone showAirTimeText) seasonCursors
     where
         seasonCursors = fullShowInfoCurs $// XML.element "Season" :: [XML.Cursor]
+
+
+parseTVRageTimeZone :: Text -> TimeZone
+parseTVRageTimeZone timeZoneText = hoursToTimeZone $ traceValue "hours" hours
+    where
+        hoursText = traceValue "hoursText" $ T.takeWhile signOrDigit $ T.dropWhile notSignOrDigit (traceValue "timeZoneText" timeZoneText)
+        tzHours = traceValue "tzHours" $ case T.signed T.decimal hoursText of
+            Left _ -> 0
+            Right (i, _) -> i
+        dstHours = if T.isSuffixOf "+DST" timeZoneText then 1 else 0
+        hours = dstHours + tzHours
+        notSignOrDigit = not . signOrDigit
+        signOrDigit c = c == '-' || c == '+' || isDigit c
 
 
 parseGetFullShowInfoResponse :: Integer -> BL.ByteString -> Maybe FullShowInfo
@@ -181,17 +213,20 @@ parseGetFullShowInfoResponse tvRageId resp =
                     _curs = XML.fromDocument doc
                     _title = T.concat $ _curs $// XML.element "name" &/ XML.content
                     _seasonCountText = T.concat $ _curs $/ XML.element "totalseasons" &/ XML.content
-                    _seasonCount = case (T.decimal _seasonCountText) of
+                    _seasonCount = case T.decimal _seasonCountText of
                         Left _ -> 0
                         Right (i, _) -> i
-                    _seasons = extractSeasonsFromFullShowInfoCurs _curs
+                    showAirTimeText = T.concat $ _curs $/ XML.element "airtime" &/ XML.content
+                    showTimeZoneText = T.concat $ _curs $/ XML.element "timezone" &/ XML.content
+                    showTimeZone = parseTVRageTimeZone showTimeZoneText
+                    _seasons = extractSeasonsFromFullShowInfoCurs showTimeZone showAirTimeText _curs
     where
         parseResult = XML.parseLBS XML.def resp
 
 
 getFullShowInfo :: Integer -> IO (Maybe FullShowInfo)
 getFullShowInfo showId = parseGetFullShowInfoResponse showId <$> httpGet url
-    where url = "http://services.tvrage.com/feeds/full_show_info.php?sid=" ++ (show showId)
+    where url = "http://services.tvrage.com/feeds/full_show_info.php?sid=" ++ show showId
 
 
 searchCommand :: MainOptions -> SearchOptions -> [String] -> IO ()

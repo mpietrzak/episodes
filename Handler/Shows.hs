@@ -7,13 +7,20 @@ import           Import
 import           Control.Applicative ((<*))
 import           Data.Function (on)
 import           Data.List (sortBy)
+import           Data.Time.Clock (UTCTime)
+import           Data.Time.Format (formatTime)
+import           Data.Time.LocalTime (TimeZone, timeZoneOffsetString, utc, utcToLocalTime)
+import           System.Locale (defaultTimeLocale)
 import           Yesod.Auth
 import           Yesod.Form.Bootstrap3
-import qualified Data.Text as T
-import qualified Data.Text.Read as T
-import qualified TVRage as TVR
+import           Episodes.Trace (traceValue)
 import qualified Data.Map as M
 import qualified Data.Set as S
+import qualified Data.Text as T
+import qualified Data.Text.Format as TF
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Read as T
+import qualified TVRage as TVR
 
 
 -- Show searching parameters.
@@ -57,7 +64,7 @@ getShowsR = do
     subscriptions <- case mAuthId of
         Nothing -> return []
         Just authId -> runDB $ selectList [SubscriptionUser ==. authId] []
-    let subscribedShowKeys = S.fromList $ map (\s -> (subscriptionShow $ entityVal s)) subscriptions
+    let subscribedShowKeys = S.fromList $ map (\s -> subscriptionShow $ entityVal s) subscriptions
     defaultLayout $ do
         setTitle "Shows"
         $(widgetFile "shows")
@@ -73,26 +80,60 @@ groupEpisodesBySeason episodeList = sortEpisodes $ foldr _add M.empty episodeLis
         _add episode m = M.insert seasonId newSeasonEpisodes m
             where
                 seasonId = episodeSeason episode
-                newSeasonEpisodes = (episode:oldSeasonEpisodes)
+                newSeasonEpisodes = episode:oldSeasonEpisodes
                 oldSeasonEpisodes = M.findWithDefault [] seasonId m
         sortEpisodes = M.map (sortBy episodeSortBy)
         episodeSortBy = compare `on` episodeNumber
 
 
+formatEpisodeCode :: Int -> Int -> Text
+formatEpisodeCode season episode = TL.toStrict $ TF.format "s{}e{}" [TF.left 2 '0' season, TF.left 2 '0' episode]
+
+
+formatInTimeZone :: TimeZone -> UTCTime -> Text
+formatInTimeZone tz t = traceValue "formatted time" $ formatToText lt
+    where
+        lt = traceValue "local time" $ utcToLocalTime (traceValue "tz" tz) (traceValue "input time" t)
+        formatToText = T.pack . (formatTime defaultTimeLocale fmt)
+        fmt = "%Y-%m-%d %H:%M:%S"
+
+
 getShowDetailsR :: ShowId -> Handler Html
 getShowDetailsR showId = do
+    app <- getYesod
+    mai <- maybeAuthId
     show_ <- runDB $ get404 showId
+
+    -- todo - make utility function or better yet automate this
+    tz <- case mai of
+        Just authId -> do
+            meProfile <- runDB $ getBy $ UniqueProfileUser authId
+            case meProfile of
+                Just (Entity _ profile) -> do
+                    let tzName = traceValue "profile time zone name" (profileTimezone profile)
+
+                    let mtz = M.lookup tzName (commonTimeZoneMap app)
+                    case mtz of
+                        Just _tz -> return _tz
+                        Nothing -> return utc
+                _ -> return utc
+        Nothing -> return utc
+
+    liftIO $ putStrLn $ "time zone offset string" ++ timeZoneOffsetString tz
+
     showSeasons :: [Entity Season] <- runDB $ selectList [SeasonShow ==. showId] [Asc SeasonNumber]
     let showSeasonKeys = map (\s -> entityKey s) showSeasons
     showEpisodes :: [Entity Episode] <- runDB $ selectList [EpisodeSeason <-. showSeasonKeys] []
     let episodesBySeasonMap = groupEpisodesBySeason (map entityVal showEpisodes)
     let episodesBySeason = getEpisodesBySeason episodesBySeasonMap
+    let formatInUserTimeZone = formatInTimeZone tz
     defaultLayout $ do
+        setTitle "Show Details"
         $(widgetFile "show")
 
 
 searchShows :: Text -> IO [TVR.Show]
-searchShows _q = TVR.searchShows _q
+searchShows = TVR.searchShows
 
 
 getAddShowR :: Handler Html
@@ -112,9 +153,11 @@ postAddShowR = do
             showSearchResult <- liftIO $ searchShows query
             let shows_ = map (\s -> (TVR.showTitle s, TVR.showTVRageId s)) showSearchResult
             defaultLayout $ do
+                setTitle "Add Show"
                 $(widgetFile "add-show-list")
         _ -> do
             defaultLayout $ do
+                setTitle "Add Show"
                 $(widgetFile "add-show-form")
 
 
@@ -132,11 +175,12 @@ extractEpisodesForInsert :: TVR.FullShowInfo -> [SeasonId] -> [Episode]
 extractEpisodesForInsert fullShowInfo seasonIds =
     concat seasonsEpisodes
     where
-        seasonsEpisodes = map extractSeasonEpisodes (zip seasonIds (TVR.fullShowInfoSeasons fullShowInfo))
-        extractSeasonEpisodes (seasonId, tvrSeason) = map (convertEpisode seasonId) (TVR.seasonEpisodes tvrSeason)
+        seasonsEpisodes = zipWith extractSeasonEpisodes seasonIds (TVR.fullShowInfoSeasons fullShowInfo)
+        extractSeasonEpisodes seasonId tvrSeason = map (convertEpisode seasonId) (TVR.seasonEpisodes tvrSeason)
         convertEpisode seasonId tvrEpisode = Episode { episodeSeason = seasonId
                                                      , episodeNumber = fromInteger $ TVR.episodeNumber tvrEpisode
-                                                     , episodeTitle = TVR.episodeTitle tvrEpisode }
+                                                     , episodeTitle = TVR.episodeTitle tvrEpisode
+                                                     , episodeAirDateTime = TVR.episodeAirDateTime tvrEpisode }
 
 
 -- Insert show to DB.
@@ -166,8 +210,7 @@ postAddTVRShowR = do
                 Just showInfo -> do
                     id_ <- insertShow showInfo
                     redirect $ ShowDetailsR id_
-                Nothing -> do
-                    redirect ShowsR
+                Nothing -> redirect ShowsR
         _ -> do
             $(logDebug) "invalid form"
             redirect ShowsR
@@ -180,7 +223,7 @@ getSubscribeShowR showId = do
     mSubscription <- runDB $ getBy $ UniqueSubscriptionUserShow authId showId
     case mSubscription of
         Just _ -> return ()
-        Nothing -> runDB $ insert_ $ Subscription { subscriptionUser = authId, subscriptionShow = showId }
+        Nothing -> runDB $ insert_ Subscription { subscriptionUser = authId, subscriptionShow = showId }
     redirect ShowsR
 
 

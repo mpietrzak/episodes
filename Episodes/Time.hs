@@ -9,7 +9,7 @@ module Episodes.Time (
 
 import Data.Maybe
 import Data.Text (Text)
-import Data.Time.LocalTime (TimeZone)
+import Data.Time.LocalTime (TimeZone, timeZoneOffsetString)
 import Prelude
 import qualified Data.Text as T
 import qualified Data.Time.LocalTime.TimeZone.Series as TS
@@ -461,6 +461,7 @@ loadTimezone name = do
     tzs <- TO.getTimeZoneSeriesFromOlsonFile path
     let tz = TS.tzsTimeZone tzs
     let ntz = NamedTimeZone name tz
+    putStrLn $ "loaded " ++ path ++ ", got " ++ (show tz) ++ ", tz offset string: " ++ timeZoneOffsetString tz
     return (Just ntz)
 
 

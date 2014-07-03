@@ -17,6 +17,7 @@ Email
 Show
 	title Text
 	tvRageId Int Maybe
+    UniqueShowTVRageId tvRageId !force
 
 Season
 	number Int
@@ -27,6 +28,7 @@ Episode
 	title Text
 	number Int
 	season SeasonId
+    airDateTime UTCTime
 	UniqueSeasonEpisodeNumber season number
 
 Subscription

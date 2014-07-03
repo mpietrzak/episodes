@@ -28,6 +28,7 @@ library
                      Handler.Users
                      TVRage
                      Episodes.Time
+                     Episodes.Trace
 
 
     if flag(dev) || flag(library-only)
@@ -90,6 +91,7 @@ library
                  , HTTP
                  , timezone-series
                  , timezone-olson
+                 , old-locale
 
 
 executable         episodes
@@ -116,7 +118,9 @@ executable         tvrage
                         network >= 2.5,
                         options,
                         text,
-                        xml-conduit >= 1.2
+                        xml-conduit >= 1.2,
+                        time,
+                        old-locale
     ghc-options:        -threaded -O2
 
 test-suite test

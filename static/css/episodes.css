@@ -7,3 +7,16 @@ div#nav {
 	width: 100%;
 	border: 1px solid black;
 }
+
+table.show-detail {
+    border-collapse: collapse;
+}
+
+table.show-details tbody tr td {
+    border: 1px solid black;
+    padding: 2pt 4pt;
+}
+
+table.show-details tbody tr td.show-title {
+    font-weight: bold;
+}
