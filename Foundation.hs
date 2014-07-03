@@ -2,7 +2,6 @@ module Foundation where
 
 import Control.Applicative ((<$>))
 import Data.Text (Text)
-import Data.Time.LocalTime (TimeZone)
 import Database.Persist.Sql (SqlPersistT)
 import Model
 import Network.HTTP.Client.Conduit (Manager, HasHttpManager (getHttpManager))
@@ -20,6 +19,7 @@ import Yesod.Default.Config
 import Yesod.Default.Util (addStaticContentExternal)
 import Yesod.Fay
 import Yesod.Static
+import Data.Time.Zones (TZ)
 import qualified Data.Map as M
 import qualified Database.Persist
 import qualified Settings
@@ -42,7 +42,7 @@ data App = App
     , fayCommandHandler :: CommandHandler App
     , appLogger :: Logger
     , commonTimeZones :: [NamedTimeZone]
-    , commonTimeZoneMap :: M.Map Text TimeZone
+    , commonTimeZoneMap :: M.Map Text TZ
     }
 
 instance HasHttpManager App where
@@ -74,7 +74,7 @@ instance Yesod App where
         "config/client_session_key.aes"
 
     defaultLayout widget = do
-        master <- getYesod
+        -- master <- getYesod
         mmsg <- getMessage
         ma <- maybeAuth
 

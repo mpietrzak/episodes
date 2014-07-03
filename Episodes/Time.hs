@@ -3,7 +3,8 @@
 module Episodes.Time (
     NamedTimeZone(..),
     commonTimezoneNames,
-    loadCommonTimezones
+    loadCommonTimezones,
+    utcToLocalTimeTZ
 ) where
 
 
@@ -11,13 +12,13 @@ import Data.Maybe
 import Data.Text (Text)
 import Data.Time.LocalTime (TimeZone, timeZoneOffsetString)
 import Prelude
+import Data.Time.Zones
 import qualified Data.Text as T
-import qualified Data.Time.LocalTime.TimeZone.Series as TS
-import qualified Data.Time.LocalTime.TimeZone.Olson as TO
 
 
+-- This is a time zone with "human readable" (not canonical) time zone name.
 data NamedTimeZone = NamedTimeZone { ntzName :: Text
-                                   , ntzTimeZone :: TimeZone }
+                                   , ntzTZ :: TZ }
 
 
 commonTimezoneNames :: [Text]
@@ -455,19 +456,12 @@ commonTimezoneNames = [
     "UTC"]
 
 
-loadTimezone :: Text -> IO (Maybe NamedTimeZone)
-loadTimezone name = do
-    let path = "/usr/share/zoneinfo/" ++ T.unpack name
-    tzs <- TO.getTimeZoneSeriesFromOlsonFile path
-    let tz = TS.tzsTimeZone tzs
-    let ntz = NamedTimeZone name tz
-    putStrLn $ "loaded " ++ path ++ ", got " ++ (show tz) ++ ", tz offset string: " ++ timeZoneOffsetString tz
-    return (Just ntz)
+loadTZ :: Text -> IO NamedTimeZone
+loadTZ name = do
+    tz <- loadSystemTZ (T.unpack name)
+    return $ NamedTimeZone { ntzName = name, ntzTZ = tz }
 
 
 loadCommonTimezones :: IO [NamedTimeZone]
-loadCommonTimezones = do
-    maybeTimezones <- mapM loadTimezone commonTimezoneNames
-    return (catMaybes maybeTimezones)
-
+loadCommonTimezones = mapM loadTZ commonTimezoneNames
 

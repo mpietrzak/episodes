@@ -19,4 +19,9 @@ table.show-details tbody tr td {
 
 table.show-details tbody tr td.show-title {
     font-weight: bold;
+    text-align: center;
+}
+
+table.show-details tbody tr td.show-season {
+    text-align: center;
 }

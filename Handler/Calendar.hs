@@ -3,21 +3,19 @@ module Handler.Calendar where
 
 import Import
 
-import           Yesod.Auth (maybeAuthId)
-import           Data.Time.LocalTime (LocalTime(..))
 import           Data.Maybe (fromJust)
-import           Database.Persist.Sql (PersistField(..), PersistFieldSql(..), Single(..), rawSql)
-import           Database.Persist (toPersistValue)
+import           Database.Persist.Sql (Single(..), rawSql)
 import           Text.Shakespeare.Text (st)
+import           Yesod.Auth (maybeAuthId)
 import qualified Data.Map as M
-import qualified Data.Time.Calendar as C
-import qualified Data.Time.Clock as C
-import qualified Data.Time.LocalTime as LT
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Format as TF
+import qualified Data.Text.Lazy as TL
+import qualified Data.Time.Calendar as C
+import qualified Data.Time.LocalTime as LT
+import qualified Data.Time.Zones as TZ
 
 
+selectEpisodesForCalendarSql :: Text
 selectEpisodesForCalendarSql = [st|
     select episode.id
     from
@@ -31,6 +29,8 @@ selectEpisodesForCalendarSql = [st|
           on (episode_status.episode = episode.id)
     where
          subscription.user = ?
+         and episode.air_date_time >= ?
+         and episode.air_date_time <= ?
 |]
 
 -- Episode data in calendar.
@@ -38,7 +38,7 @@ data CalendarEpisode = CalendarEpisode { calendarEpisodeTitle :: Text
                                        , calendarEpisodeSeasonNumber :: Int
                                        , calendarEpisodeNumber :: Int
                                        , calendarEpisodeSeen :: Bool
-                                       , calendarEpisodeTime :: LocalTime }
+                                       , calendarEpisodeTime :: LT.LocalTime }
 
 
 data Day = Day { dayEpisodes :: [CalendarEpisode] }
@@ -54,7 +54,7 @@ data Month = Month { monthWeeks :: [Week] }
 -- Calendar is a list of weeks.
 -- Each week contains episodes with statuses.
 calendar :: Int -> Int -> [CalendarEpisode] -> Month
-calendar year month episodes = Month { monthWeeks = [] }
+calendar _ _ _ = Month { monthWeeks = [] }
 
 
 getCalendarR :: Handler Html
@@ -87,11 +87,11 @@ getCalendarMonthR year month = do
     let d1 = C.fromGregorian (toInteger year) month 1
     let d2 = C.addGregorianMonthsClip 1 d1
 
-    let lt1 = LT.LocalTime { localDay = d1, localTimeOfDay = LT.midnight }
-    let lt2 = LT.LocalTime { localDay = d2, localTimeOfDay = LT.midnight }
+    let lt1 = LT.LocalTime { LT.localDay = d1, LT.localTimeOfDay = LT.midnight }
+    let lt2 = LT.LocalTime { LT.localDay = d2, LT.localTimeOfDay = LT.midnight }
 
-    let utc1 = LT.localTimeToUTC timeZone lt1
-    let utc2 = LT.localTimeToUTC timeZone lt2
+    let utc1 = TZ.localTimeToUTCTZ timeZone lt1
+    let utc2 = TZ.localTimeToUTCTZ timeZone lt2
 
     -- select
     -- from
@@ -107,7 +107,7 @@ getCalendarMonthR year month = do
     (x :: [(Single Int)]) <- case ma of
         Just authId -> do
             let sql = selectEpisodesForCalendarSql
-            let params = [toPersistValue authId, toPersistValue authId]
+            let params = [toPersistValue authId, toPersistValue authId, toPersistValue utc1, toPersistValue utc2]
             runDB $ rawSql sql params
         Nothing -> return []
 

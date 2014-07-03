@@ -91,7 +91,7 @@ makeFoundation conf = do
     _ <- forkIO updateLoop
 
     _timezones <- loadCommonTimezones
-    let _timezoneMap = M.fromList $ map (\ntz -> (ntzName ntz, ntzTimeZone ntz)) _timezones
+    let _timezoneMap = M.fromList $ map (\ntz -> (ntzName ntz, ntzTZ ntz)) _timezones
 
     let logger = Yesod.Core.Types.Logger loggerSet' getter
         foundation = App conf s p manager dbconf onCommand logger _timezones _timezoneMap

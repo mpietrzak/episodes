@@ -9,11 +9,10 @@ import           Data.Function (on)
 import           Data.List (sortBy)
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (formatTime)
-import           Data.Time.LocalTime (TimeZone, timeZoneOffsetString, utc, utcToLocalTime)
+import           Data.Time.Zones (TZ, utcToLocalTimeTZ, utcTZ)
 import           System.Locale (defaultTimeLocale)
 import           Yesod.Auth
 import           Yesod.Form.Bootstrap3
-import           Episodes.Trace (traceValue)
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.Text as T
@@ -90,10 +89,10 @@ formatEpisodeCode :: Int -> Int -> Text
 formatEpisodeCode season episode = TL.toStrict $ TF.format "s{}e{}" [TF.left 2 '0' season, TF.left 2 '0' episode]
 
 
-formatInTimeZone :: TimeZone -> UTCTime -> Text
-formatInTimeZone tz t = traceValue "formatted time" $ formatToText lt
+formatInTimeZone :: TZ -> UTCTime -> Text
+formatInTimeZone tz t = formatToText lt
     where
-        lt = traceValue "local time" $ utcToLocalTime (traceValue "tz" tz) (traceValue "input time" t)
+        lt = utcToLocalTimeTZ tz t
         formatToText = T.pack . (formatTime defaultTimeLocale fmt)
         fmt = "%Y-%m-%d %H:%M:%S"
 
@@ -110,16 +109,15 @@ getShowDetailsR showId = do
             meProfile <- runDB $ getBy $ UniqueProfileUser authId
             case meProfile of
                 Just (Entity _ profile) -> do
-                    let tzName = traceValue "profile time zone name" (profileTimezone profile)
-
+                    let tzName = profileTimezone profile
                     let mtz = M.lookup tzName (commonTimeZoneMap app)
                     case mtz of
                         Just _tz -> return _tz
-                        Nothing -> return utc
-                _ -> return utc
-        Nothing -> return utc
+                        Nothing -> return utcTZ
+                _ -> return utcTZ
+        Nothing -> return utcTZ
 
-    liftIO $ putStrLn $ "time zone offset string" ++ timeZoneOffsetString tz
+    -- liftIO $ putStrLn $ "time zone offset string" ++ timeZoneOffsetString tz
 
     showSeasons :: [Entity Season] <- runDB $ selectList [SeasonShow ==. showId] [Asc SeasonNumber]
     let showSeasonKeys = map (\s -> entityKey s) showSeasons
@@ -138,7 +136,7 @@ searchShows = TVR.searchShows
 
 getAddShowR :: Handler Html
 getAddShowR = do
-    authId <- requireAuthId
+    _ <- requireAuthId
     (formWidget, formEnctype) <- generateFormPost searchShowForm
     defaultLayout $ do
         $(widgetFile "add-show-form")
