@@ -25,3 +25,17 @@ table.show-details tbody tr td.show-title {
 table.show-details tbody tr td.show-season {
     text-align: center;
 }
+
+table.big-calendar {
+    border-collapse: collapse;
+}
+
+table.big-calendar > tbody > tr > td {
+    border: 1px solid #789;
+}
+
+table.big-calendar > tbody > tr > td.day {
+    font-size: 75%;
+    background-color: #e5f8f5;
+}
+
