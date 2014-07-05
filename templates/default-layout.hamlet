@@ -33,6 +33,8 @@
                 $nothing
                     <li>
                         <a href="@{AuthR LoginR}">Login
+                    <li>
+                        <a href="@{RegisterR}">Register
                 <li>
                     <a href="#">About
 

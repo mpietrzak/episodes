@@ -179,6 +179,7 @@ getCalendarMonthR year month = do
 
 
     where
+        -- TODO: gather custom SQL results using Persist's machinery
         calEpRowToMaybeCalEp tz row =
             case (_mTitle,
                     _mShowTitle,

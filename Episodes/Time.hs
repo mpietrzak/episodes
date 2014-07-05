@@ -8,9 +8,7 @@ module Episodes.Time (
 ) where
 
 
-import Data.Maybe
 import Data.Text (Text)
-import Data.Time.LocalTime (TimeZone, timeZoneOffsetString)
 import Prelude
 import Data.Time.Zones
 import qualified Data.Text as T

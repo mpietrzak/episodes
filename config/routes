@@ -13,5 +13,7 @@
 /add-tvr-show AddTVRShowR POST
 /show/#ShowId ShowDetailsR GET
 /profile ProfileR GET POST
+/profile-password ProfilePasswordR POST
+/register RegisterR GET POST
 /subscribeShow/#ShowId SubscribeShowR GET
 /unsubscribeShow/#ShowId UnsubscribeShowR GET

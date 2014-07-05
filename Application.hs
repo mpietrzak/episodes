@@ -29,7 +29,7 @@ import qualified Data.Map as M
 
 -- Import all relevant handler modules here.
 -- Don't forget to add new modules to your cabal file!
-import Handler.Fay
+import Handler.Fay (onCommand)
 import Handler.Home
 import Handler.Calendar
 import Handler.Shows

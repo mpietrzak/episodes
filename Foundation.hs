@@ -1,5 +1,6 @@
 module Foundation where
 
+
 import Control.Applicative ((<$>))
 import Data.Text (Text)
 import Database.Persist.Sql (SqlPersistT)
@@ -14,6 +15,7 @@ import Yesod
 import Yesod.Auth
 import Yesod.Auth.BrowserId
 import Yesod.Auth.GoogleEmail2
+import Yesod.Auth.HashDB (HashDBUser(..), authHashDB)
 import Yesod.Core.Types (Logger)
 import Yesod.Default.Config
 import Yesod.Default.Util (addStaticContentExternal)
@@ -141,6 +143,12 @@ instance YesodPersist App where
 instance YesodPersistRunner App where
     getDBRunner = defaultGetDBRunner connPool
 
+
+instance HashDBUser User where
+    userPasswordHash = userPassword
+    setPasswordHash h p = p { userPassword = Just h }
+
+
 instance YesodAuth App where
     type AuthId App = UserId
 
@@ -161,9 +169,16 @@ instance YesodAuth App where
                     }
 
     -- You can add other plugins like BrowserID, email or OAuth here
-    authPlugins _ = [authBrowserId def, authGoogleEmail "779562207992-3n0vomdr0qiifco6elap9mi2cruhftgf.apps.googleusercontent.com" "UYfhViD4cQgsxhWwjwj0qBJM"]
+    authPlugins _ = [ authBrowserId def
+                    , authGoogleEmail "779562207992-3n0vomdr0qiifco6elap9mi2cruhftgf.apps.googleusercontent.com" "UYfhViD4cQgsxhWwjwj0qBJM"
+                    , authHashDB (Just . UniqueUser) ]
 
     authHttpManager = httpManager
+
+    -- TODO: customize login screen
+    -- loginHandler = lift $ defaultLayout $ do
+    --    $(widgetFile "login")
+
 
 -- This instance is required to use forms. You can modify renderMessage to
 -- achieve customized and internationalized form validation messages.

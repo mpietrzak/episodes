@@ -2,12 +2,15 @@
 {-# LANGUAGE EmptyDataDecls    #-}
 module Home where
 
-import Prelude
 import Fay.FFI
+import JQuery
 import Language.Fay.Yesod
+import Prelude
 import SharedTypes
 
+
 data Element
+
 
 getElementById :: String -> Fay Element
 getElementById = ffi "document.getElementById(%1)"
@@ -27,11 +30,16 @@ alert = ffi "window.alert(%1)"
 parseInt :: String -> Fay Int
 parseInt = ffi "window.parseInt(%1, 10)"
 
+setEpisodeStatus :: Fay ()
+setEpisodeStatus = ffi "window.console.log(\"setEpisodeStatus\")"
+
 main :: Fay ()
-main = do
-    input <- getElementById "fibindex"
-    result <- getElementById "fibresult"
-    onKeyUp input $ do
-        indexS <- getAttribute "value" input
-        index <- parseInt indexS
-        call (GetFib index) $ setInnerHTML result . show
+main = ready $ do
+    --input <- getElementById "fibindex"
+    --result <- getElementById "fibresult"
+    --onKeyUp input $ do
+    --    indexS <- getAttribute "value" input
+    --    index <- parseInt indexS
+    --    call (GetFib index) $ setInnerHTML result . show
+    boxes <- select ".episode-status-checkbox"
+    click boxes setEpisodeStatus

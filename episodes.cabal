@@ -91,6 +91,7 @@ library
                  , HTTP
                  , tz
                  , old-locale
+                 , yesod-auth-hashdb
 
 
 executable         episodes

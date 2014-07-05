@@ -3,3 +3,6 @@
     <form .form-horizontal role="form" method="post" action="@{ProfileR}" enctype="#{formEnctype}">
         ^{formWidget}
 
+    <form .form-horizontal role="form" method="post" action="@{ProfilePasswordR}" enctype="#{passFormEnctype}">
+        ^{passFormWidget}
+

@@ -1,18 +1,25 @@
 module Handler.Fay where
 
 import Import
-import Yesod.Fay
+
 import Fay.Convert (readFromFay)
 
-fibs :: [Int]
-fibs = 0 : 1 : zipWith (+) fibs (drop 1 fibs)
+import Yesod.Auth (requireAuthId)
+import Yesod.Fay
 
 
-
+-- Action to create show subscription for currently logged in user.
+-- I have no idea what this type means though.
+subscribeShow :: Integer -> HandlerT App IO ()
+subscribeShow showId = do
+    userId <- requireAuthId
+    _ <- runDB $ insert_ $ Subscription { subscriptionUser = userId, subscriptionShow = Key $ PersistInt64 $ fromInteger showId }
+    return ()
 
 
 onCommand :: CommandHandler App
 onCommand render command =
     case readFromFay command of
-      Just (GetFib index r) -> render r $ fibs !! index
-      Nothing               -> invalidArgs ["Invalid command"]
+      Just (SubscribeShow showId r) -> render r =<< subscribeShow showId
+      Nothing                       -> invalidArgs ["Invalid command"]
+
