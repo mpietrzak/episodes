@@ -8,6 +8,7 @@ import           Data.List (groupBy)
 import           Data.Maybe (mapMaybe)
 import           Database.Persist.Sql (Single(..), rawSql)
 import           Episodes.Trace (traceValue)
+import           Language.Haskell.TH
 import           Text.Shakespeare.Text (st)
 import           Yesod.Auth (maybeAuthId)
 import qualified Data.Map as M
@@ -175,6 +176,7 @@ getCalendarMonthR year month = do
 
     defaultLayout $ do
         setTitle "Episodes"
+        $(fayFile' (ConE 'StaticR) "Calendar")
         $(widgetFile "calendar")
 
 

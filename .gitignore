@@ -14,3 +14,5 @@ cabal.sandbox.config
 *.swp
 episodes.sublime-project
 episodes.sublime-workspace
+static/faygen-*.js
+tools/closure-compiler.jar

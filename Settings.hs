@@ -76,8 +76,9 @@ fayFile' staticR moduleName
   where
     settings = (yesodFaySettings moduleName)
         { yfsSeparateRuntime = Just ("static", staticR)
-        , yfsPostProcess = readProcess "java" ["-jar", "closure-compiler.jar"]
+        -- , yfsPostProcess = readProcess "java" ["-jar", "tools/closure-compiler.jar"]
         , yfsExternal = Just ("static", staticR)
+        , yfsPackages = ["fay-base", "fay-text", "fay-jquery"]
         }
 
 

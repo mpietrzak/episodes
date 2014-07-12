@@ -8,17 +8,21 @@
                             #{show (dayDay day)}
                 <tr>
                     $forall day <- weekDays week
-                        <td class="episodes">
+                        <td class="episodes" style="height: 1em">
                             $with eps <- dayEpisodes day
                                 $case eps
                                     $of []
-                                        <small>no episodes</small>
                                     $of _
-                                        <ul>
-                                            $forall episode <- eps
-                                                <li class="episode">
-                                                    <a href="@{ShowDetailsR (calendarEpisodeShowId episode)}">#{calendarEpisodeShowTitle episode}#
-                                                    \: #{calendarEpisodeTitle episode}
+                                        <table>
+                                            <tbody>
+                                                $forall episode <- eps
+                                                    $with i <- toPathPiece $ calendarEpisodeId episode
+                                                        <tr class="episode" id="episode-#{i}">
+                                                            <td>
+                                                                <input type="hidden" name="episode-id" class="episode-id" value="#{i}">
+                                                                <input type="checkbox" class="episode-status checkbox">
+                                                            <td>
+                                                                <a href="@{ShowDetailsR (calendarEpisodeShowId episode)}">#{calendarEpisodeShowTitle episode}: #{calendarEpisodeTitle episode}
 
 <div class="small-calendar visible-xs">
     <p>small calendar

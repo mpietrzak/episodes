@@ -3,7 +3,6 @@
 module Home where
 
 import Fay.FFI
-import JQuery
 import Language.Fay.Yesod
 import Prelude
 import SharedTypes
@@ -30,8 +29,10 @@ alert = ffi "window.alert(%1)"
 parseInt :: String -> Fay Int
 parseInt = ffi "window.parseInt(%1, 10)"
 
+
 setEpisodeStatus :: Fay ()
-setEpisodeStatus = ffi "window.console.log(\"setEpisodeStatus\")"
+setEpisodeStatus = do
+    log "test"
 
 main :: Fay ()
 main = ready $ do
@@ -41,5 +42,4 @@ main = ready $ do
     --    indexS <- getAttribute "value" input
     --    index <- parseInt indexS
     --    call (GetFib index) $ setInnerHTML result . show
-    boxes <- select ".episode-status-checkbox"
-    click boxes setEpisodeStatus
+    return ()

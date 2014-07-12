@@ -40,7 +40,7 @@ EpisodeStatus
     user UserId
     episode EpisodeId
     status Text
-    UniqueUserEpisode user episode
+    UniqueEpisodeStatusUserEpisode user episode
 
 Profile
     user UserId
