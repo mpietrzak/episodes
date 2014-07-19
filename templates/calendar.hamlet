@@ -1,6 +1,22 @@
 <div class="calendar hidden-xs">
     <table class="big-calendar">
         <tbody>
+            <tr>
+                <td colspan="7">
+                    <table style="width: 100%">
+                        <tbody>
+                            <tr>
+                                <td style="text-align: left">
+                                    $with (y, m, _) <- C.toGregorian prevMonth
+                                        <a href="@{CalendarMonthR (fromInteger y) m}">
+                                            prev #{formatMonth prevMonth}
+                                <td style="text-align: center">
+                                    <a href="@{CalendarMonthR year month}">
+                                        #{formatMonth (C.fromGregorian (toInteger year) month 1)}
+                                <td style="text-align: right">
+                                    $with (y, m, _) <- C.toGregorian nextMonth
+                                        <a href="@{CalendarMonthR (fromInteger y) m}">
+                                            next #{formatMonth nextMonth}
             $forall week <- monthWeeks calendar
                 <tr>
                     $forall day <- weekDays week
@@ -22,7 +38,8 @@
                                                                 <input type="hidden" name="episode-id" class="episode-id" value="#{i}">
                                                                 <input type="checkbox" class="episode-status checkbox">
                                                             <td>
-                                                                <a href="@{ShowDetailsR (calendarEpisodeShowId episode)}">#{calendarEpisodeShowTitle episode}: #{calendarEpisodeTitle episode}
+                                                                <a href="@{ShowDetailsR (calendarEpisodeShowId episode)}">#{calendarEpisodeShowTitle episode}#
+                                                                \: #{calendarEpisodeTitle episode}
 
 <div class="small-calendar visible-xs">
     <p>small calendar

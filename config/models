@@ -17,6 +17,7 @@ Email
 Show
 	title Text
 	tvRageId Int Maybe
+    subscriptionCount Int DEFAULT=0
     UniqueShowTVRageId tvRageId !force
 
 Season
@@ -29,6 +30,7 @@ Episode
 	number Int
 	season SeasonId
     airDateTime UTCTime
+    viewCount Int DEFAULT=0
 	UniqueSeasonEpisodeNumber season number
 
 Subscription

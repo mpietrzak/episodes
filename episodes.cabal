@@ -22,13 +22,14 @@ library
                      Settings.Development
                      SharedTypes
                      Handler.Fay
-                     Handler.Home
                      Handler.Calendar
                      Handler.Shows
                      Handler.Users
+                     Handler.Stats
                      TVRage
                      Episodes.Time
                      Episodes.Trace
+                     Episodes.Format
 
 
     if flag(dev) || flag(library-only)

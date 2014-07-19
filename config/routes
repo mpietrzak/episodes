@@ -5,13 +5,14 @@
 /favicon.ico FaviconR GET
 /robots.txt RobotsR GET
 
-/ HomeR GET POST
+/ HomeR GET
 /month CalendarR GET
 /month/#Int/#Int CalendarMonthR GET
 /shows ShowsR GET
 /add-show AddShowR GET POST
 /add-tvr-show AddTVRShowR POST
 /show/#ShowId ShowDetailsR GET
+/stats StatsR GET
 /profile ProfileR GET POST
 /profile-password ProfilePasswordR POST
 /register RegisterR GET POST

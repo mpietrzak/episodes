@@ -14,8 +14,16 @@ import           Yesod.Auth (maybeAuthId)
 import qualified Data.Map as M
 import qualified Data.Time.Calendar as C
 import qualified Data.Time.Calendar.WeekDate as C
+import qualified Data.Time.Clock as C
 import qualified Data.Time.LocalTime as TLT
 import qualified Data.Time.Zones as TZ
+
+
+
+
+
+
+import Episodes.Format (formatMonth)
 
 
 selectEpisodesForCalendarSql :: Text
@@ -127,11 +135,32 @@ createCalendar year month episodes = calMonth
         calMonth = Month { monthWeeks = epCalWeeks }
 
 
+getHomeR :: Handler Html
+getHomeR = getCalendarR
+
+
 getCalendarR :: Handler Html
 getCalendarR = do
-    let year = 2014
-    let month = 7
-    getCalendarMonthR year month
+    now <- lift C.getCurrentTime
+    ma <- maybeAuthId
+    app <- getYesod
+
+    let timeZoneMap = commonTimeZoneMap app
+    timeZoneName <- case ma of
+            Just authId -> do
+                maybeProfileEntity <- runDB $ getBy (UniqueProfileUser authId)
+                case maybeProfileEntity of
+                    Just (Entity _ profile) -> do
+                        return (profileTimezone profile)
+                    _ -> return "UTC"
+            _ -> return "UTC"
+    let timeZone = M.findWithDefault TZ.utcTZ timeZoneName timeZoneMap
+
+    let localTime = TZ.utcToLocalTimeTZ timeZone now
+    let localDay = TLT.localDay localTime
+    let (year, month, _) = C.toGregorian localDay
+
+    getCalendarMonthR (fromInteger year) month
 
 
 getCalendarMonthR :: Int -> Int -> Handler Html
@@ -173,6 +202,9 @@ getCalendarMonthR year month = do
     let calendarEpisodes = mapMaybe (calEpRowToMaybeCalEp timeZone) calendarEpisodeRows
 
     let calendar = createCalendar (toInteger year) month calendarEpisodes
+
+    let prevMonth = C.addGregorianMonthsClip (-1) (C.fromGregorian (toInteger year) month 1)
+    let nextMonth = C.addGregorianMonthsClip 1 (C.fromGregorian (toInteger year) month 1)
 
     defaultLayout $ do
         setTitle "Episodes"

@@ -11,15 +11,11 @@ import Yesod.Auth
 import Yesod.Default.Config
 import Yesod.Default.Main
 import Yesod.Default.Handlers
-import Network.Wai.Middleware.RequestLogger
-    ( mkRequestLogger, outputFormat, OutputFormat (..), IPAddrSource (..), destination
-    )
+import Network.Wai.Middleware.RequestLogger (mkRequestLogger, outputFormat, OutputFormat (..), IPAddrSource (..), destination)
 import qualified Network.Wai.Middleware.RequestLogger as RequestLogger
 import qualified Database.Persist
-import Database.Persist.Sql (runMigration)
 import Network.HTTP.Client.Conduit (newManager)
 import Yesod.Fay (getFaySite)
-import Control.Monad.Logger (runLoggingT)
 import Control.Concurrent (forkIO, threadDelay)
 import System.Log.FastLogger (newStdoutLoggerSet, defaultBufSize, flushLogStr)
 import Network.Wai.Logger (clockDateCacher)
@@ -30,10 +26,10 @@ import qualified Data.Map as M
 -- Import all relevant handler modules here.
 -- Don't forget to add new modules to your cabal file!
 import Handler.Fay (onCommand)
-import Handler.Home
 import Handler.Calendar
 import Handler.Shows
 import Handler.Users
+import Handler.Stats (getStatsR)
 
 import Episodes.Time (NamedTimeZone(..), loadCommonTimezones)
 
@@ -97,9 +93,9 @@ makeFoundation conf = do
         foundation = App conf s p manager dbconf onCommand logger _timezones _timezoneMap
 
     -- Perform database migration using our application's logging settings.
-    runLoggingT
-        (Database.Persist.runPool dbconf (runMigration migrateAll) p)
-        (messageLoggerSource foundation logger)
+    -- runLoggingT
+    --    (Database.Persist.runPool dbconf (runMigration migrateAll) p)
+    --    (messageLoggerSource foundation logger)
 
     return foundation
 

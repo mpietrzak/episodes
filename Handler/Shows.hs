@@ -178,21 +178,25 @@ extractEpisodesForInsert fullShowInfo seasonIds =
         convertEpisode seasonId tvrEpisode = Episode { episodeSeason = seasonId
                                                      , episodeNumber = fromInteger $ TVR.episodeNumber tvrEpisode
                                                      , episodeTitle = TVR.episodeTitle tvrEpisode
-                                                     , episodeAirDateTime = TVR.episodeAirDateTime tvrEpisode }
+                                                     , episodeAirDateTime = TVR.episodeAirDateTime tvrEpisode
+                                                     , episodeViewCount = 0 }
 
 
 -- Insert show to DB.
 insertShow :: TVR.FullShowInfo -> Handler (Key Show)
 insertShow fullShowInfo = do
     let _show = Show { showTitle = TVR.fullShowInfoTitle fullShowInfo
-                     , showTvRageId = Just $ fromInteger $ TVR.fullShowInfoTVRageId fullShowInfo }
+                     , showTvRageId = Just $ fromInteger $ TVR.fullShowInfoTVRageId fullShowInfo
+                     , showSubscriptionCount = 0 }
     _showId <- runDB $ insert _show
-    let _seasons = map (\ts -> Season { seasonNumber = fromInteger $ TVR.seasonNumber ts
-                                      , seasonShow = _showId }) (TVR.fullShowInfoSeasons fullShowInfo)
+    let _seasons = map (tvrSeasonToSeason _showId) (TVR.fullShowInfoSeasons fullShowInfo)
     seasonIds <- runDB $ mapM insert _seasons
     let _episodes = extractEpisodesForInsert fullShowInfo seasonIds
     _ <- runDB $ mapM insert _episodes
     return _showId
+    where
+        tvrSeasonToSeason _showId ts = Season { seasonNumber = fromInteger $ TVR.seasonNumber ts
+                                              , seasonShow = _showId}
 
 
 postAddTVRShowR :: Handler Html
