@@ -18,11 +18,6 @@ import qualified Data.Time.Clock as C
 import qualified Data.Time.LocalTime as TLT
 import qualified Data.Time.Zones as TZ
 
-
-
-
-
-
 import Episodes.Format (formatMonth)
 
 
@@ -112,13 +107,13 @@ createCalendar year month episodes = calMonth
 
         -- if thuesday is second day of month, then get also monday, so we have complete row of first week
         -- so instead of days of month, we get full-week days of weeks of month
-        fullWeekDaysOfMonth = traceValue "days of month" $ getFullWeekDaysOfMonth year month
+        fullWeekDaysOfMonth = getFullWeekDaysOfMonth year month
 
         dayWeekCmp = (==) `on` getWeekOfDay
         getWeekOfDay d = (y, w)
             where
                 (y, w, _) = C.toWeekDate d
-        weeksOfMonth = traceValue "weeks of month" $ groupBy dayWeekCmp fullWeekDaysOfMonth
+        weeksOfMonth = groupBy dayWeekCmp fullWeekDaysOfMonth
 
         -- weeksOfMonth is a list of weeks, where each week is a list of 7 days
         -- convert weeksOfMonth to a [Week]
