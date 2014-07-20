@@ -125,7 +125,10 @@ parseSearchResponse resp =
 
 searchShows :: Text -> IO [Show]
 searchShows search = parseSearchResponse <$> httpGet url
-    where url = "http://services.tvrage.com/feeds/search.php?show=" ++ T.unpack search
+    where
+        url = "http://services.tvrage.com/feeds/search.php?show=" ++ escape (T.unpack search)
+        escape = NU.escapeURIString NU.isAllowedInURI
+
 
 
 -- Parse TV Rage's date time into
