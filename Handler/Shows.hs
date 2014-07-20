@@ -13,12 +13,15 @@ import           Data.Time.Zones (TZ, utcToLocalTimeTZ, utcTZ)
 import           System.Locale (defaultTimeLocale)
 import           Yesod.Auth
 import           Yesod.Form.Bootstrap3
+
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.Text as T
 import qualified Data.Text.Format as TF
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Read as T
+
+import           Episodes.DB (updateShowSubscriptionCount)
 import qualified TVRage as TVR
 
 
@@ -226,6 +229,7 @@ getSubscribeShowR showId = do
     case mSubscription of
         Just _ -> return ()
         Nothing -> runDB $ insert_ Subscription { subscriptionUser = authId, subscriptionShow = showId }
+    _ <- runDB $ updateShowSubscriptionCount showId 1
     redirect ShowsR
 
 
@@ -236,4 +240,6 @@ getUnsubscribeShowR showId = do
     case mSubscription of
         Just (Entity subscriptionId _) -> runDB $ delete subscriptionId
         Nothing -> return ()
+    _ <- runDB $ updateShowSubscriptionCount showId (-1)
     redirect ShowsR
+

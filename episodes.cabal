@@ -27,9 +27,10 @@ library
                      Handler.Users
                      Handler.Stats
                      TVRage
+                     Episodes.DB
+                     Episodes.Format
                      Episodes.Time
                      Episodes.Trace
-                     Episodes.Format
 
 
     if flag(dev) || flag(library-only)

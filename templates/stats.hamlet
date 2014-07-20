@@ -1,6 +1,28 @@
 
 
+<h3>Popular shows</h3>
 
-<p>Stats...
+<table>
+    <tbody>
+        $forall Entity k s <- popularShows
+            <tr>
+                <td>
+                    <a href="@{ShowDetailsR k}">#{showTitle s}
+                <td>
+                    #{showSubscriptionCount s}
 
+
+<h3>Popular episodes</h3>
+
+<table>
+    <tbody>
+        $forall (episodeEntity, seasonEntity, showEntity) <- popularEpisodes
+            <tr>
+                <td>
+                    #{showTitle (entityVal showEntity)}
+                <td>
+                    #{seasonNumber (entityVal seasonEntity)}-#{episodeNumber (entityVal episodeEntity)}
+                    #{episodeTitle (entityVal episodeEntity)}
+                <td>
+                    #{episodeViewCount (entityVal episodeEntity)}
 
