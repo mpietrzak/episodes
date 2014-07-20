@@ -1,28 +1,32 @@
 
 
-<h3>Popular shows</h3>
-
-<table>
-    <tbody>
-        $forall Entity k s <- popularShows
-            <tr>
-                <td>
-                    <a href="@{ShowDetailsR k}">#{showTitle s}
-                <td>
-                    #{showSubscriptionCount s}
 
 
-<h3>Popular episodes</h3>
+<div class="row">
 
-<table>
-    <tbody>
-        $forall (episodeEntity, seasonEntity, showEntity) <- popularEpisodes
-            <tr>
-                <td>
-                    #{showTitle (entityVal showEntity)}
-                <td>
-                    #{seasonNumber (entityVal seasonEntity)}-#{episodeNumber (entityVal episodeEntity)}
-                    #{episodeTitle (entityVal episodeEntity)}
-                <td>
-                    #{episodeViewCount (entityVal episodeEntity)}
+    <div class="col-md-6">
+        <h3>Popular shows</h3>
+        <table class="table table-striped">
+            <tbody>
+                $forall Entity k s <- popularShows
+                    <tr>
+                        <td>
+                            <a href="@{ShowDetailsR k}">#{showTitle s}
+                        <td>
+                            #{showSubscriptionCount s}
+
+    <div class="col-md-6">
+        <h3>Popular episodes</h3>
+        <table class="table table-striped">
+            <tbody>
+                $forall (episodeEntity, seasonEntity, showEntity) <- popularEpisodes
+                    <tr>
+                        <td>
+                            <a href="@{ShowDetailsR (entityKey showEntity)}">
+                                #{showTitle (entityVal showEntity)}
+                        <td>
+                            #{seasonNumber (entityVal seasonEntity)}-#{episodeNumber (entityVal episodeEntity)}
+                            #{episodeTitle (entityVal episodeEntity)}
+                        <td>
+                            #{episodeViewCount (entityVal episodeEntity)}
 
