@@ -21,8 +21,8 @@ import Episodes.DB (getPopularEpisodes,
 
 getStatsR :: Handler Html
 getStatsR = do
-    popularShows <- runDB getPopularShows
-    popularEpisodes <- runDB getPopularEpisodes
+    popularShows <- runDB $ getPopularShows 32
+    popularEpisodes <- runDB $ getPopularEpisodes (32 :: Int)
     defaultLayout $ do
         setTitle "Stats"
         $(widgetFile "stats")

@@ -29,17 +29,21 @@ selectPopularEpisodesSql = [st|
         join season on (episode.season = season.id)
         join show on (season.show = show.id)
     order by episode.view_count desc
-    limit 32
+    limit ?
 |]
 
 
-getPopularShows = selectList [] [Desc ShowSubscriptionCount, LimitTo 32]
+getPopularShows :: (PersistQuery m, PersistEntityBackend Show ~ PersistMonadBackend m)
+                => Int
+                -> m [Entity Show]
+getPopularShows count = selectList [] [Desc ShowSubscriptionCount, LimitTo count]
 
 
-getPopularEpisodes = rawSql selectPopularEpisodesSql []
+getPopularEpisodes count = rawSql selectPopularEpisodesSql [toPersistValue count]
 
 
 updateEpisodeViewCount episodeId change = update episodeId [EpisodeViewCount +=. change]
 
 
 updateShowSubscriptionCount showId change = update showId [ShowSubscriptionCount +=. change]
+
