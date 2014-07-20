@@ -28,7 +28,10 @@ selectEpisodesForCalendarSql = [st|
         show.title,
         season.number,
         episode.number,
-        case when episode_status.id is not null then 1 else 0 end as episode_seen,
+        case when episode_status.id is not null and episode_status.status = 'seen'
+            then 1
+            else 0
+        end as episode_seen,
         episode.air_date_time,
         episode.id,
         show.id
@@ -37,7 +40,7 @@ selectEpisodesForCalendarSql = [st|
          join season on (season.show = show.id)
          join episode on (episode.season = season.id)
          left join (
-            select episode, id
+            select episode, id, status
             from episode_status
             where episode_status.user = ?) as episode_status
           on (episode_status.episode = episode.id)

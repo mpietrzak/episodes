@@ -36,7 +36,11 @@
                                                         <tr class="episode" id="episode-#{i}">
                                                             <td>
                                                                 <input type="hidden" name="episode-id" class="episode-id" value="#{i}">
-                                                                <input type="checkbox" class="episode-status checkbox">
+                                                                $case calendarEpisodeSeen episode
+                                                                    $of True
+                                                                        <input type="checkbox" class="episode-status checkbox" checked>
+                                                                    $of False
+                                                                        <input type="checkbox" class="episode-status checkbox">
                                                             <td>
                                                                 <a href="@{ShowDetailsR (calendarEpisodeShowId episode)}">#{calendarEpisodeShowTitle episode}#
                                                                 \: #{calendarEpisodeTitle episode}
