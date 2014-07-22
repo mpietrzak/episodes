@@ -5,23 +5,32 @@
 <table class="show-details">
     <tbody>
         <tr>
-            <td colspan="5" class="show-title">
+            <td colspan="6" class="show-title">
                 #{showTitle show_}
 
         $forall seasonEntity <- showSeasons
             $with season <- entityVal seasonEntity
                 <tr>
-                    <td colspan="5" class="show-season">
+                    <td colspan="6" class="show-season">
                         Season #{seasonNumber season}
 
-                $forall episode <- episodesBySeason (entityKey seasonEntity)
-                    <tr>
-                        <td>
-                            #{formatEpisodeCode (seasonNumber season) (episodeNumber episode)}
-                        <td colspan="3">
-                            #{episodeTitle episode}
-                        <td>
-                            #{formatInUserTimeZone (episodeAirDateTime episode)}
+                $forall Entity episodeKey episode <- episodesBySeason (entityKey seasonEntity)
+                    $with episodeId <- toPathPiece $ episodeKey
+                        <tr class="episode" id="episode-#{episodeId}">
+                            <td>
+                                <input type="hidden" name="episode-id" class="episode-id" value="#{episodeId}">
+                                $case mai
+                                    $of Nothing
+                                        <a href="@{AuthR LoginR}">
+                                            <input type="checkbox" onclick="$(this).closest('a')[0].click()">
+                                    $of _
+                                        <input type="checkbox" class="episode-status checkbox">
+                            <td>
+                                #{formatEpisodeCode (seasonNumber season) (episodeNumber episode)}
+                            <td colspan="3">
+                                #{episodeTitle episode}
+                            <td>
+                                #{formatInUserTimeZone (episodeAirDateTime episode)}
 
 
 

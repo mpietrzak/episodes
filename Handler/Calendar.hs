@@ -1,7 +1,10 @@
 {-# LANGUAGE TupleSections, OverloadedStrings, ScopedTypeVariables #-}
+
+
 module Handler.Calendar where
 
-import Import
+
+import           Import
 
 import           Data.Function (on)
 import           Data.List (groupBy)

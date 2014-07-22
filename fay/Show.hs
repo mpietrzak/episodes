@@ -2,7 +2,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE RebindableSyntax  #-}
 
-module Calendar where
+module Show where
 
 
 import JQuery

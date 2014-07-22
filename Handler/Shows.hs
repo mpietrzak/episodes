@@ -1,4 +1,6 @@
 {-# LANGUAGE TupleSections, OverloadedStrings, ScopedTypeVariables #-}
+
+
 module Handler.Shows where
 
 
@@ -13,6 +15,7 @@ import           Data.Time.Zones (TZ, utcToLocalTimeTZ, utcTZ)
 import           System.Locale (defaultTimeLocale)
 import           Yesod.Auth
 import           Yesod.Form.Bootstrap3
+import           Language.Haskell.TH
 
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -72,20 +75,20 @@ getShowsR = do
         $(widgetFile "shows")
 
 
-getEpisodesBySeason :: M.Map SeasonId [Episode] -> SeasonId -> [Episode]
+getEpisodesBySeason :: M.Map SeasonId [Entity Episode] -> SeasonId -> [Entity Episode]
 getEpisodesBySeason episodesBySeasonMap seasonId = M.findWithDefault [] seasonId episodesBySeasonMap
 
 
-groupEpisodesBySeason :: [Episode] -> M.Map SeasonId [Episode]
+groupEpisodesBySeason :: [Entity Episode] -> M.Map SeasonId [Entity Episode]
 groupEpisodesBySeason episodeList = sortEpisodes $ foldr _add M.empty episodeList
     where
         _add episode m = M.insert seasonId newSeasonEpisodes m
             where
-                seasonId = episodeSeason episode
+                seasonId = episodeSeason (entityVal episode)
                 newSeasonEpisodes = episode:oldSeasonEpisodes
                 oldSeasonEpisodes = M.findWithDefault [] seasonId m
         sortEpisodes = M.map (sortBy episodeSortBy)
-        episodeSortBy = compare `on` episodeNumber
+        episodeSortBy = compare `on` (episodeNumber . entityVal)
 
 
 formatEpisodeCode :: Int -> Int -> Text
@@ -125,11 +128,12 @@ getShowDetailsR showId = do
     showSeasons :: [Entity Season] <- runDB $ selectList [SeasonShow ==. showId] [Asc SeasonNumber]
     let showSeasonKeys = map (\s -> entityKey s) showSeasons
     showEpisodes :: [Entity Episode] <- runDB $ selectList [EpisodeSeason <-. showSeasonKeys] []
-    let episodesBySeasonMap = groupEpisodesBySeason (map entityVal showEpisodes)
+    let episodesBySeasonMap = groupEpisodesBySeason showEpisodes
     let episodesBySeason = getEpisodesBySeason episodesBySeasonMap
     let formatInUserTimeZone = formatInTimeZone tz
     defaultLayout $ do
         setTitle "Show Details"
+        $(fayFile' (ConE 'StaticR) "Show")
         $(widgetFile "show")
 
 
