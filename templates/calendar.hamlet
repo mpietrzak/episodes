@@ -34,7 +34,7 @@
                                                 $forall episode <- eps
                                                     $with i <- toPathPiece $ calendarEpisodeId episode
                                                         <tr class="episode" id="episode-#{i}">
-                                                            <td>
+                                                            <td class="checkbox-td">
                                                                 <input type="hidden" name="episode-id" class="episode-id" value="#{i}">
                                                                 $case calendarEpisodeSeen episode
                                                                     $of True

@@ -1,0 +1,24 @@
+Default: &defaults
+  user: episodes
+  password: episodes
+  host: localhost
+  port: 5432
+  database: episodes
+  poolsize: 10
+
+Development:
+  <<: *defaults
+
+Testing:
+  database: episodes_test
+  <<: *defaults
+
+Staging:
+  database: episodes_staging
+  poolsize: 100
+  <<: *defaults
+
+Production:
+  database: episodes_production
+  poolsize: 100
+  <<: *defaults

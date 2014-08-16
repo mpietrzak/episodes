@@ -9,7 +9,7 @@ import           Import
 import           Control.Applicative ((<*))
 import           Data.Function (on)
 import           Data.List (sortBy)
-import           Data.Time.Clock (UTCTime)
+import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Time.Format (formatTime)
 import           Data.Time.Zones (TZ, utcToLocalTimeTZ, utcTZ)
 import           System.Locale (defaultTimeLocale)
@@ -24,7 +24,9 @@ import qualified Data.Text.Format as TF
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Read as T
 
-import           Episodes.DB (updateShowSubscriptionCount)
+
+import           Episodes.DB (getEpisodeStatusesByShowAndUser,
+                              updateShowSubscriptionCount)
 import qualified TVRage as TVR
 
 
@@ -68,7 +70,7 @@ getShowsR = do
     mAuthId <- maybeAuthId
     subscriptions <- case mAuthId of
         Nothing -> return []
-        Just authId -> runDB $ selectList [SubscriptionUser ==. authId] []
+        Just authId -> runDB $ selectList [SubscriptionAccount ==. authId] []
     let subscribedShowKeys = S.fromList $ map (\s -> subscriptionShow $ entityVal s) subscriptions
     defaultLayout $ do
         setTitle "Shows"
@@ -112,10 +114,10 @@ getShowDetailsR showId = do
     -- todo - make utility function or better yet automate this
     tz <- case mai of
         Just authId -> do
-            meProfile <- runDB $ getBy $ UniqueProfileUser authId
+            meProfile <- runDB $ getBy $ UniqueProfileAccount authId
             case meProfile of
                 Just (Entity _ profile) -> do
-                    let tzName = profileTimezone profile
+                    let tzName = maybe "UTC" id $ profileTimezone profile
                     let mtz = M.lookup tzName (commonTimeZoneMap app)
                     case mtz of
                         Just _tz -> return _tz
@@ -123,13 +125,18 @@ getShowDetailsR showId = do
                 _ -> return utcTZ
         Nothing -> return utcTZ
 
-    -- liftIO $ putStrLn $ "time zone offset string" ++ timeZoneOffsetString tz
-
     showSeasons :: [Entity Season] <- runDB $ selectList [SeasonShow ==. showId] [Asc SeasonNumber]
     let showSeasonKeys = map (\s -> entityKey s) showSeasons
     showEpisodes :: [Entity Episode] <- runDB $ selectList [EpisodeSeason <-. showSeasonKeys] []
     let episodesBySeasonMap = groupEpisodesBySeason showEpisodes
     let episodesBySeason = getEpisodesBySeason episodesBySeasonMap
+
+    episodeStatusEntities :: [Entity EpisodeStatus] <- case mai of
+        Just authId -> runDB $ getEpisodeStatusesByShowAndUser showId authId
+        Nothing -> return []
+    let episodeStatusByEpisodeId = M.fromList $ map (\e -> (episodeStatusEpisode (entityVal e), episodeStatusStatus (entityVal e))) episodeStatusEntities
+    let getEpisodeStatusByEpisodeId = \eid -> M.findWithDefault "unseen" eid episodeStatusByEpisodeId
+
     let formatInUserTimeZone = formatInTimeZone tz
     defaultLayout $ do
         setTitle "Show Details"
@@ -229,10 +236,15 @@ postAddTVRShowR = do
 getSubscribeShowR :: ShowId -> Handler Html
 getSubscribeShowR showId = do
     authId <- requireAuthId
-    mSubscription <- runDB $ getBy $ UniqueSubscriptionUserShow authId showId
+    mSubscription <- runDB $ getBy $ UniqueSubscriptionAccountShow authId showId
+    now <- liftIO $ getCurrentTime
     case mSubscription of
         Just _ -> return ()
-        Nothing -> runDB $ insert_ Subscription { subscriptionUser = authId, subscriptionShow = showId }
+        Nothing -> runDB $ insert_ Subscription {
+            subscriptionAccount = authId,
+            subscriptionShow = showId,
+            subscriptionCreated = now,
+            subscriptionModified = now}
     _ <- runDB $ updateShowSubscriptionCount showId 1
     redirect ShowsR
 
@@ -240,7 +252,7 @@ getSubscribeShowR showId = do
 getUnsubscribeShowR :: ShowId -> Handler Html
 getUnsubscribeShowR showId = do
     authId <- requireAuthId
-    mSubscription <- runDB $ getBy $ UniqueSubscriptionUserShow authId showId
+    mSubscription <- runDB $ getBy $ UniqueSubscriptionAccountShow authId showId
     case mSubscription of
         Just (Entity subscriptionId _) -> runDB $ delete subscriptionId
         Nothing -> return ()

@@ -25,15 +25,15 @@ import Episodes.DB (updateEpisodeViewCount)
 setEpisodeStatus :: Int -> Bool -> HandlerT App IO SetEpisodeStatusResult
 setEpisodeStatus episodeId status = do
     $(logDebug) $ TL.toStrict $ TF.format "setting status of episode {} to {}" (episodeId, status)
-    userId <- requireAuthId
+    accId <- requireAuthId
     let episodeKey = Key $ PersistInt64 (fromIntegral episodeId)
     let newStatusText = case status of
             True -> "seen"
             False -> "unseen"
-    let newEpisodeStatus = EpisodeStatus { episodeStatusUser = userId
+    let newEpisodeStatus = EpisodeStatus { episodeStatusAccount = accId
                                          , episodeStatusEpisode = episodeKey
                                          , episodeStatusStatus = newStatusText }
-    maybeEpisodeStatusEntity <- runDB $ getBy $ UniqueEpisodeStatusUserEpisode userId episodeKey
+    maybeEpisodeStatusEntity <- runDB $ getBy $ UniqueEpisodeStatusAccountEpisode accId episodeKey
     case maybeEpisodeStatusEntity of
         Nothing -> runDB $ insert_ newEpisodeStatus
         Just (Entity k _) -> runDB $ replace k newEpisodeStatus

@@ -4,18 +4,13 @@ module Foundation where
 import Control.Applicative ((<$>))
 import Data.Text (Text)
 import Database.Persist.Sql (SqlPersistT)
-import Model
 import Network.HTTP.Client.Conduit (Manager, HasHttpManager (getHttpManager))
 import Prelude
-import Settings (widgetFile, Extra (..))
-import Settings.Development (development)
-import Settings.StaticFiles
 import Text.Hamlet (hamletFile)
 import Yesod
 import Yesod.Auth
 import Yesod.Auth.BrowserId
 import Yesod.Auth.GoogleEmail2
-import Yesod.Auth.HashDB (HashDBUser(..), authHashDB)
 import Yesod.Core.Types (Logger)
 import Yesod.Default.Config
 import Yesod.Default.Util (addStaticContentExternal)
@@ -23,10 +18,18 @@ import Yesod.Fay
 import Yesod.Static
 import Data.Time.Zones (TZ)
 import qualified Data.Map as M
+import qualified Data.Text as T
 import qualified Database.Persist
-import qualified Settings
+import qualified Debug.Trace as DT
 
+import Episodes.Auth (authEpisodes)
+import Episodes.DB (checkPassword)
 import Episodes.Time (NamedTimeZone)
+import Model
+import Settings (widgetFile, Extra (..))
+import Settings.Development (development)
+import Settings.StaticFiles
+import qualified Settings
 
 
 -- | The site argument for your application. This can be a good place to
@@ -67,10 +70,9 @@ type Form x = Html -> MForm (HandlerT App IO) (FormResult x, Widget)
 instance Yesod App where
     approot = ApprootMaster $ appRoot . settings
 
-    -- Store session data on the client in encrypted cookies,
-    -- default session idle timeout is 120 minutes
+    -- Store session data on the client in encrypted cookies.
     makeSessionBackend _ = Just <$> defaultClientSessionBackend
-        120    -- timeout in minutes
+        (24 * 60 * 30 * 12)  -- timeout in minutes
         "config/client_session_key.aes"
 
     defaultLayout widget = do
@@ -89,8 +91,8 @@ instance Yesod App where
                 [ css_bootstrap_css
                 , css_episodes_css ])
             $(combineScripts 'StaticR
-                [ js_jquery_2_1_1_js
-                , js_bootstrap_js ])
+               [ js_jquery_2_1_1_js
+               , js_bootstrap_js ])
             $(widgetFile "default-layout")
         giveUrlRenderer $(hamletFile "templates/default-layout-wrapper.hamlet")
 
@@ -144,13 +146,8 @@ instance YesodPersistRunner App where
     getDBRunner = defaultGetDBRunner connPool
 
 
-instance HashDBUser User where
-    userPasswordHash = userPassword
-    setPasswordHash h p = p { userPassword = Just h }
-
-
 instance YesodAuth App where
-    type AuthId App = UserId
+    type AuthId App = AccountId
 
     -- Where to send a user after successful login
     loginDest _ = HomeR
@@ -158,20 +155,25 @@ instance YesodAuth App where
     logoutDest _ = HomeR
 
     getAuthId creds = runDB $ do
-        x <- getBy $ UniqueUser $ credsIdent creds
-        case x of
-            Just (Entity uid _) -> return $ Just uid
-            Nothing -> do
-                fmap Just $ insert User
-                    { userIdent = credsIdent creds
-                    , userPassword = Nothing
-                    , userAdmin = False
-                    }
+        let ident = DT.trace ("creds ident: " ++ show (credsIdent creds) ++ ", creds plugin: " ++ show (credsPlugin creds) ++ ", creds extra: " ++ show (credsExtra creds)) $ credsIdent creds
+        case T.any ((==) '@') ident of
+            True -> do
+                -- get by mail
+                _mAccEntity <- getBy $ UniqueAccountEmail $ Just ident
+                case _mAccEntity of
+                    Just (Entity _id _) -> return $ Just _id
+                    _ -> return Nothing
+            False -> do
+                _mAccEntity <- getBy $ UniqueAccountNickname $ Just ident
+                case _mAccEntity of
+                    Just (Entity _id _) -> do
+                        return $ Just _id
+                    _ -> return Nothing
 
     -- You can add other plugins like BrowserID, email or OAuth here
     authPlugins _ = [ authBrowserId def
                     , authGoogleEmail "779562207992-3n0vomdr0qiifco6elap9mi2cruhftgf.apps.googleusercontent.com" "UYfhViD4cQgsxhWwjwj0qBJM"
-                    , authHashDB (Just . UniqueUser) ]
+                    , authEpisodes checkPassword ]
 
     authHttpManager = httpManager
 

@@ -10,7 +10,6 @@ import           Data.Function (on)
 import           Data.List (groupBy)
 import           Data.Maybe (mapMaybe)
 import           Database.Persist.Sql (Single(..), rawSql)
-import           Episodes.Trace (traceValue)
 import           Language.Haskell.TH
 import           Text.Shakespeare.Text (st)
 import           Yesod.Auth (maybeAuthId)
@@ -21,6 +20,7 @@ import qualified Data.Time.Clock as C
 import qualified Data.Time.LocalTime as TLT
 import qualified Data.Time.Zones as TZ
 
+import Episodes.DB (getPopularShowsEpisodesByMonth)
 import Episodes.Format (formatMonth)
 
 
@@ -45,10 +45,10 @@ selectEpisodesForCalendarSql = [st|
          left join (
             select episode, id, status
             from episode_status
-            where episode_status.user = ?) as episode_status
+            where episode_status.account = ?) as episode_status
           on (episode_status.episode = episode.id)
     where
-         subscription.user = ?
+         subscription.account = ?
          and episode.air_date_time >= ?
          and episode.air_date_time <= ?;
 |]
@@ -136,10 +136,29 @@ createCalendar year month episodes = calMonth
         calMonth = Month { monthWeeks = epCalWeeks }
 
 
+-- Convert (Show, Season, Episode) to CalendarEpisode.
+showSeasonEpisodeToCalendarEpisode :: TZ.TZ -> (Entity Show, Entity Season, Entity Episode) -> CalendarEpisode
+showSeasonEpisodeToCalendarEpisode tz (showEntity, seasonEntity, episodeEntity) = CalendarEpisode { calendarEpisodeTitle = episodeTitle episode
+                                                                                                  , calendarEpisodeShowTitle = showTitle show
+                                                                                                  , calendarEpisodeSeasonNumber = seasonNumber season
+                                                                                                  , calendarEpisodeNumber = episodeNumber episode
+                                                                                                  , calendarEpisodeSeen = False  -- for unauthenticated user every episode is not seen
+                                                                                                  , calendarEpisodeTime = TZ.utcToLocalTimeTZ tz (episodeAirDateTime episode)
+                                                                                                  , calendarEpisodeId = entityKey episodeEntity
+                                                                                                  , calendarEpisodeShowId = entityKey showEntity }
+    where
+        episode = entityVal episodeEntity
+        show = entityVal showEntity
+        season = entityVal seasonEntity
+
+
+
 getHomeR :: Handler Html
 getHomeR = getCalendarR
 
 
+-- Get calendar for default date.
+-- Currently this formats calendar for current time, but it will eventually accept optional year and month.
 getCalendarR :: Handler Html
 getCalendarR = do
     now <- lift C.getCurrentTime
@@ -149,10 +168,12 @@ getCalendarR = do
     let timeZoneMap = commonTimeZoneMap app
     timeZoneName <- case ma of
             Just authId -> do
-                maybeProfileEntity <- runDB $ getBy (UniqueProfileUser authId)
+                maybeProfileEntity <- runDB $ getBy (UniqueProfileAccount authId)
                 case maybeProfileEntity of
-                    Just (Entity _ profile) -> do
-                        return (profileTimezone profile)
+                    Just (Entity _ profile) ->
+                        case profileTimezone profile of
+                            Just _tz -> return _tz
+                            Nothing -> return "UTC"
                     _ -> return "UTC"
             _ -> return "UTC"
     let timeZone = M.findWithDefault TZ.utcTZ timeZoneName timeZoneMap
@@ -174,18 +195,18 @@ getCalendarMonthR year month = do
 
     timeZoneName <- case ma of
             Just authId -> do
-                maybeProfileEntity <- runDB $ getBy (UniqueProfileUser authId)
+                maybeProfileEntity <- runDB $ getBy (UniqueProfileAccount authId)
                 case maybeProfileEntity of
                     Just (Entity _ profile) -> do
-                        return (profileTimezone profile)
+                        return $ maybe "UTC" id $ profileTimezone profile
                     _ -> return "UTC"
             _ -> return "UTC"
 
     let timeZone = M.findWithDefault TZ.utcTZ timeZoneName timeZoneMap
 
     -- convert start and end of month to UTC times
-    let d1 = C.fromGregorian (toInteger year) month 1
-    let d2 = C.addGregorianMonthsClip 1 d1
+    let d1 = C.fromGregorian (toInteger year) month 1 -- eg 2012 05 01
+    let d2 = C.addGregorianMonthsClip 1 d1            -- eg 2012 05 01
 
     let lt1 = TLT.LocalTime { TLT.localDay = d1, TLT.localTimeOfDay = TLT.midnight }
     let lt2 = TLT.LocalTime { TLT.localDay = d2, TLT.localTimeOfDay = TLT.midnight }
@@ -200,7 +221,15 @@ getCalendarMonthR year month = do
             runDB $ rawSql sql params
         Nothing -> return []
 
-    let calendarEpisodes = mapMaybe (calEpRowToMaybeCalEp timeZone) calendarEpisodeRows
+    popularCalendarEpisodes <- case ma of
+        Just authId -> return []
+        Nothing -> do
+            sse <- runDB $ getPopularShowsEpisodesByMonth 32 utc1 utc2
+            return $ map (showSeasonEpisodeToCalendarEpisode timeZone) sse
+
+    let calendarEpisodes = case ma of
+            Just _ -> mapMaybe (calEpRowToMaybeCalEp timeZone) calendarEpisodeRows
+            Nothing -> popularCalendarEpisodes
 
     let calendar = createCalendar (toInteger year) month calendarEpisodes
 

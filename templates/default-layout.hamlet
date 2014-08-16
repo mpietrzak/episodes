@@ -36,9 +36,7 @@
                         <a href="@{ProfileR}">Profile
                 $nothing
                     <li>
-                        <a href="@{AuthR LoginR}">Login
-                    <li>
-                        <a href="@{RegisterR}">Register
+                        <a href="@{AuthR LoginR}">Login / Sign Up
                 <li>
                     <a href="#">About
 

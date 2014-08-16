@@ -1,6 +1,6 @@
 name:              episodes
-version:           0.0.0
-cabal-version:     >= 1.8
+version:           0.1.0
+cabal-version:     >= 1.19
 build-type:        Simple
 
 Flag dev
@@ -12,6 +12,7 @@ Flag library-only
     Default:       False
 
 library
+    default-language: Haskell2010
     hs-source-dirs: ., fay-shared
     exposed-modules: Application
                      Foundation
@@ -27,6 +28,7 @@ library
                      Handler.Users
                      Handler.Stats
                      TVRage
+                     Episodes.Auth
                      Episodes.DB
                      Episodes.Format
                      Episodes.Time
@@ -39,41 +41,44 @@ library
     else
         ghc-options:   -Wall -O2
 
-    extensions: TemplateHaskell
-                QuasiQuotes
-                OverloadedStrings
-                NoImplicitPrelude
-                CPP
-                MultiParamTypeClasses
-                TypeFamilies
-                GADTs
-                GeneralizedNewtypeDeriving
-                FlexibleContexts
-                EmptyDataDecls
-                NoMonomorphismRestriction
-                RankNTypes
-                DeriveDataTypeable
+    default-extensions: TemplateHaskell
+                        QuasiQuotes
+                        OverloadedStrings
+                        NoImplicitPrelude
+                        CPP
+                        MultiParamTypeClasses
+                        TypeFamilies
+                        GADTs
+                        GeneralizedNewtypeDeriving
+                        FlexibleContexts
+                        EmptyDataDecls
+                        NoMonomorphismRestriction
+                        RankNTypes
+                        DeriveDataTypeable
 
     build-depends: base                          >= 4          && < 5
-                 , yesod                         >= 1.2.5      && < 1.3
-                 , yesod-core                    >= 1.2.12
+                 , bytestring                    >= 0.9
+                 , fay                           >= 0.16
+                 , hjsmin                        >= 0.1
+                 , monad-control                 >= 0.3
+                 , resourcet
+                 , time                          >= 1.4
+                 , text                          >= 0.11
+                 , pbkdf                         >= 1.1
+                 , persistent
+                 , persistent-postgresql         >= 1.3
+                 , persistent-template           >= 1.3
+                 , template-haskell
+                 , shakespeare                   >= 2.0
+                 , transformers
+                 , wai-extra                     >= 2.1
+                 , yaml                          >= 0.8
+                 , yesod                         >= 1.2.6
+                 , yesod-core                    >= 1.2.17
                  , yesod-auth                    >= 1.3
                  , yesod-static                  >= 1.2
                  , yesod-form                    >= 1.3
                  , yesod-fay                     >= 0.5.0.1
-                 , fay                           >= 0.16
-                 , bytestring                    >= 0.9
-                 , time
-                 , text                          >= 0.11
-                 , persistent                    >= 1.3
-                 , persistent-sqlite             >= 1.3
-                 , persistent-template           >= 1.3
-                 , template-haskell
-                 , shakespeare                   >= 2.0
-                 , hjsmin                        >= 0.1
-                 , monad-control                 >= 0.3
-                 , wai-extra                     >= 2.1
-                 , yaml                          >= 0.8
                  , http-conduit                  >= 2.1
                  , directory                     >= 1.1
                  , warp                          >= 2.1
@@ -81,8 +86,8 @@ library
                  , aeson                         >= 0.6
                  , conduit                       >= 1.0
                  , monad-logger                  >= 0.3
-                 , fast-logger                   >= 2.1.4
-                 , wai-logger                    >= 2.1
+                 , fast-logger                   >= 2.2
+                 , wai-logger                    >= 2.2
                  , process                       >= 1.1.0.2
                  , containers
                  , network
@@ -97,6 +102,7 @@ library
 
 
 executable         episodes
+    default-language: Haskell2010
     if flag(library-only)
         Buildable: False
 
@@ -110,6 +116,7 @@ executable         episodes
 
 
 executable         tvrage
+    default-language: Haskell2010
     if flag(library-only)
         Buildable: False
     main-is:            main.hs
