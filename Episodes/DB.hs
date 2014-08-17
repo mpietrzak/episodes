@@ -14,6 +14,7 @@ module Episodes.DB (
 
 import Control.Monad.Trans.Resource (MonadResource (..))
 import Crypto.PBKDF.ByteString (sha1PBKDF2)
+
 import Data.ByteString (ByteString)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
@@ -22,6 +23,8 @@ import Database.Persist
 import Database.Persist.Sql (MonadSqlPersist (..), RawSql (..), rawSql)
 import Prelude hiding (Show)
 import Text.Shakespeare.Text (st)
+import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Base64 as BSB64
 import qualified Data.Text as T
 import qualified Debug.Trace as DT
 
@@ -110,13 +113,18 @@ updateShowSubscriptionCount showId change = update showId [ShowSubscriptionCount
 getEpisodeStatusesByShowAndUser showId userId = rawSql selectEpisodeStatusesByShowAndUser [toPersistValue showId, toPersistValue userId]
 
 
+-- Check if given user/pass match with what is stored in DB.
+-- All legacy hashes are pbkdf2.py "$p5k2$$" hashes (default iterations, random salt), so we don't support anything else.
+-- Haskell's pbkdf implementation is more generic than Python, so we have to build salt manually (Python's salt includes prefix etc).
+-- Returns True if given pass' hash matches the one from db.
 checkPassword :: (PersistUnique m, MonadResource m, PersistEntityBackend Account ~ PersistMonadBackend m)
               => Text
               -> Text
               -> m Bool
 checkPassword username password = do
-    let passwordBS = encodeUtf8 password :: ByteString
-    let passwordPBKDF = DT.trace ("sha1PBKDF2 " ++ show passwordBS ++ " -> " ++ show (sha1PBKDF2 "123" passwordBS 1000 16)) $ sha1PBKDF2 "123" passwordBS 1000 16 :: ByteString
+    let rounds = 400
+    let hashlen = 24
+
     maybeAcc <- case T.any ((==) '@') username of
         True -> getBy $ UniqueAccountEmail $ Just username
         False -> getBy $ UniqueAccountNickname $ Just username
@@ -126,9 +134,23 @@ checkPassword username password = do
             let acc = entityVal accEntity
             let mDbPassHash = accountPassword acc
             case mDbPassHash of
-                Just ph -> do
-                    let phbs = encodeUtf8 ph
-                    return (phbs == passwordPBKDF)
+                Just dbPassHash -> do
+                    -- additional helper let for easier logging
+                    let dbPassHashBS0 = encodeUtf8 dbPassHash
+                    let dbPassHashBS = DT.trace ("password hash from db: " ++ show dbPassHashBS0) dbPassHashBS0
+                    let dbPassParts = BS.split '$' dbPassHashBS
+                    case dbPassParts of
+                        [_, "p5k2", iterations, salt, hash] -> do
+                            -- pbkdf2.py uses "$p5k2$$xxx" as salt, where xxx is mostly random
+                            let pbkdf2Salt0 = BS.intercalate "$" (take 4 dbPassParts)
+                            let pbkdf2Salt = DT.trace ("pbkdf2 salt: " ++ show pbkdf2Salt0) pbkdf2Salt0
+                            let allegedPassBS = encodeUtf8 password
+                            let allegedPassHash = sha1PBKDF2 allegedPassBS pbkdf2Salt rounds hashlen
+                            let allegedPassHashB64 = BSB64.encode allegedPassHash
+                            let allegedPassHashB64WithSalt0 = BS.intercalate "$" (concat [(take 4 dbPassParts), [allegedPassHashB64]])
+                            let allegedPassHashB64WithSalt = DT.trace ("user supplied pass after hashing with salt from db: " ++ show allegedPassHashB64WithSalt0) allegedPassHashB64WithSalt0
+                            return (dbPassHashBS == allegedPassHashB64WithSalt)
+                        _ -> return False
                 _ -> return False
 
 

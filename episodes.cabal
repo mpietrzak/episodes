@@ -57,6 +57,7 @@ library
                         DeriveDataTypeable
 
     build-depends: base                          >= 4          && < 5
+                 , base64-bytestring             >= 1.0
                  , bytestring                    >= 0.9
                  , fay                           >= 0.16
                  , hjsmin                        >= 0.1
