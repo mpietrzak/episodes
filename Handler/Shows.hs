@@ -15,7 +15,6 @@ import           Data.Time.Zones (TZ, utcToLocalTimeTZ, utcTZ)
 import           System.Locale (defaultTimeLocale)
 import           Yesod.Auth
 import           Yesod.Form.Bootstrap3
-import           Language.Haskell.TH
 
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -27,6 +26,7 @@ import qualified Data.Text.Read as T
 
 import           Episodes.DB (getEpisodeStatusesByShowAndUser,
                               updateShowSubscriptionCount)
+import qualified Episodes.YesodPureScript as YPS
 import qualified TVRage as TVR
 
 
@@ -140,7 +140,7 @@ getShowDetailsR showId = do
     let formatInUserTimeZone = formatInTimeZone tz
     defaultLayout $ do
         setTitle "Show Details"
-        $(fayFile' (ConE 'StaticR) "Show")
+        addScript $ PureScriptR $ YPS.getPureScriptRoute ["Show"]
         $(widgetFile "show")
 
 

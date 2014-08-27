@@ -7,6 +7,7 @@ module Episodes.DB (
     getPopularShowsEpisodesByMonth,
     getPopularShows,
     getPopularEpisodes,
+    updateEpisodeStatus,
     updateEpisodeViewCount,
     updateShowSubscriptionCount
 ) where
@@ -14,13 +15,11 @@ module Episodes.DB (
 
 import Control.Monad.Trans.Resource (MonadResource (..))
 import Crypto.PBKDF.ByteString (sha1PBKDF2)
-
-import Data.ByteString (ByteString)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Time (UTCTime)
 import Database.Persist
-import Database.Persist.Sql (MonadSqlPersist (..), RawSql (..), rawSql)
+import Database.Persist.Sql
 import Prelude hiding (Show)
 import Text.Shakespeare.Text (st)
 import qualified Data.ByteString.Char8 as BS
@@ -104,17 +103,47 @@ getPopularShowsEpisodesByMonth :: (MonadSqlPersist m, MonadResource m)
 getPopularShowsEpisodesByMonth cnt t1 t2 = rawSql selectPopularShowsEpisodesByMonthSql [toPersistValue t1, toPersistValue t2, toPersistValue cnt]
 
 
+updateEpisodeViewCount :: (PersistQuery m, PersistMonadBackend m ~ SqlBackend) => EpisodeId -> Int -> m ()
 updateEpisodeViewCount episodeId change = update episodeId [EpisodeViewCount +=. change]
 
 
+updateShowSubscriptionCount :: (PersistQuery m, PersistMonadBackend m ~ SqlBackend) => ShowId -> Int -> m ()
 updateShowSubscriptionCount showId change = update showId [ShowSubscriptionCount +=. change]
 
 
+getEpisodeStatusesByShowAndUser :: (MonadSqlPersist m, MonadResource m) => ShowId -> AccountId -> m [Entity EpisodeStatus]
 getEpisodeStatusesByShowAndUser showId userId = rawSql selectEpisodeStatusesByShowAndUser [toPersistValue showId, toPersistValue userId]
 
 
+-- Update episode status.
+-- If does not exist, then create new.
+updateEpisodeStatus :: (PersistQuery m, PersistUnique m, PersistMonadBackend m ~ SqlBackend)
+                    => AccountId
+                    -> EpisodeId
+                    -> UTCTime
+                    -> Bool
+                    -> m ()
+updateEpisodeStatus accountId episodeKey now status = do
+    let newStatusText = case status of
+            True -> "seen"
+            False -> "unseen"
+    maybeEpisodeStatusEntity <- getBy $ UniqueEpisodeStatusAccountEpisode accountId episodeKey
+    case maybeEpisodeStatusEntity of
+        Nothing -> do
+            let newEpisodeStatus = EpisodeStatus { episodeStatusAccount = accountId
+                                                 , episodeStatusEpisode = episodeKey
+                                                 , episodeStatusStatus = newStatusText
+                                                 , episodeStatusCreated = now
+                                                 , episodeStatusModified = now }
+            insert_ newEpisodeStatus
+        Just (Entity k _) -> do
+            let u = [EpisodeStatusStatus =. newStatusText, EpisodeStatusModified =. now]
+            update k u
+    return ()
+
+
 -- Check if given user/pass match with what is stored in DB.
--- All legacy hashes are pbkdf2.py "$p5k2$$" hashes (default iterations, random salt), so we don't support anything else.
+-- All legacy hashes (from previous DB) are pbkdf2.py "$p5k2$$" hashes (default iterations, random salt), so we don't support anything else.
 -- Haskell's pbkdf implementation is more generic than Python, so we have to build salt manually (Python's salt includes prefix etc).
 -- Returns True if given pass' hash matches the one from db.
 checkPassword :: (PersistUnique m, MonadResource m, PersistEntityBackend Account ~ PersistMonadBackend m)
@@ -140,7 +169,7 @@ checkPassword username password = do
                     let dbPassHashBS = DT.trace ("password hash from db: " ++ show dbPassHashBS0) dbPassHashBS0
                     let dbPassParts = BS.split '$' dbPassHashBS
                     case dbPassParts of
-                        [_, "p5k2", iterations, salt, hash] -> do
+                        ["", "p5k2", "", "", _] -> do
                             -- pbkdf2.py uses "$p5k2$$xxx" as salt, where xxx is mostly random
                             let pbkdf2Salt0 = BS.intercalate "$" (take 4 dbPassParts)
                             let pbkdf2Salt = DT.trace ("pbkdf2 salt: " ++ show pbkdf2Salt0) pbkdf2Salt0

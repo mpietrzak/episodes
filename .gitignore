@@ -16,3 +16,4 @@ episodes.sublime-project
 episodes.sublime-workspace
 static/faygen-*.js
 tools/closure-compiler.jar
+bower_components

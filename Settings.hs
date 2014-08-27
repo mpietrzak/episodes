@@ -17,8 +17,6 @@ import Control.Applicative
 import Settings.Development
 import Data.Default (def)
 import Text.Hamlet
-import Yesod.Fay
--- import System.Process (readProcess)
 
 
 -- | Which Persistent backend this site is using.
@@ -67,19 +65,6 @@ widgetFile :: String -> Q Exp
 widgetFile = (if development then widgetFileReload
                              else widgetFileNoReload)
               widgetFileSettings
-
-
-fayFile' :: Exp -> FayFile
-fayFile' staticR moduleName
-    | development = fayFileReload settings
-    | otherwise   = fayFileProd settings
-  where
-    settings = (yesodFaySettings moduleName)
-        { yfsSeparateRuntime = Just ("static", staticR)
-        -- , yfsPostProcess = readProcess "java" ["-jar", "tools/closure-compiler.jar"]
-        , yfsExternal = Just ("static", staticR)
-        , yfsPackages = ["fay-base", "fay-text", "fay-jquery"]
-        }
 
 
 data Extra = Extra

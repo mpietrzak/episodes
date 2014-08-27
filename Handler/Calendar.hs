@@ -4,14 +4,16 @@
 module Handler.Calendar where
 
 
-import           Import
-
+import           Control.Monad.Trans.Class (lift)
 import           Data.Function (on)
 import           Data.List (groupBy)
 import           Data.Maybe (mapMaybe)
+import           Data.Text (Text)
+import           Database.Persist (Entity(Entity), entityKey, entityVal, fromPersistValue, getBy, toPersistValue)
 import           Database.Persist.Sql (Single(..), rawSql)
-import           Language.Haskell.TH
+import           Prelude hiding (Show)
 import           Text.Shakespeare.Text (st)
+import           Yesod (Html, addScript, defaultLayout, getYesod, runDB, setTitle, toPathPiece)
 import           Yesod.Auth (maybeAuthId)
 import qualified Data.Map as M
 import qualified Data.Time.Calendar as C
@@ -20,8 +22,12 @@ import qualified Data.Time.Clock as C
 import qualified Data.Time.LocalTime as TLT
 import qualified Data.Time.Zones as TZ
 
+import Foundation
 import Episodes.DB (getPopularShowsEpisodesByMonth)
 import Episodes.Format (formatMonth)
+import Episodes.YesodPureScript (getPureScriptRoute)
+import Model
+import Settings (widgetFile)
 
 
 selectEpisodesForCalendarSql :: Text
@@ -138,19 +144,18 @@ createCalendar year month episodes = calMonth
 
 -- Convert (Show, Season, Episode) to CalendarEpisode.
 showSeasonEpisodeToCalendarEpisode :: TZ.TZ -> (Entity Show, Entity Season, Entity Episode) -> CalendarEpisode
-showSeasonEpisodeToCalendarEpisode tz (showEntity, seasonEntity, episodeEntity) = CalendarEpisode { calendarEpisodeTitle = episodeTitle episode
-                                                                                                  , calendarEpisodeShowTitle = showTitle show
-                                                                                                  , calendarEpisodeSeasonNumber = seasonNumber season
-                                                                                                  , calendarEpisodeNumber = episodeNumber episode
-                                                                                                  , calendarEpisodeSeen = False  -- for unauthenticated user every episode is not seen
-                                                                                                  , calendarEpisodeTime = TZ.utcToLocalTimeTZ tz (episodeAirDateTime episode)
+showSeasonEpisodeToCalendarEpisode tz (showEntity, seasonEntity, episodeEntity) = CalendarEpisode { calendarEpisodeTitle = episodeTitle _episode
+                                                                                                  , calendarEpisodeShowTitle = showTitle _show
+                                                                                                  , calendarEpisodeSeasonNumber = seasonNumber _season
+                                                                                                  , calendarEpisodeNumber = episodeNumber _episode
+                                                                                                  , calendarEpisodeSeen = False  -- for unauthenticated user every _episode is not seen
+                                                                                                  , calendarEpisodeTime = TZ.utcToLocalTimeTZ tz (episodeAirDateTime _episode)
                                                                                                   , calendarEpisodeId = entityKey episodeEntity
                                                                                                   , calendarEpisodeShowId = entityKey showEntity }
     where
-        episode = entityVal episodeEntity
-        show = entityVal showEntity
-        season = entityVal seasonEntity
-
+        _episode = entityVal episodeEntity
+        _show = entityVal showEntity
+        _season = entityVal seasonEntity
 
 
 getHomeR :: Handler Html
@@ -222,7 +227,7 @@ getCalendarMonthR year month = do
         Nothing -> return []
 
     popularCalendarEpisodes <- case ma of
-        Just authId -> return []
+        Just _ -> return []
         Nothing -> do
             sse <- runDB $ getPopularShowsEpisodesByMonth 32 utc1 utc2
             return $ map (showSeasonEpisodeToCalendarEpisode timeZone) sse
@@ -238,7 +243,8 @@ getCalendarMonthR year month = do
 
     defaultLayout $ do
         setTitle "Episodes"
-        $(fayFile' (ConE 'StaticR) "Calendar")
+        addScript $ PureScriptR $ getPureScriptRoute ["Calendar"]
+        -- addScript
         $(widgetFile "calendar")
 
 

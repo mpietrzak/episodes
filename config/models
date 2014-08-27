@@ -38,6 +38,8 @@ EpisodeStatus
     account AccountId
     episode EpisodeId
     status Text
+    created UTCTime
+    modified UTCTime
     UniqueEpisodeStatusAccountEpisode account episode
 
 Profile

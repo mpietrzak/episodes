@@ -5,31 +5,30 @@ module Application
     , makeFoundation
     ) where
 
-import Import
-import Settings
-import Yesod.Auth
-import Yesod.Default.Config
-import Yesod.Default.Main
-import Yesod.Default.Handlers
-import Network.Wai.Middleware.RequestLogger (mkRequestLogger, outputFormat, OutputFormat (..), IPAddrSource (..), destination)
-import qualified Network.Wai.Middleware.RequestLogger as RequestLogger
-import qualified Database.Persist
-import Network.HTTP.Client.Conduit (newManager)
-import Yesod.Fay (getFaySite)
-import System.Log.FastLogger (newStdoutLoggerSet, defaultBufSize)
-import Network.Wai.Logger (clockDateCacher)
 import Data.Default (def)
+import Import
+import Network.HTTP.Client.Conduit (newManager)
+import Network.Wai.Logger (clockDateCacher)
+import Network.Wai.Middleware.RequestLogger (mkRequestLogger, outputFormat, OutputFormat (..), IPAddrSource (..), destination)
+import Settings
+import System.Log.FastLogger (newStdoutLoggerSet, defaultBufSize)
+import Yesod.Auth
 import Yesod.Core.Types (loggerSet, Logger (Logger))
+import Yesod.Default.Config
+import Yesod.Default.Handlers
+import Yesod.Default.Main
 import qualified Data.Map as M
+import qualified Database.Persist
+import qualified Network.Wai.Middleware.RequestLogger as RequestLogger
 
--- Import all relevant handler modules here.
--- Don't forget to add new modules to your cabal file!
-import Handler.Fay (onCommand)
+import Handler.API (postSetEpisodeStatusR)
 import Handler.Calendar
 import Handler.Shows
 import Handler.Users
 import Handler.Stats (getStatsR)
 
+import Episodes.YesodPureScript (PureScriptSite (PureScriptSite))
+import Episodes.YesodPureScript ()
 import Episodes.Time (NamedTimeZone(..), loadCommonTimezones)
 
 
@@ -77,8 +76,10 @@ makeFoundation conf = do
     _timezones <- loadCommonTimezones
     let _timezoneMap = M.fromList $ map (\ntz -> (ntzName ntz, ntzTZ ntz)) _timezones
 
+    let purs = PureScriptSite
+
     let logger = Yesod.Core.Types.Logger loggerSet' getter
-        foundation = App conf s p manager dbconf onCommand logger _timezones _timezoneMap
+        foundation = App conf s p manager dbconf logger _timezones _timezoneMap purs
 
     -- Perform database migration using our application's logging settings.
     -- runLoggingT

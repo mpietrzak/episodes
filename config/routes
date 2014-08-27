@@ -1,6 +1,6 @@
 /static      StaticR  Static  getStatic
 /auth        AuthR    Auth    getAuth
-/fay-command FaySiteR FaySite getFaySite
+/purs        PureScriptR PureScriptSite getPureScriptSite
 
 /favicon.ico FaviconR GET
 /robots.txt RobotsR GET
@@ -16,6 +16,8 @@
 /profile ProfileR GET POST
 /subscribeShow/#ShowId SubscribeShowR GET
 /unsubscribeShow/#ShowId UnsubscribeShowR GET
+
+/api/set-episode-status SetEpisodeStatusR POST
 
 -- /profile-password ProfilePasswordR POST
 -- /register RegisterR GET POST

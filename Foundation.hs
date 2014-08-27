@@ -14,7 +14,6 @@ import Yesod.Auth.GoogleEmail2
 import Yesod.Core.Types (Logger)
 import Yesod.Default.Config
 import Yesod.Default.Util (addStaticContentExternal)
-import Yesod.Fay
 import Yesod.Static
 import Data.Time.Zones (TZ)
 import qualified Data.Map as M
@@ -24,6 +23,7 @@ import qualified Debug.Trace as DT
 
 import Episodes.Auth (authEpisodes)
 import Episodes.DB (checkPassword)
+import Episodes.YesodPureScript (YesodPureScript, PureScriptSite)
 import Episodes.Time (NamedTimeZone)
 import Model
 import Settings (widgetFile, Extra (..))
@@ -42,10 +42,10 @@ data App = App
     , connPool :: Database.Persist.PersistConfigPool Settings.PersistConf -- ^ Database connection pool.
     , httpManager :: Manager
     , persistConfig :: Settings.PersistConf
-    , fayCommandHandler :: CommandHandler App
     , appLogger :: Logger
     , commonTimeZones :: [NamedTimeZone]
     , commonTimeZoneMap :: M.Map Text TZ
+    , getPureScriptSite :: PureScriptSite
     }
 
 instance HasHttpManager App where
@@ -128,16 +128,6 @@ instance Yesod App where
     makeLogger = return . appLogger
 
 
-instance YesodJquery App
-instance YesodFay App where
-
-    fayRoute = FaySiteR
-
-    yesodFayCommand render command = do
-        master <- getYesod
-        fayCommandHandler master render command
-
-
 -- How to run database actions.
 instance YesodPersist App where
     type YesodPersistBackend App = SqlPersistT
@@ -180,6 +170,9 @@ instance YesodAuth App where
     -- TODO: customize login screen
     -- loginHandler = lift $ defaultLayout $ do
     --    $(widgetFile "login")
+
+
+instance YesodPureScript App
 
 
 -- This instance is required to use forms. You can modify renderMessage to
