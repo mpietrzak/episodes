@@ -183,8 +183,8 @@ maybeTextToMaybeInt mt = case mt of
 
 
 -- Convert list of TV Rage episodes and list of season ids to list of pairs of season id and Episode
-extractEpisodesForInsert :: TVR.FullShowInfo -> [SeasonId] -> [Episode]
-extractEpisodesForInsert fullShowInfo seasonIds =
+extractEpisodesForInsert :: UTCTime -> TVR.FullShowInfo -> [SeasonId] -> [Episode]
+extractEpisodesForInsert now fullShowInfo seasonIds =
     concat seasonsEpisodes
     where
         seasonsEpisodes = zipWith extractSeasonEpisodes seasonIds (TVR.fullShowInfoSeasons fullShowInfo)
@@ -193,24 +193,31 @@ extractEpisodesForInsert fullShowInfo seasonIds =
                                                      , episodeNumber = fromInteger $ TVR.episodeNumber tvrEpisode
                                                      , episodeTitle = TVR.episodeTitle tvrEpisode
                                                      , episodeAirDateTime = TVR.episodeAirDateTime tvrEpisode
-                                                     , episodeViewCount = 0 }
+                                                     , episodeViewCount = 0
+                                                     , episodeModified = now
+                                                     , episodeCreated = now }
 
 
 -- Insert show to DB.
 insertShow :: TVR.FullShowInfo -> Handler (Key Show)
 insertShow fullShowInfo = do
+    now <- liftIO getCurrentTime
     let _show = Show { showTitle = TVR.fullShowInfoTitle fullShowInfo
                      , showTvRageId = Just $ fromInteger $ TVR.fullShowInfoTVRageId fullShowInfo
-                     , showSubscriptionCount = 0 }
+                     , showSubscriptionCount = 0
+                     , showCreated = now
+                     , showModified = now }
     _showId <- runDB $ insert _show
-    let _seasons = map (tvrSeasonToSeason _showId) (TVR.fullShowInfoSeasons fullShowInfo)
+    let _seasons = map (tvrSeasonToSeason now _showId) (TVR.fullShowInfoSeasons fullShowInfo)
     seasonIds <- runDB $ mapM insert _seasons
-    let _episodes = extractEpisodesForInsert fullShowInfo seasonIds
+    let _episodes = extractEpisodesForInsert now fullShowInfo seasonIds
     _ <- runDB $ mapM insert _episodes
     return _showId
     where
-        tvrSeasonToSeason _showId ts = Season { seasonNumber = fromInteger $ TVR.seasonNumber ts
-                                              , seasonShow = _showId}
+        tvrSeasonToSeason now _showId ts = Season { seasonNumber = fromInteger $ TVR.seasonNumber ts
+                                                  , seasonShow = _showId
+                                                  , seasonCreated = now
+                                                  , seasonModified = now }
 
 
 postAddTVRShowR :: Handler Html

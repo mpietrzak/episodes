@@ -15,11 +15,15 @@ Show
     title Text
     tvRageId Int Maybe
     subscriptionCount Int DEFAULT=0
+    created UTCTime
+    modified UTCTime
     UniqueShowTVRageId tvRageId !force
 
 Season
     number Int
     show ShowId
+    created UTCTime
+    modified UTCTime
     UniqueShowSeasonNumber show number
 
 Episode
@@ -28,6 +32,8 @@ Episode
     season SeasonId
     airDateTime UTCTime
     viewCount Int DEFAULT=0
+    created UTCTime
+    modified UTCTime
     UniqueSeasonEpisodeNumber season number
 
 Subscription
@@ -48,5 +54,7 @@ EpisodeStatus
 Profile
     account AccountId
     timezone Text Maybe
+    created UTCTime
+    modified UTCTime
     UniqueProfileAccount account
 

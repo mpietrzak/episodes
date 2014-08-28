@@ -5,6 +5,7 @@ module Handler.Users where
 import           Import
 
 import           Control.Applicative ((<*))
+import           Data.Time (getCurrentTime)
 import           Yesod.Auth (requireAuthId)
 import           Yesod.Form.Bootstrap3
 import qualified Data.Text as T
@@ -88,6 +89,7 @@ postProfileR :: Handler Html
 postProfileR = do
     authId <- requireAuthId
     app <- getYesod
+    now <- liftIO getCurrentTime
     let timezones = commonTimeZones app
     let tzOpts = map timeZoneToTzOpt timezones
 
@@ -103,9 +105,12 @@ postProfileR = do
         FormSuccess profileFormValues -> do
             let newProfileTimezone = profileFormTimezone profileFormValues
             let newProfile = case mEntProfile of
-                    Just (Entity _ profile) -> profile { profileTimezone = Just newProfileTimezone }
+                    Just (Entity _ profile) -> profile { profileTimezone = Just newProfileTimezone
+                                                       , profileModified = now }
                     _ -> Profile { profileTimezone = Just newProfileTimezone
-                                 , profileAccount = authId }
+                                 , profileAccount = authId
+                                 , profileCreated = now
+                                 , profileModified = now }
             -- we either replace if found earlier, or insert if not found earlier
             case mEntProfile of
                 Just (Entity profileKey _) -> runDB $ replace profileKey newProfile

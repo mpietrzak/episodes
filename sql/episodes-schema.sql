@@ -23,6 +23,8 @@ create table profile (
     timezone varchar(128),
     -- cookie varchar(256),
     episode_links varchar(8196),
+    created timestamp not null,
+    modified timestamp not null,
     constraint unique_profile_account unique (account)
 );
 
