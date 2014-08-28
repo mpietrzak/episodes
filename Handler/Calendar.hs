@@ -244,7 +244,6 @@ getCalendarMonthR year month = do
     defaultLayout $ do
         setTitle "Episodes"
         addScript $ PureScriptR $ getPureScriptRoute ["Calendar"]
-        -- addScript
         $(widgetFile "calendar")
 
 
