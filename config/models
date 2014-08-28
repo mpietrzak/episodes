@@ -4,6 +4,9 @@ Account
     email Text Maybe
     password Text Maybe
     admin Bool DEFAULT=False
+    accessedApprox UTCTime
+    created UTCTime
+    modified UTCTime
     UniqueAccountNickname nickname !force
     UniqueAccountEmail email !force
     deriving Typeable

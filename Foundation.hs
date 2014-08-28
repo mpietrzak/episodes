@@ -1,8 +1,11 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Foundation where
 
 
 import Control.Applicative ((<$>))
 import Data.Text (Text)
+import Data.Time (getCurrentTime)
 import Database.Persist.Sql (SqlPersistT)
 import Network.HTTP.Client.Conduit (Manager, HasHttpManager (getHttpManager))
 import Prelude
@@ -22,7 +25,7 @@ import qualified Database.Persist
 import qualified Debug.Trace as DT
 
 import Episodes.Auth (authEpisodes)
-import Episodes.DB (checkPassword)
+import Episodes.DB (checkPassword, createAccount)
 import Episodes.YesodPureScript (YesodPureScript, PureScriptSite)
 import Episodes.Time (NamedTimeZone)
 import Model
@@ -146,30 +149,22 @@ instance YesodAuth App where
 
     getAuthId creds = runDB $ do
         let ident = DT.trace ("creds ident: " ++ show (credsIdent creds) ++ ", creds plugin: " ++ show (credsPlugin creds) ++ ", creds extra: " ++ show (credsExtra creds)) $ credsIdent creds
-        case T.any ((==) '@') ident of
-            True -> do
-                -- get by mail
-                _mAccEntity <- getBy $ UniqueAccountEmail $ Just ident
-                case _mAccEntity of
-                    Just (Entity _id _) -> return $ Just _id
-                    _ -> return Nothing
-            False -> do
-                _mAccEntity <- getBy $ UniqueAccountNickname $ Just ident
-                case _mAccEntity of
-                    Just (Entity _id _) -> do
-                        return $ Just _id
-                    _ -> return Nothing
+        let getter = case T.any ((==) '@') ident of
+                True -> getBy . UniqueAccountEmail . Just
+                False -> getBy . UniqueAccountNickname . Just
+        _mAccEntity <- getter ident
+        case _mAccEntity of
+            Just (Entity _id _) -> return $ Just _id
+            _ -> do
+                now <- liftIO getCurrentTime
+                _id <- createAccount ident Nothing now
+                return (Just _id)
 
-    -- You can add other plugins like BrowserID, email or OAuth here
     authPlugins _ = [ authBrowserId def
                     , authGoogleEmail "779562207992-3n0vomdr0qiifco6elap9mi2cruhftgf.apps.googleusercontent.com" "UYfhViD4cQgsxhWwjwj0qBJM"
                     , authEpisodes checkPassword ]
 
     authHttpManager = httpManager
-
-    -- TODO: customize login screen
-    -- loginHandler = lift $ defaultLayout $ do
-    --    $(widgetFile "login")
 
 
 instance YesodPureScript App

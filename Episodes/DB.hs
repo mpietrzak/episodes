@@ -3,6 +3,7 @@
 
 module Episodes.DB (
     checkPassword,
+    createAccount,
     getEpisodeStatusesByShowAndUser,
     getPopularShowsEpisodesByMonth,
     getPopularShows,
@@ -140,6 +141,23 @@ updateEpisodeStatus accountId episodeKey now status = do
             let u = [EpisodeStatusStatus =. newStatusText, EpisodeStatusModified =. now]
             update k u
     return ()
+
+
+createAccount :: (PersistStore m, PersistMonadBackend m ~ SqlBackend)
+              => Text -> Maybe Text -> UTCTime -> m (Key Account)
+createAccount usernameOrEmail mPassword now = do
+    let (_username, _email) = if T.any ((==) '@') usernameOrEmail
+            then (Nothing, Just usernameOrEmail)
+            else (Just usernameOrEmail, Nothing)
+    let acc = Account { accountNickname = _username
+                      , accountEmail = _email
+                      , accountPassword = mPassword
+                      , accountAdmin = False
+                      , accountAccessedApprox = now
+                      , accountCreated = now
+                      , accountModified = now }
+    accId <- insert acc
+    return accId
 
 
 -- Check if given user/pass match with what is stored in DB.
