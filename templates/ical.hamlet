@@ -1,0 +1,7 @@
+
+$maybe cookie <- mCookie
+    <p>You can use following link to import dynamic episodes calendar into your favourite calendar app:
+
+    <div style="padding: 4pt; border: 1px solid #333; text-align: center; font-family: monospace">@{ICalR cookie}
+$nothing
+    <p>Please set API cookie in <a href="@{ProfileR}">profile</a> in order to use iCal

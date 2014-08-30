@@ -21,10 +21,11 @@ import qualified Data.Map as M
 import qualified Database.Persist
 import qualified Network.Wai.Middleware.RequestLogger as RequestLogger
 
-import Handler.API (postSetEpisodeStatusR)
 import Handler.Calendar
 import Handler.Shows
 import Handler.Users
+import Handler.API (postSetEpisodeStatusR)
+import Handler.Export (getICalR, getICalPageR)
 import Handler.Stats (getStatsR)
 
 import Episodes.YesodPureScript (PureScriptSite (PureScriptSite))

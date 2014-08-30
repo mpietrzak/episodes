@@ -21,12 +21,15 @@ create table profile (
     id bigserial primary key,
     account bigint not null references account,
     timezone varchar(128),
-    -- cookie varchar(256),
+    cookie varchar(256),
     episode_links varchar(8196),
     created timestamp not null,
     modified timestamp not null,
     constraint unique_profile_account unique (account)
+    constraint unique_profile_cookie unique (cookie)
 );
+
+create unique index profile_cookie_i on profile (cookie);
 
 
 create table show (

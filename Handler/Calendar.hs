@@ -23,6 +23,7 @@ import qualified Data.Time.LocalTime as TLT
 import qualified Data.Time.Zones as TZ
 
 import Foundation
+import Episodes.Common (getUserTimeZone)
 import Episodes.DB (getPopularShowsEpisodesByMonth)
 import Episodes.Format (formatMonth)
 import Episodes.YesodPureScript (getPureScriptRoute)
@@ -167,47 +168,18 @@ getHomeR = getCalendarR
 getCalendarR :: Handler Html
 getCalendarR = do
     now <- lift C.getCurrentTime
-    ma <- maybeAuthId
-    app <- getYesod
-
-    let timeZoneMap = commonTimeZoneMap app
-    timeZoneName <- case ma of
-            Just authId -> do
-                maybeProfileEntity <- runDB $ getBy (UniqueProfileAccount authId)
-                case maybeProfileEntity of
-                    Just (Entity _ profile) ->
-                        case profileTimezone profile of
-                            Just _tz -> return _tz
-                            Nothing -> return "UTC"
-                    _ -> return "UTC"
-            _ -> return "UTC"
-    let timeZone = M.findWithDefault TZ.utcTZ timeZoneName timeZoneMap
-
+    timeZone <- getUserTimeZone
     let localTime = TZ.utcToLocalTimeTZ timeZone now
     let localDay = TLT.localDay localTime
     let (year, month, _) = C.toGregorian localDay
-
     getCalendarMonthR (fromInteger year) month
 
 
 getCalendarMonthR :: Int -> Int -> Handler Html
 getCalendarMonthR year month = do
-
     ma <- maybeAuthId
-    app <- getYesod
 
-    let timeZoneMap = commonTimeZoneMap app
-
-    timeZoneName <- case ma of
-            Just authId -> do
-                maybeProfileEntity <- runDB $ getBy (UniqueProfileAccount authId)
-                case maybeProfileEntity of
-                    Just (Entity _ profile) -> do
-                        return $ maybe "UTC" id $ profileTimezone profile
-                    _ -> return "UTC"
-            _ -> return "UTC"
-
-    let timeZone = M.findWithDefault TZ.utcTZ timeZoneName timeZoneMap
+    timeZone <- getUserTimeZone
 
     -- convert start and end of month to UTC times
     let d1 = C.fromGregorian (toInteger year) month 1 -- eg 2012 05 01

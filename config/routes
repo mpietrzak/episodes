@@ -19,6 +19,9 @@
 
 /api/set-episode-status SetEpisodeStatusR POST
 
+/ical ICalPageR GET
+/calendar/#Text ICalR GET
+
 -- /profile-password ProfilePasswordR POST
 -- /register RegisterR GET POST
 

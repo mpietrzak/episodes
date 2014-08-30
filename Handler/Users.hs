@@ -9,9 +9,13 @@ import           Data.Time (getCurrentTime)
 import           Yesod.Auth (requireAuthId)
 import           Yesod.Form.Bootstrap3
 import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
-import qualified Episodes.Time as ET
+import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Format as TF
+import qualified Data.Text.Lazy as TL
+import qualified Data.UUID as UUID
+import qualified Data.UUID.V4 as UUID4
+
+import qualified Episodes.Time as ET
 
 
 data ProfileForm = ProfileForm { profileFormTimezone :: Text }
@@ -63,6 +67,12 @@ timeZoneToTzOpt ntz = (nt, nt)
         nt = ET.ntzName ntz
 
 
+generateRandomProfileCookie :: IO (Text)
+generateRandomProfileCookie = do
+    uuid <- UUID4.nextRandom
+    return $ TE.decodeUtf8 (UUID.toASCIIBytes uuid)
+
+
 getProfileR :: Handler Html
 getProfileR = do
     authId <- requireAuthId
@@ -101,6 +111,8 @@ postProfileR = do
 
     ((formResult, formWidget), formEnctype) <- runFormPost (profileForm tzOpts currentTimezone)
 
+    randomProfileCookie <- liftIO generateRandomProfileCookie
+
     case formResult of
         FormSuccess profileFormValues -> do
             let newProfileTimezone = profileFormTimezone profileFormValues
@@ -110,7 +122,8 @@ postProfileR = do
                     _ -> Profile { profileTimezone = Just newProfileTimezone
                                  , profileAccount = authId
                                  , profileCreated = now
-                                 , profileModified = now }
+                                 , profileModified = now
+                                 , profileCookie = Just randomProfileCookie }
             -- we either replace if found earlier, or insert if not found earlier
             case mEntProfile of
                 Just (Entity profileKey _) -> runDB $ replace profileKey newProfile

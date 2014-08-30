@@ -4,10 +4,12 @@
 module Episodes.DB (
     checkPassword,
     createAccount,
+    getEpisodesForICal,
     getEpisodeStatusesByShowAndUser,
     getPopularShowsEpisodesByMonth,
     getPopularShows,
     getPopularEpisodes,
+    getProfile,
     updateEpisodeStatus,
     updateEpisodeViewCount,
     updateShowSubscriptionCount
@@ -84,6 +86,23 @@ selectEpisodeStatusesByShowAndUser = [st|
 |]
 
 
+selectEpisodesForICal :: Text
+selectEpisodesForICal = [st|
+    select ??, ??, ??
+    from
+        profile
+        join account on (account.id = profile.account)
+        join subscription on (subscription.account = account.id)
+        join show on (show.id = subscription.show)
+        join season on (season.show = show.id)
+        join episode on (episode.season = season.id)
+        left join episode_status on (episode_status.episode = episode.id and episode_status.account = account.id)
+    where
+        profile.cookie = ?
+        and (episode_status.id is null or episode_status.status != 'seen')
+|]
+
+
 getPopularShows :: (PersistQuery m, PersistEntityBackend Show ~ PersistMonadBackend m)
                 => Int
                 -> m [Entity Show]
@@ -114,6 +133,9 @@ updateShowSubscriptionCount showId change = update showId [ShowSubscriptionCount
 
 getEpisodeStatusesByShowAndUser :: (MonadSqlPersist m, MonadResource m) => ShowId -> AccountId -> m [Entity EpisodeStatus]
 getEpisodeStatusesByShowAndUser showId userId = rawSql selectEpisodeStatusesByShowAndUser [toPersistValue showId, toPersistValue userId]
+
+
+getEpisodesForICal _cookie = rawSql selectEpisodesForICal [toPersistValue _cookie]
 
 
 -- Update episode status.
@@ -199,6 +221,23 @@ checkPassword username password = do
                             return (dbPassHashBS == allegedPassHashB64WithSalt)
                         _ -> return False
                 _ -> return False
+
+
+getProfile :: (PersistUnique m, PersistMonadBackend m ~ SqlBackend)
+           => AccountId
+           -> m (Maybe Profile)
+getProfile accId = do
+    mep <- getBy (UniqueProfileAccount accId)
+    case mep of
+        Just (Entity _ p) -> return (Just p)
+        _ -> return Nothing
+
+
+
+
+
+
+
 
 
 

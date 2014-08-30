@@ -54,7 +54,9 @@ EpisodeStatus
 Profile
     account AccountId
     timezone Text Maybe
+    cookie Text Maybe
     created UTCTime
     modified UTCTime
     UniqueProfileAccount account
+    UniqueProfileCookie cookie !force
 
