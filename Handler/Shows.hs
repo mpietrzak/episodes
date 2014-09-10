@@ -22,11 +22,10 @@ import qualified Data.Text as T
 import qualified Data.Text.Format as TF
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Read as T
-
+import qualified Yesod.PureScript as YPS
 
 import           Episodes.DB (getEpisodeStatusesByShowAndUser,
                               updateShowSubscriptionCount)
-import qualified Episodes.YesodPureScript as YPS
 import qualified TVRage as TVR
 
 

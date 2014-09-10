@@ -15,6 +15,7 @@ import           Prelude hiding (Show)
 import           Text.Shakespeare.Text (st)
 import           Yesod (Html, addScript, defaultLayout, getYesod, runDB, setTitle, toPathPiece)
 import           Yesod.Auth (maybeAuthId)
+import           Yesod.PureScript (getPureScriptRoute)
 import qualified Data.Map as M
 import qualified Data.Time.Calendar as C
 import qualified Data.Time.Calendar.WeekDate as C
@@ -26,7 +27,7 @@ import Foundation
 import Episodes.Common (getUserTimeZone)
 import Episodes.DB (getPopularShowsEpisodesByMonth)
 import Episodes.Format (formatMonth)
-import Episodes.YesodPureScript (getPureScriptRoute)
+
 import Model
 import Settings (widgetFile)
 

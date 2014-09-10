@@ -1,5 +1,5 @@
-/static      StaticR  Static  getStatic
-/auth        AuthR    Auth    getAuth
+/static      StaticR     Static         getStatic
+/auth        AuthR       Auth           getAuth
 /purs        PureScriptR PureScriptSite getPureScriptSite
 
 /favicon.ico FaviconR GET

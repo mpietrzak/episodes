@@ -10,7 +10,7 @@ import Debug.Trace
 import qualified Control.Monad.JQuery as J
 
 
--- PureScript version of Ajax Settings as documented here: http://api.jquery.com/jquery.ajax/#jQuery-ajax-settings
+-- | PureScript version of Ajax Settings as documented here: http://api.jquery.com/jquery.ajax/#jQuery-ajax-settings
 -- Fields are being addded here on as-needed basis.
 -- Note that I'm not planning to add success and error callbacks as they're deprecated in favor of Deferred/Promise interface.
 data AjaxSettings = AjaxSettings { ajaxData :: Maybe String }

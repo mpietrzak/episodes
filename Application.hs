@@ -17,6 +17,7 @@ import Yesod.Core.Types (loggerSet, Logger (Logger))
 import Yesod.Default.Config
 import Yesod.Default.Handlers
 import Yesod.Default.Main
+import Yesod.PureScript
 import qualified Data.Map as M
 import qualified Database.Persist
 import qualified Network.Wai.Middleware.RequestLogger as RequestLogger
@@ -28,8 +29,6 @@ import Handler.API (postSetEpisodeStatusR)
 import Handler.Export (getICalR, getICalPageR)
 import Handler.Stats (getStatsR)
 
-import Episodes.YesodPureScript (PureScriptSite (PureScriptSite))
-import Episodes.YesodPureScript ()
 import Episodes.Time (NamedTimeZone(..), loadCommonTimezones)
 
 
@@ -77,7 +76,8 @@ makeFoundation conf = do
     _timezones <- loadCommonTimezones
     let _timezoneMap = M.fromList $ map (\ntz -> (ntzName ntz, ntzTZ ntz)) _timezones
 
-    let purs = PureScriptSite
+    let ypsOptions = def
+    purs <- createYesodPureScriptSite ypsOptions
 
     let logger = Yesod.Core.Types.Logger loggerSet' getter
         foundation = App conf s p manager dbconf logger _timezones _timezoneMap purs

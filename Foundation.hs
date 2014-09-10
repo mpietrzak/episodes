@@ -17,6 +17,7 @@ import Yesod.Auth.GoogleEmail2
 import Yesod.Core.Types (Logger)
 import Yesod.Default.Config
 import Yesod.Default.Util (addStaticContentExternal)
+import Yesod.PureScript
 import Yesod.Static
 import Data.Time.Zones (TZ)
 import qualified Data.Map as M
@@ -26,7 +27,6 @@ import qualified Debug.Trace as DT
 
 import Episodes.Auth (authEpisodes)
 import Episodes.DB (checkPassword, createAccount)
-import Episodes.YesodPureScript (YesodPureScript, PureScriptSite)
 import Episodes.Time (NamedTimeZone)
 import Model
 import Settings (widgetFile, Extra (..))
