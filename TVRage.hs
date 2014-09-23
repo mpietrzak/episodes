@@ -13,7 +13,7 @@ module TVRage (
 
 import Control.Applicative
 import Data.Char
-import Data.Maybe (mapMaybe)
+import Data.Maybe (fromJust, mapMaybe)
 import Data.Text (Text)
 import Data.Time.Clock
 import Data.Time.LocalTime
@@ -31,6 +31,10 @@ import qualified Network.URI as NU
 import qualified Prelude
 import qualified Text.XML as XML
 import qualified Text.XML.Cursor as XML
+
+
+minValidEpisodeAirDateTime :: UTCTime
+minValidEpisodeAirDateTime = fromJust $ DTF.parseTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" "1900-01-01 00:00:00"
 
 
 data MainOptions = MainOptions {}
@@ -154,10 +158,12 @@ extractEpisodeFromEpisodeCurs showTimeZone showAirTimeText _curs = _maybeEpisode
         _maybeEpisodeAirLocalDateTime = parseTVRageAirDateTime airDateText showAirTimeText
         _maybeEpisodeAirDateTime = localTimeToUTC showTimeZone <$> _maybeEpisodeAirLocalDateTime
         _maybeEpisode = case (_maybeEpisodeNumber, _maybeEpisodeAirDateTime) of
-            (Just _n, Just _episodeAirDateTime) -> Just Episode
-                { episodeNumber = _n
-                , episodeTitle = _episodeTitle
-                , episodeAirDateTime = _episodeAirDateTime }
+            (Just _n, Just _episodeAirDateTime) -> if _airDateOk then Just _ep else Nothing
+                where
+                    _ep = Episode { episodeNumber = _n
+                                  , episodeTitle = _episodeTitle
+                                  , episodeAirDateTime = _episodeAirDateTime }
+                    _airDateOk = _episodeAirDateTime > minValidEpisodeAirDateTime
             _ -> Nothing
 
 
@@ -172,7 +178,7 @@ extractSeasonFromSeasonCurs :: TimeZone -> Text -> XML.Cursor -> Maybe Season
 extractSeasonFromSeasonCurs showTimeZone showAirTimeText _curs = _maybeSeason
     where
         _seasonNumberText = T.concat $ XML.attribute "no" _curs
-        _maybeSeasonNumber = Trace.trace ("_seasonNumberText: " ++ show _seasonNumberText) $ case T.decimal _seasonNumberText of
+        _maybeSeasonNumber = case T.decimal _seasonNumberText of
             Left _ -> Nothing
             Right (_n, _) -> Just _n
         _episodes = extractSeasonEpisodesFromSeasonCurs showTimeZone showAirTimeText _curs

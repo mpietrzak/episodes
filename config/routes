@@ -18,6 +18,7 @@
 /unsubscribeShow/#ShowId UnsubscribeShowR GET
 
 /api/set-episode-status SetEpisodeStatusR POST
+/api/set-show-subscription-status SetShowSubscriptionStatusR POST
 
 /ical ICalPageR GET
 /calendar/#Text ICalR GET

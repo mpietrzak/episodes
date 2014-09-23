@@ -1,11 +1,14 @@
 
 -- |Common stuff used in many places, utility functions only, no business logic.
 module Episodes.Common (
-    getUserTimeZone
+    choose,
+    getUserTimeZone,
+    forceText
 ) where
 
 
 import Prelude
+import Data.Text (Text)
 import Yesod
 import Yesod.Auth (maybeAuthId)
 import qualified Data.Map.Strict as M
@@ -35,3 +38,14 @@ getUserTimeZone = do
                         Nothing -> return TZ.utcTZ
                 Nothing -> return TZ.utcTZ
         Nothing -> return TZ.utcTZ
+
+
+
+-- | Helper for hamlet
+forceText :: Text -> Text
+forceText = id
+
+
+-- | Helper for hamlet
+choose :: Bool -> a -> a -> a
+choose t x y = if t then x else y

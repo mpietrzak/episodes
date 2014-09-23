@@ -30,7 +30,7 @@ getCheckboxStatus checkbox = is ":checked" checkbox
 
 onSetEpisodeStatusDone :: forall e. JQueryXmlHttpData -> String -> JQueryXmlHttpRequest -> Eff (trace :: DT.Trace | e) {}
 onSetEpisodeStatusDone _ s _ = do
-    DT.trace $ "done: " ++ s
+    DT.trace $ "onSetEpisodeStatusDone: " ++ s
     return {}
 
 
@@ -46,7 +46,6 @@ onEpisodeStatusCheckboxClick event target = do
     status <- getCheckboxStatus target
     let req = { episodeStatus: status, episodeId: episodeId }
     reqJson <- jsonStringify req
-    -- let ajaxSettings = AjaxSettings { ajaxData: Just reqJson }
     let settings = { "data": reqJson
             , "url": "/api/set-episode-status"
             , "method": "POST"

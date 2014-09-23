@@ -1,6 +1,6 @@
 
 
-module Show
+module ShowDetails
 where
 
 

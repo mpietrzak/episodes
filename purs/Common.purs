@@ -16,10 +16,11 @@ import qualified Control.Monad.JQuery as J
 data AjaxSettings = AjaxSettings { ajaxData :: Maybe String }
 
 
--- As returned by $.ajax.
+-- | As returned by $.ajax.
 foreign import data JQueryXmlHttpRequest :: *
 
 
+-- | Wraps data in handler in $.ajax callbacks.
 foreign import data JQueryXmlHttpData :: *
 
 

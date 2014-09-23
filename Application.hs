@@ -5,6 +5,10 @@ module Application
     , makeFoundation
     ) where
 
+import Control.Concurrent (forkIO)
+import Control.Concurrent.Thread.Delay (delay)
+import Control.Monad.Logger (runStdoutLoggingT)
+import Control.Monad.Trans.Resource (runResourceT)
 import Data.Default (def)
 import Import
 import Network.HTTP.Client.Conduit (newManager)
@@ -25,11 +29,12 @@ import qualified Network.Wai.Middleware.RequestLogger as RequestLogger
 import Handler.Calendar
 import Handler.Shows
 import Handler.Users
-import Handler.API (postSetEpisodeStatusR)
+import Handler.API (postSetEpisodeStatusR, postSetShowSubscriptionStatusR)
 import Handler.Export (getICalR, getICalPageR)
 import Handler.Stats (getStatsR)
 
 import Episodes.Time (NamedTimeZone(..), loadCommonTimezones)
+import Episodes.Update (updateTVRageShows)
 
 
 -- This line actually creates our YesodDispatch instance. It is the second half
@@ -80,12 +85,14 @@ makeFoundation conf = do
     purs <- createYesodPureScriptSite ypsOptions
 
     let logger = Yesod.Core.Types.Logger loggerSet' getter
-        foundation = App conf s p manager dbconf logger _timezones _timezoneMap purs
+    let foundation = App conf s p manager dbconf logger _timezones _timezoneMap purs
 
     -- Perform database migration using our application's logging settings.
     -- runLoggingT
     --    (Database.Persist.runPool dbconf (runMigration migrateAll) p)
     --    (messageLoggerSource foundation logger)
+
+    _ <- forkIO $ scheduler dbconf p
 
     return foundation
 
@@ -97,3 +104,19 @@ getApplicationDev =
     loader = Yesod.Default.Config.loadConfig (configSettings Development)
         { csParseExtra = parseExtra
         }
+
+
+-- | Code that runs jobs.
+-- This thread should never stop.
+-- Jobs are fired in separate threads.
+-- Uses DB pool.
+scheduler conf pool = do
+        let _minute = 60 * 1000 * 1000
+        -- let _day = 24 * 60 * _minute
+        _ <- forkIO job
+        _ <- delay _minute
+        scheduler conf pool
+    where
+        job = do
+            runResourceT $ runStdoutLoggingT $ runPool conf updateTVRageShows pool
+

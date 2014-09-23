@@ -24,7 +24,9 @@ import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Read as T
 import qualified Yesod.PureScript as YPS
 
+import           Episodes.Common (choose, forceText)
 import           Episodes.DB (getEpisodeStatusesByShowAndUser,
+                              getPopularShows,
                               updateShowSubscriptionCount)
 import qualified TVRage as TVR
 
@@ -65,14 +67,18 @@ addTVRageShowForm  = renderBootstrap3 bootstrapFormLayout $ AddTVRageShow
 
 getShowsR :: Handler Html
 getShowsR = do
-    showEntities :: [Entity Show] <- runDB $ selectList [] [Asc ShowTitle]
+    showEntities <- runDB $ selectList [] [Asc ShowTitle]
     mAuthId <- maybeAuthId
-    subscriptions <- case mAuthId of
-        Nothing -> return []
-        Just authId -> runDB $ selectList [SubscriptionAccount ==. authId] []
-    let subscribedShowKeys = S.fromList $ map (\s -> subscriptionShow $ entityVal s) subscriptions
+    subscribedShowKeys <- case mAuthId of
+        Nothing -> do
+            popularShows <- runDB $ getPopularShows 32
+            return $ S.fromList $ map entityKey popularShows
+        Just authId -> do
+            subscriptions <- runDB $ selectList [SubscriptionAccount ==. authId] []
+            return $ S.fromList $ map (\s -> subscriptionShow $ entityVal s) subscriptions
     defaultLayout $ do
         setTitle "Shows"
+        addScript $ PureScriptR $ YPS.getPureScriptRoute ["ShowSubscriptions"]
         $(widgetFile "shows")
 
 
@@ -139,7 +145,7 @@ getShowDetailsR showId = do
     let formatInUserTimeZone = formatInTimeZone tz
     defaultLayout $ do
         setTitle "Show Details"
-        addScript $ PureScriptR $ YPS.getPureScriptRoute ["Show"]
+        addScript $ PureScriptR $ YPS.getPureScriptRoute ["ShowDetails"]
         $(widgetFile "show")
 
 
@@ -205,7 +211,9 @@ insertShow fullShowInfo = do
                      , showTvRageId = Just $ fromInteger $ TVR.fullShowInfoTVRageId fullShowInfo
                      , showSubscriptionCount = 0
                      , showCreated = now
-                     , showModified = now }
+                     , showModified = now
+                     , showLastUpdate = now
+                     , showNextUpdate = now }
     _showId <- runDB $ insert _show
     let _seasons = map (tvrSeasonToSeason now _showId) (TVR.fullShowInfoSeasons fullShowInfo)
     seasonIds <- runDB $ mapM insert _seasons
@@ -243,7 +251,7 @@ getSubscribeShowR :: ShowId -> Handler Html
 getSubscribeShowR showId = do
     authId <- requireAuthId
     mSubscription <- runDB $ getBy $ UniqueSubscriptionAccountShow authId showId
-    now <- liftIO $ getCurrentTime
+    now <- liftIO getCurrentTime
     case mSubscription of
         Just _ -> return ()
         Nothing -> runDB $ insert_ Subscription {

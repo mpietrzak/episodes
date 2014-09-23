@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Handler.API (
-    postSetEpisodeStatusR
+    postSetEpisodeStatusR,
+    postSetShowSubscriptionStatusR
 ) where
 
 
@@ -13,8 +14,8 @@ import qualified Data.HashMap.Strict as HM
 import qualified Network.HTTP.Types as HT
 import qualified Yesod.Auth as YA
 
-import Episodes.DB (updateEpisodeStatus, updateEpisodeViewCount)
 import Foundation
+import qualified Episodes.DB as DB
 
 
 postSetEpisodeStatusR :: Handler TypedContent
@@ -31,10 +32,8 @@ postSetEpisodeStatusR = do
                     let episodeKey = Key $ PersistInt64 episodeId
                     now <- liftIO getCurrentTime
                     runDB $ do
-                        updateEpisodeStatus accId episodeKey now episodeStatus
-                        updateEpisodeViewCount episodeKey (if episodeStatus then 1 else (-1))
-                    --runDB $ updateEpisodeStatus accId episodeKey now episodeStatus
-                    --runDB $ updateEpisodeViewCount episodeKey (if episodeStatus then 1 else (-1))
+                        DB.updateEpisodeStatus accId episodeKey now episodeStatus
+                        DB.updateEpisodeViewCount episodeKey (if episodeStatus then 1 else (-1))
                     selectRep $ do
                         let status = "ok" :: Text
                         provideRep $ return $ object
@@ -43,6 +42,27 @@ postSetEpisodeStatusR = do
         _ -> sendResponseStatus HT.status500 ("Expected JSON request" :: Text)
 
 
+postSetShowSubscriptionStatusR :: Handler TypedContent
+postSetShowSubscriptionStatusR = do
+    accId <- YA.requireAuthId
+    setShowSubscriptionStatusRequest <- requireJsonBody
+    case setShowSubscriptionStatusRequest of
+        Object m -> do
+            let mShowId = HM.lookup "showId" m
+            let mShowSubscriptionStatus = HM.lookup "status" m
+            case (mShowId, mShowSubscriptionStatus) of
+                (Just (Number showIdSci), Just (Bool status)) -> do
+                    let showId = truncate showIdSci
+                    let showKey = Key $ PersistInt64 showId
+                    now <- liftIO getCurrentTime
+                    runDB $ do
+                        DB.updateShowSubscriptionCount showKey (if status then 1 else (-1))
+                        DB.setSubscriptionStatus now accId showKey status
+                    selectRep $ do
+                        let _status = "ok" :: Text
+                        provideRep $ return $ object
+                            [ "status" .= _status ]
+                _ -> sendResponseStatus HT.status500 ("Invalid JSON request" :: Text)
+        _ -> sendResponseStatus HT.status500 ("Expected JSON request" :: Text)
 
---    return (TypedContent "application/json" (toContent s))
 

@@ -4,14 +4,22 @@
 module Episodes.DB (
     checkPassword,
     createAccount,
+    createEpisode,
+    createSeason,
+    deleteEpisodeByEpisodeCode,
     getEpisodesForICal,
     getEpisodeStatusesByShowAndUser,
     getPopularShowsEpisodesByMonth,
     getPopularShows,
     getPopularEpisodes,
     getProfile,
+    getShowData,
+    getShowsToUpdate,
+    setSubscriptionStatus,
     updateEpisodeStatus,
     updateEpisodeViewCount,
+    updateShowLastUpdate,
+    updateShowNextUpdate,
     updateShowSubscriptionCount
 ) where
 
@@ -31,6 +39,13 @@ import qualified Data.Text as T
 import qualified Debug.Trace as DT
 
 import Model
+
+
+-- class ( MonadSqlPersist m
+--       , PersistStore m
+--       , PersistQuery m
+--       , PersistUnique m
+--       , PersistMonadBackend m ~ SqlBackend ) => Query m
 
 
 selectPopularEpisodesSql :: Text
@@ -103,6 +118,86 @@ selectEpisodesForICal = [st|
 |]
 
 
+selectShowsToUpdate :: Text
+selectShowsToUpdate = [st|
+    select ??
+    from show
+    where
+        next_update <= current_timestamp
+        and tv_rage_id is not null
+    limit ?
+|]
+
+
+selectShowData :: Text
+selectShowData = [st|
+    select ??, ??, ??
+    from
+        show
+        join season on (season.show = show.id)
+        join episode on (episode.season = season.id)
+    where
+        show.id = ?
+|]
+
+
+deleteEpisodeStatusesByEpisodeCodeSql :: Text
+deleteEpisodeStatusesByEpisodeCodeSql = [st|
+    delete from episode_status
+    where
+        id in (
+            select episode_status.id
+            from
+                episode_status join episode on (episode_status.episode = episode.id)
+                join season on (season.id = episode.season)
+                join show on (season.show = show.id)
+            where
+                show.id = ?
+                and season.number = ?
+                and episode.number = ?
+        )
+|]
+
+
+deleteEpisodeByEpisodeCodeSql :: Text
+deleteEpisodeByEpisodeCodeSql = [st|
+    delete from episode
+    where id in (
+        select episode.id
+        from
+            episode
+            join season on (season.id = episode.season)
+            join show on (show.id = season.show)
+        where
+            show.id = ?
+            and season.id = ?
+            and episode.id = ?
+    )
+|]
+
+
+insertEpisodeSql :: Text
+insertEpisodeSql = [st|
+    insert into episode (
+        title,
+        number,
+        season,
+        air_date_time,
+        view_count,
+        created,
+        modified
+    ) values (
+        ?,
+        ?,
+        (select id from season where season.show = ? and season.number = ?),
+        ?,
+        0,
+        ?,
+        ?
+    )
+|]
+
+
 getPopularShows :: (PersistQuery m, PersistEntityBackend Show ~ PersistMonadBackend m)
                 => Int
                 -> m [Entity Show]
@@ -129,6 +224,27 @@ updateEpisodeViewCount episodeId change = update episodeId [EpisodeViewCount +=.
 
 updateShowSubscriptionCount :: (PersistQuery m, PersistMonadBackend m ~ SqlBackend) => ShowId -> Int -> m ()
 updateShowSubscriptionCount showId change = update showId [ShowSubscriptionCount +=. change]
+
+
+setSubscriptionStatus :: (PersistUnique m, PersistMonadBackend m ~ SqlBackend)
+                      => UTCTime
+                      -> AccountId
+                      -> ShowId
+                      -> Bool
+                      -> m ()
+setSubscriptionStatus now accId showId status = do
+    case status of
+        True -> do
+            -- insert new
+            let subscription = Subscription {
+                    subscriptionAccount = accId,
+                    subscriptionShow = showId,
+                    subscriptionCreated = now,
+                    subscriptionModified = now }
+            insert_ subscription
+        False -> do
+            -- delete
+            deleteBy $ UniqueSubscriptionAccountShow accId showId
 
 
 getEpisodeStatusesByShowAndUser :: (MonadSqlPersist m, MonadResource m) => ShowId -> AccountId -> m [Entity EpisodeStatus]
@@ -233,11 +349,78 @@ getProfile accId = do
         _ -> return Nothing
 
 
+getShowsToUpdate _cnt = rawSql selectShowsToUpdate [toPersistValue _cnt]
 
 
+getShowData :: (MonadResource m, MonadSqlPersist m, PersistStore m, PersistQuery m, PersistUnique m, PersistMonadBackend m ~ SqlBackend)
+            => ShowId
+            -> m [(Entity Show, Entity Season, Entity Episode)]
+getShowData showKey = rawSql selectShowData [toPersistValue showKey]
 
 
+updateShowLastUpdate :: (MonadResource m, MonadSqlPersist m, PersistStore m, PersistQuery m, PersistUnique m, PersistMonadBackend m ~ SqlBackend)
+                     => ShowId
+                     -> UTCTime
+                     -> m ()
+updateShowLastUpdate showKey time = update showKey [ShowLastUpdate =. time]
 
 
+updateShowNextUpdate :: (MonadResource m, MonadSqlPersist m, PersistStore m, PersistQuery m, PersistUnique m, PersistMonadBackend m ~ SqlBackend)
+                     => ShowId
+                     -> UTCTime
+                     -> m ()
+updateShowNextUpdate showKey time = update showKey [ShowNextUpdate =. time]
 
+
+-- | Delete episode and data that references given episode.
+-- episodeCode is a tuple of Integrals which are converted to Ints in impl - I'd prefer to expose
+-- generic interface. If we're outside of range, then we'll fail.
+deleteEpisodeByEpisodeCode :: (MonadSqlPersist m, Integral a, Integral b)
+                           => ShowId
+                           -> (a, b)
+                           -> m ()
+deleteEpisodeByEpisodeCode showId episodeCode = do
+    let sc = fst episodeCode
+    let ec = snd episodeCode
+    let isc = fromIntegral sc :: Int
+    let iec = fromIntegral ec :: Int
+    let _pcl = [toPersistValue showId, toPersistValue isc, toPersistValue iec]
+    rawExecute deleteEpisodeStatusesByEpisodeCodeSql _pcl
+    rawExecute deleteEpisodeByEpisodeCodeSql _pcl
+
+
+createSeason :: (PersistStore m, PersistMonadBackend m ~ SqlBackend)
+             => ShowId
+             -> UTCTime
+             -> Integer
+             -> m ()
+createSeason showId now _seasonNumber = insert_ season
+    where
+        season = Season { seasonNumber = fromIntegral _seasonNumber
+                        , seasonShow = showId
+                        , seasonCreated = now
+                        , seasonModified = now }
+
+
+createEpisode :: (MonadSqlPersist m, Integral a, Integral b)
+              => ShowId
+              -> a
+              -> b
+              -> Text
+              -> UTCTime
+              -> UTCTime
+              -> m ()
+createEpisode _showId _seasonNumber _episodeNumber _title _airDateTime _now = rawExecute insertEpisodeSql params
+    where
+        _seasonNumberInt = fromIntegral _seasonNumber :: Int
+        _episodeNumberInt = fromIntegral _episodeNumber :: Int
+        params = [
+                toPersistValue _title,
+                toPersistValue _episodeNumberInt,
+                toPersistValue _showId,
+                toPersistValue _seasonNumberInt,
+                toPersistValue _airDateTime,
+                toPersistValue _now,
+                toPersistValue _now
+            ]
 

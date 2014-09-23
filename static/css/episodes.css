@@ -8,7 +8,7 @@ div#nav {
 	border: 1px solid black;
 }
 
-table.show-detail {
+table.show-details {
     border-collapse: collapse;
 }
 
@@ -50,3 +50,30 @@ table.big-calendar > tbody > tr > td > table > tbody > tr > td.checkbox-td {
     font-size: 72%;
     padding: 2pt;
 }
+
+
+/* Show subscriptions */
+
+div.subscribed tr.episodes-show.not-subscribed {
+    display: none;
+}
+
+div.not-subscribed tr.episodes-show.subscribed {
+    display: none;
+}
+
+.subscribe-show, .unsubscribe-show {
+    width: 2.5em;
+    max-width: 2.5em;
+    min-width: 2.5em;
+    margin: 1pt;
+}
+
+tr.subscribed .subscribe-show {
+    display: none;
+}
+
+tr.not-subscribed .unsubscribe-show {
+    display: none;
+}
+

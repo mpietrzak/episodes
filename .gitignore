@@ -17,3 +17,4 @@ episodes.sublime-workspace
 static/faygen-*.js
 tools/closure-compiler.jar
 bower_components
+.psci_modules
