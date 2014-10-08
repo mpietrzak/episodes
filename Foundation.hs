@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Foundation where
 
@@ -6,7 +7,7 @@ module Foundation where
 import Control.Applicative ((<$>))
 import Data.Text (Text)
 import Data.Time (getCurrentTime)
-import Database.Persist.Sql (SqlPersistT)
+import Database.Persist.Sql (SqlBackend)
 import Network.HTTP.Client.Conduit (Manager, HasHttpManager (getHttpManager))
 import Prelude
 import Text.Hamlet (hamletFile)
@@ -97,7 +98,7 @@ instance Yesod App where
                [ js_jquery_2_1_1_js
                , js_bootstrap_js ])
             $(widgetFile "default-layout")
-        giveUrlRenderer $(hamletFile "templates/default-layout-wrapper.hamlet")
+        withUrlRenderer $(hamletFile "templates/default-layout-wrapper.hamlet")
 
     -- This is done to provide an optimization for serving static files from
     -- a separate domain. Please see the staticRoot setting in Settings.hs
@@ -133,7 +134,7 @@ instance Yesod App where
 
 -- How to run database actions.
 instance YesodPersist App where
-    type YesodPersistBackend App = SqlPersistT
+    type YesodPersistBackend App = SqlBackend
     runDB = defaultRunDB persistConfig connPool
 instance YesodPersistRunner App where
     getDBRunner = defaultGetDBRunner connPool
@@ -165,6 +166,9 @@ instance YesodAuth App where
                     , authEpisodes checkPassword ]
 
     authHttpManager = httpManager
+
+
+instance YesodAuthPersist App
 
 
 instance YesodPureScript App

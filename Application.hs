@@ -1,4 +1,6 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE ViewPatterns #-}
+
 module Application
     ( makeApplication
     , getApplicationDev
@@ -7,9 +9,12 @@ module Application
 
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Thread.Delay (delay)
-import Control.Monad.Logger (runStdoutLoggingT)
+import Control.Monad.Logger (runLoggingT, runStderrLoggingT)
+import Control.Monad.Trans.Reader (ReaderT)
 import Control.Monad.Trans.Resource (runResourceT)
 import Data.Default (def)
+import Database.Persist.Sql (SqlBackend)
+import Database.Persist.Sql (runMigration)
 import Import
 import Network.HTTP.Client.Conduit (newManager)
 import Network.Wai.Logger (clockDateCacher)
@@ -88,9 +93,9 @@ makeFoundation conf = do
     let foundation = App conf s p manager dbconf logger _timezones _timezoneMap purs
 
     -- Perform database migration using our application's logging settings.
-    -- runLoggingT
-    --    (Database.Persist.runPool dbconf (runMigration migrateAll) p)
-    --    (messageLoggerSource foundation logger)
+    runLoggingT
+       (Database.Persist.runPool dbconf (runMigration migrateAll) p)
+       (messageLoggerSource foundation logger)
 
     _ <- forkIO $ scheduler dbconf p
 
@@ -110,6 +115,8 @@ getApplicationDev =
 -- This thread should never stop.
 -- Jobs are fired in separate threads.
 -- Uses DB pool.
+scheduler :: (PersistConfig c, PersistConfigBackend c ~ ReaderT SqlBackend)
+          => c -> PersistConfigPool c -> IO ()
 scheduler conf pool = do
         let _minute = 60 * 1000 * 1000
         -- let _day = 24 * 60 * _minute
@@ -118,5 +125,5 @@ scheduler conf pool = do
         scheduler conf pool
     where
         job = do
-            runResourceT $ runStdoutLoggingT $ runPool conf updateTVRageShows pool
+            runResourceT $ runStderrLoggingT $ runPool conf updateTVRageShows pool
 

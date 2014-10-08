@@ -11,7 +11,7 @@ import Data.Time.Clock
 import qualified Prelude
 
 
-share [mkPersist sqlOnlySettings]
+share [mkPersist sqlSettings, mkMigrate "migrateAll"]
     $(persistFileWith lowerCaseSettings "config/models")
 
 

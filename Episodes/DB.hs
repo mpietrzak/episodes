@@ -6,6 +6,7 @@ module Episodes.DB (
     createAccount,
     createEpisode,
     createSeason,
+    deleteEmptySeasons,
     deleteEpisodeByEpisodeCode,
     getEpisodesForICal,
     getEpisodeStatusesByShowAndUser,
@@ -24,7 +25,7 @@ module Episodes.DB (
 ) where
 
 
-import Control.Monad.Trans.Resource (MonadResource (..))
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Crypto.PBKDF.ByteString (sha1PBKDF2)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
@@ -36,16 +37,10 @@ import Text.Shakespeare.Text (st)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Base64 as BSB64
 import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
 import qualified Debug.Trace as DT
 
 import Model
-
-
--- class ( MonadSqlPersist m
---       , PersistStore m
---       , PersistQuery m
---       , PersistUnique m
---       , PersistMonadBackend m ~ SqlBackend ) => Query m
 
 
 selectPopularEpisodesSql :: Text
@@ -141,6 +136,24 @@ selectShowData = [st|
 |]
 
 
+deleteEmptySeasonsSql :: Text
+deleteEmptySeasonsSql = [st|
+    delete from season
+    where id in (
+      select season.id
+      from
+          show
+          join season on (season.show = show.id)
+          left join episode on (episode.season = season.id)
+      where
+          show.id = ?
+      group by show.id, season.id
+      having
+          count(episode.id) = 0
+    )
+|]
+
+
 deleteEpisodeStatusesByEpisodeCodeSql :: Text
 deleteEpisodeStatusesByEpisodeCodeSql = [st|
     delete from episode_status
@@ -198,40 +211,40 @@ insertEpisodeSql = [st|
 |]
 
 
-getPopularShows :: (PersistQuery m, PersistEntityBackend Show ~ PersistMonadBackend m)
+getPopularShows :: MonadIO m
                 => Int
-                -> m [Entity Show]
+                -> SqlPersistT m [Entity Show]
 getPopularShows _count = selectList [] [Desc ShowSubscriptionCount, LimitTo _count]
 
 
-getPopularEpisodes :: (MonadSqlPersist m, MonadResource m)
+getPopularEpisodes :: MonadIO m
                    => Int
-                   -> m [(Entity Episode, Entity Season, Entity Show)]
+                   -> SqlPersistT m [(Entity Episode, Entity Season, Entity Show)]
 getPopularEpisodes _count = rawSql selectPopularEpisodesSql [toPersistValue _count]
 
 
-getPopularShowsEpisodesByMonth :: (MonadSqlPersist m, MonadResource m)
+getPopularShowsEpisodesByMonth :: (MonadIO m)
                                => Int
                                -> UTCTime
                                -> UTCTime
-                               -> m [(Entity Show, Entity Season, Entity Episode)]
+                               -> SqlPersistT m [(Entity Show, Entity Season, Entity Episode)]
 getPopularShowsEpisodesByMonth cnt t1 t2 = rawSql selectPopularShowsEpisodesByMonthSql [toPersistValue t1, toPersistValue t2, toPersistValue cnt]
 
 
-updateEpisodeViewCount :: (PersistQuery m, PersistMonadBackend m ~ SqlBackend) => EpisodeId -> Int -> m ()
+updateEpisodeViewCount :: MonadIO m => EpisodeId -> Int -> SqlPersistT m ()
 updateEpisodeViewCount episodeId change = update episodeId [EpisodeViewCount +=. change]
 
 
-updateShowSubscriptionCount :: (PersistQuery m, PersistMonadBackend m ~ SqlBackend) => ShowId -> Int -> m ()
+updateShowSubscriptionCount :: MonadIO m => ShowId -> Int -> SqlPersistT m ()
 updateShowSubscriptionCount showId change = update showId [ShowSubscriptionCount +=. change]
 
 
-setSubscriptionStatus :: (PersistUnique m, PersistMonadBackend m ~ SqlBackend)
+setSubscriptionStatus :: MonadIO m
                       => UTCTime
                       -> AccountId
                       -> ShowId
                       -> Bool
-                      -> m ()
+                      -> SqlPersistT m ()
 setSubscriptionStatus now accId showId status = do
     case status of
         True -> do
@@ -247,21 +260,22 @@ setSubscriptionStatus now accId showId status = do
             deleteBy $ UniqueSubscriptionAccountShow accId showId
 
 
-getEpisodeStatusesByShowAndUser :: (MonadSqlPersist m, MonadResource m) => ShowId -> AccountId -> m [Entity EpisodeStatus]
+getEpisodeStatusesByShowAndUser :: MonadIO m => ShowId -> AccountId -> SqlPersistT m [Entity EpisodeStatus]
 getEpisodeStatusesByShowAndUser showId userId = rawSql selectEpisodeStatusesByShowAndUser [toPersistValue showId, toPersistValue userId]
 
 
+getEpisodesForICal :: MonadIO m => Text -> SqlPersistT m [(Entity Show, Entity Season, Entity Episode)]
 getEpisodesForICal _cookie = rawSql selectEpisodesForICal [toPersistValue _cookie]
 
 
 -- Update episode status.
 -- If does not exist, then create new.
-updateEpisodeStatus :: (PersistQuery m, PersistUnique m, PersistMonadBackend m ~ SqlBackend)
+updateEpisodeStatus :: MonadIO m
                     => AccountId
                     -> EpisodeId
                     -> UTCTime
                     -> Bool
-                    -> m ()
+                    -> SqlPersistT m ()
 updateEpisodeStatus accountId episodeKey now status = do
     let newStatusText = case status of
             True -> "seen"
@@ -281,8 +295,8 @@ updateEpisodeStatus accountId episodeKey now status = do
     return ()
 
 
-createAccount :: (PersistStore m, PersistMonadBackend m ~ SqlBackend)
-              => Text -> Maybe Text -> UTCTime -> m (Key Account)
+createAccount :: MonadIO m
+              => Text -> Maybe Text -> UTCTime -> SqlPersistT m (Key Account)
 createAccount usernameOrEmail mPassword now = do
     let (_username, _email) = if T.any ((==) '@') usernameOrEmail
             then (Nothing, Just usernameOrEmail)
@@ -292,6 +306,7 @@ createAccount usernameOrEmail mPassword now = do
                       , accountPassword = mPassword
                       , accountAdmin = False
                       , accountAccessedApprox = now
+                      , accountViews = 0
                       , accountCreated = now
                       , accountModified = now }
     accId <- insert acc
@@ -302,11 +317,12 @@ createAccount usernameOrEmail mPassword now = do
 -- All legacy hashes (from previous DB) are pbkdf2.py "$p5k2$$" hashes (default iterations, random salt), so we don't support anything else.
 -- Haskell's pbkdf implementation is more generic than Python, so we have to build salt manually (Python's salt includes prefix etc).
 -- Returns True if given pass' hash matches the one from db.
-checkPassword :: (PersistUnique m, MonadResource m, PersistEntityBackend Account ~ PersistMonadBackend m)
+checkPassword :: MonadIO m
               => Text
               -> Text
-              -> m Bool
+              -> SqlPersistT m Bool
 checkPassword username password = do
+
     let rounds = 400
     let hashlen = 24
 
@@ -339,9 +355,9 @@ checkPassword username password = do
                 _ -> return False
 
 
-getProfile :: (PersistUnique m, PersistMonadBackend m ~ SqlBackend)
+getProfile :: MonadIO m
            => AccountId
-           -> m (Maybe Profile)
+           -> SqlPersistT m (Maybe Profile)
 getProfile accId = do
     mep <- getBy (UniqueProfileAccount accId)
     case mep of
@@ -349,36 +365,37 @@ getProfile accId = do
         _ -> return Nothing
 
 
+getShowsToUpdate :: MonadIO m => Int -> SqlPersistT m [Entity Show]
 getShowsToUpdate _cnt = rawSql selectShowsToUpdate [toPersistValue _cnt]
 
 
-getShowData :: (MonadResource m, MonadSqlPersist m, PersistStore m, PersistQuery m, PersistUnique m, PersistMonadBackend m ~ SqlBackend)
+getShowData :: MonadIO m
             => ShowId
-            -> m [(Entity Show, Entity Season, Entity Episode)]
+            -> SqlPersistT m [(Entity Show, Entity Season, Entity Episode)]
 getShowData showKey = rawSql selectShowData [toPersistValue showKey]
 
 
-updateShowLastUpdate :: (MonadResource m, MonadSqlPersist m, PersistStore m, PersistQuery m, PersistUnique m, PersistMonadBackend m ~ SqlBackend)
+updateShowLastUpdate :: MonadIO m
                      => ShowId
                      -> UTCTime
-                     -> m ()
+                     -> SqlPersistT m ()
 updateShowLastUpdate showKey time = update showKey [ShowLastUpdate =. time]
 
 
-updateShowNextUpdate :: (MonadResource m, MonadSqlPersist m, PersistStore m, PersistQuery m, PersistUnique m, PersistMonadBackend m ~ SqlBackend)
+updateShowNextUpdate :: MonadIO m
                      => ShowId
                      -> UTCTime
-                     -> m ()
+                     -> SqlPersistT m ()
 updateShowNextUpdate showKey time = update showKey [ShowNextUpdate =. time]
 
 
 -- | Delete episode and data that references given episode.
 -- episodeCode is a tuple of Integrals which are converted to Ints in impl - I'd prefer to expose
 -- generic interface. If we're outside of range, then we'll fail.
-deleteEpisodeByEpisodeCode :: (MonadSqlPersist m, Integral a, Integral b)
+deleteEpisodeByEpisodeCode :: (MonadIO m, Integral a, Integral b)
                            => ShowId
                            -> (a, b)
-                           -> m ()
+                           -> SqlPersistT m ()
 deleteEpisodeByEpisodeCode showId episodeCode = do
     let sc = fst episodeCode
     let ec = snd episodeCode
@@ -389,12 +406,14 @@ deleteEpisodeByEpisodeCode showId episodeCode = do
     rawExecute deleteEpisodeByEpisodeCodeSql _pcl
 
 
-createSeason :: (PersistStore m, PersistMonadBackend m ~ SqlBackend)
+createSeason :: MonadIO m
              => ShowId
              -> UTCTime
              -> Integer
-             -> m ()
-createSeason showId now _seasonNumber = insert_ season
+             -> SqlPersistT m ()
+createSeason showId now _seasonNumber = do
+    liftIO $ TIO.putStrLn $ T.concat $ ["inserting season ", T.pack $ show _seasonNumber, " of show ", T.pack $ show showId]
+    insert_ season
     where
         season = Season { seasonNumber = fromIntegral _seasonNumber
                         , seasonShow = showId
@@ -402,14 +421,20 @@ createSeason showId now _seasonNumber = insert_ season
                         , seasonModified = now }
 
 
-createEpisode :: (MonadSqlPersist m, Integral a, Integral b)
+deleteEmptySeasons :: MonadIO m => ShowId -> SqlPersistT m ()
+deleteEmptySeasons showId = rawExecute deleteEmptySeasonsSql params
+    where
+        params = [toPersistValue showId]
+
+
+createEpisode :: (MonadIO m, Integral a, Integral b)
               => ShowId
               -> a
               -> b
               -> Text
               -> UTCTime
               -> UTCTime
-              -> m ()
+              -> SqlPersistT m ()
 createEpisode _showId _seasonNumber _episodeNumber _title _airDateTime _now = rawExecute insertEpisodeSql params
     where
         _seasonNumberInt = fromIntegral _seasonNumber :: Int

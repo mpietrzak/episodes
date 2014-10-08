@@ -121,6 +121,7 @@ postProfileR = do
                                                        , profileModified = now }
                     _ -> Profile { profileTimezone = Just newProfileTimezone
                                  , profileAccount = authId
+                                 , profileEpisodeLinks = Nothing
                                  , profileCreated = now
                                  , profileModified = now
                                  , profileCookie = Just randomProfileCookie }

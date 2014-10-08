@@ -5,6 +5,7 @@ Account
     password Text Maybe
     admin Bool DEFAULT=False
     accessedApprox UTCTime
+    views Int
     created UTCTime
     modified UTCTime
     UniqueAccountNickname nickname !force
@@ -57,6 +58,7 @@ Profile
     account AccountId
     timezone Text Maybe
     cookie Text Maybe
+    episodeLinks Text Maybe
     created UTCTime
     modified UTCTime
     UniqueProfileAccount account

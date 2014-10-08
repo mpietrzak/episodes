@@ -15,6 +15,7 @@ import Prelude ( Bool (False, True)
 
 import Yesod ( HandlerT
              , TypedContent
+             , YesodDB
              , YesodPersist
              , YesodPersistBackend
              , getRouteToParent
@@ -38,7 +39,7 @@ loginAuthRoute :: AuthRoute
 loginAuthRoute = PluginR "episodes" ["login"]
 
 postLoginR :: (YesodPersist master, YesodAuth master)
-           => (Text -> Text -> YesodPersistBackend master (HandlerT master IO) Bool)
+           => (Text -> Text -> YesodDB master Bool)
            -> HandlerT Auth (HandlerT master IO) TypedContent
 postLoginR checkPassword = do
     tm <- getRouteToParent
@@ -57,7 +58,7 @@ postLoginR checkPassword = do
 
 
 authEpisodes :: (YesodPersist master, YesodAuth master)
-             => (Text -> Text -> YesodPersistBackend master (HandlerT master IO) Bool)
+             => (Text -> Text -> YesodDB master Bool)
              -> AuthPlugin master
 authEpisodes checkPassword = AuthPlugin name dispatch widget
     where

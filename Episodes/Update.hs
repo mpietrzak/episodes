@@ -11,7 +11,6 @@ import Prelude hiding (Show)
 import Control.Concurrent (forkIO)
 import Control.Monad (forM_)
 import Control.Monad.IO.Class
-import Control.Monad.Trans.Resource
 import Data.Text (Text)
 import Data.Time (UTCTime, addUTCTime, getCurrentTime)
 import Database.Persist
@@ -22,13 +21,14 @@ import qualified Data.Text as T
 -- import qualified Data.Time as DT
 
 import Model
+import Episodes.Trace (traceValue)
 import qualified Data.Text.IO as TIO
 import qualified Episodes.DB as DB
 import qualified TVRage as TVR
 
 
 showCountPerUpdate :: Int
-showCountPerUpdate = 2
+showCountPerUpdate = 128
 
 
 class LogParam a where
@@ -48,8 +48,8 @@ _log _lp = liftIO $ TIO.putStrLn (toText _lp)
 
 
 -- | Job that updates TVRage shows, executed from time to time (eg once per day).
-updateTVRageShows :: (PersistStore m, PersistQuery m, PersistUnique m, MonadSqlPersist m, MonadResource m, PersistMonadBackend m ~ SqlBackend)
-                  => m ()
+updateTVRageShows :: MonadIO m
+                  => SqlPersistT m ()
 updateTVRageShows = do
         _log ("updateTVRageShows" :: Text)
 
@@ -68,8 +68,12 @@ updateTVRageShows = do
             let _show = entityVal showEntity
 
             case showTvRageId _show of
-                Nothing -> return ()
+                Nothing -> error "this show has no TVRage Id"
                 Just _tvrid -> do
+
+                    _log ["title: ", showTitle _show]
+                    _log ["tv rage id: ", T.pack $ show _tvrid]
+
                     -- lock show by updating "last_update"
                     DB.updateShowLastUpdate _showKey now
 
@@ -93,12 +97,18 @@ updateTVRageShows = do
         _fork _a = liftIO $ forkIO _a
 
 
-combineLocalAndRemoteShowData :: (PersistQuery m, PersistUnique m, MonadSqlPersist m, MonadResource m, PersistMonadBackend m ~ SqlBackend)
+-- combineLocalAndRemoteShowData :: (PersistQuery m, PersistUnique m, MonadSqlPersist m, MonadResource m, PersistMonadBackend m ~ SqlBackend)
+--                               => Entity Show
+--                               -> [(Entity Show, Entity Season, Entity Episode)]
+--                               -> TVR.FullShowInfo
+--                               -> UTCTime
+--                               -> [m ()]
+combineLocalAndRemoteShowData :: MonadIO m
                               => Entity Show
                               -> [(Entity Show, Entity Season, Entity Episode)]
                               -> TVR.FullShowInfo
                               -> UTCTime
-                              -> [m ()]
+                              -> [SqlPersistT m ()]
 combineLocalAndRemoteShowData _showEntity _local _remote _now = actions
     where
         actions = concat [deletes, updates, inserts]
@@ -107,7 +117,9 @@ combineLocalAndRemoteShowData _showEntity _local _remote _now = actions
         _show = entityVal _showEntity
         _showId = entityKey _showEntity
 
-        deletes = map (DB.deleteEpisodeByEpisodeCode _showId) (HS.toList _toDeleteEpisodeCodes)
+        deletes = concat [
+            [_emptySeasonsDelete],
+            map (DB.deleteEpisodeByEpisodeCode _showId) (HS.toList _toDeleteEpisodeCodes)]
         inserts = concat [seasonInserts, episodeInserts]
 
         seasonInserts = map (DB.createSeason _showId _now) (HS.toList _toInsertSeasonNumbers)
@@ -122,10 +134,11 @@ combineLocalAndRemoteShowData _showEntity _local _remote _now = actions
                         _airDateTime = TVR.episodeAirDateTime _episode
 
         -- seasons
-        _localSeasonNumbers = HS.fromList $ map (fromIntegral . seasonNumber . entityVal . (\(_, _s, _) -> _s)) _local :: HS.HashSet Integer
-        _remoteSeasonNumbers = HS.fromList $ map TVR.seasonNumber (TVR.fullShowInfoSeasons _remote) :: HS.HashSet Integer
+        _localSeasonNumbers = traceValue "local season numbers" $ HS.fromList $ map (fromIntegral . seasonNumber . entityVal . (\(_, _s, _) -> _s)) _local :: HS.HashSet Integer
+        _remoteSeasonNumbers = traceValue "remote season numbers" $ HS.fromList $ map TVR.seasonNumber (TVR.fullShowInfoSeasons _remote) :: HS.HashSet Integer
         _allSeasonNumbers = HS.union _localSeasonNumbers _remoteSeasonNumbers
-        _toInsertSeasonNumbers = HS.difference _allSeasonNumbers _localSeasonNumbers
+        _toInsertSeasonNumbers = traceValue "to insert season numbers" (HS.difference _allSeasonNumbers _localSeasonNumbers)
+        _emptySeasonsDelete = DB.deleteEmptySeasons _showId
 
         -- episodes
         _localEpisodeCodes = HS.fromList $ map _getShowEntityRowEpisodeCode _local

@@ -10,11 +10,15 @@ import Prelude
 import Yesod
 import Data.Text (Text)
 import Data.Time (getCurrentTime)
+import Database.Persist
+import Database.Persist.Class
+import Database.Persist.Sql
 import qualified Data.HashMap.Strict as HM
 import qualified Network.HTTP.Types as HT
 import qualified Yesod.Auth as YA
 
 import Foundation
+import Model
 import qualified Episodes.DB as DB
 
 
@@ -28,8 +32,8 @@ postSetEpisodeStatusR = do
             let mEpisodeStatus = HM.lookup "episodeStatus" m
             case (mEpisodeId, mEpisodeStatus) of
                 (Just (Number episodeIdScientific), Just (Bool episodeStatus)) -> do
-                    let episodeId = truncate episodeIdScientific -- no point to be strict
-                    let episodeKey = Key $ PersistInt64 episodeId
+                    let episodeId = truncate episodeIdScientific
+                    let episodeKey = toSqlKey episodeId :: EpisodeId
                     now <- liftIO getCurrentTime
                     runDB $ do
                         DB.updateEpisodeStatus accId episodeKey now episodeStatus
@@ -53,7 +57,7 @@ postSetShowSubscriptionStatusR = do
             case (mShowId, mShowSubscriptionStatus) of
                 (Just (Number showIdSci), Just (Bool status)) -> do
                     let showId = truncate showIdSci
-                    let showKey = Key $ PersistInt64 showId
+                    let showKey = toSqlKey showId :: ShowId
                     now <- liftIO getCurrentTime
                     runDB $ do
                         DB.updateShowSubscriptionCount showKey (if status then 1 else (-1))
