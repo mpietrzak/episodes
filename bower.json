@@ -12,5 +12,11 @@
     "bower_components",
     "test",
     "tests"
-  ]
+  ],
+  "dependencies": {
+    "purescript-globals": "*",
+    "purescript-jquery": "*",
+    "purescript-lists": "*",
+    "purescript-strings": "*"
+  }
 }

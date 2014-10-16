@@ -4,13 +4,14 @@
 module Handler.Calendar where
 
 
+import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Trans.Class (lift)
+import           Data.Bool (bool)
 import           Data.Function (on)
 import           Data.List (groupBy)
-import           Data.Maybe (mapMaybe)
 import           Data.Text (Text)
-import           Database.Persist (Entity, entityKey, entityVal, fromPersistValue, toPersistValue)
-import           Database.Persist.Sql (Single(..), rawSql)
+import           Database.Persist (Entity(Entity), entityKey, entityVal)
+-- import           Database.Persist.Sql (Single(..), rawSql)
 import           Prelude hiding (Show)
 import           Text.Shakespeare.Text (st)
 import           Yesod (Html, addScript, defaultLayout, runDB, setTitle, toPathPiece)
@@ -24,8 +25,8 @@ import qualified Data.Time.LocalTime as TLT
 import qualified Data.Time.Zones as TZ
 
 import Foundation
-import Episodes.Common (getUserTimeZone)
-import Episodes.DB (getPopularShowsEpisodesByMonth)
+import Episodes.Common (forceLazyText, formatEpisodeCode, getUserEpisodeLinks, getUserTimeZone)
+import Episodes.DB (getPopularShowsEpisodesByMonth, getUserShowsEpisodesByMonth)
 import Episodes.Format (formatMonth)
 
 import Model
@@ -45,7 +46,8 @@ selectEpisodesForCalendarSql = [st|
         end as episode_seen,
         episode.air_date_time,
         episode.id,
-        show.id
+        show.id,
+        show.tv_rage_id
     from
          subscription join show on (subscription.show = show.id)
          join season on (season.show = show.id)
@@ -70,7 +72,8 @@ data CalendarEpisode = CalendarEpisode { calendarEpisodeTitle :: Text
                                        , calendarEpisodeSeen :: Bool
                                        , calendarEpisodeTime :: TLT.LocalTime
                                        , calendarEpisodeId :: EpisodeId
-                                       , calendarEpisodeShowId :: ShowId }
+                                       , calendarEpisodeShowId :: ShowId
+                                       , calendarEpisodeTVRageId :: Maybe Integer }
 
 
 data Day = Day { dayEpisodes :: [CalendarEpisode]
@@ -80,6 +83,8 @@ data Day = Day { dayEpisodes :: [CalendarEpisode]
 data Week = Week { weekDays :: [Day] }
 
 
+-- | Full weeks of days for by month, so some days are in fact not from this month.
+-- For example if this month ends on monday, then all other days will be from next month.
 data Month = Month { monthWeeks :: [Week] }
 
 
@@ -144,20 +149,25 @@ createCalendar year month episodes = calMonth
         calMonth = Month { monthWeeks = epCalWeeks }
 
 
--- Convert (Show, Season, Episode) to CalendarEpisode.
-showSeasonEpisodeToCalendarEpisode :: TZ.TZ -> (Entity Show, Entity Season, Entity Episode) -> CalendarEpisode
-showSeasonEpisodeToCalendarEpisode tz (showEntity, seasonEntity, episodeEntity) = CalendarEpisode { calendarEpisodeTitle = episodeTitle _episode
-                                                                                                  , calendarEpisodeShowTitle = showTitle _show
-                                                                                                  , calendarEpisodeSeasonNumber = seasonNumber _season
-                                                                                                  , calendarEpisodeNumber = episodeNumber _episode
-                                                                                                  , calendarEpisodeSeen = False  -- for unauthenticated user every _episode is not seen
-                                                                                                  , calendarEpisodeTime = TZ.utcToLocalTimeTZ tz (episodeAirDateTime _episode)
-                                                                                                  , calendarEpisodeId = entityKey episodeEntity
-                                                                                                  , calendarEpisodeShowId = entityKey showEntity }
+-- Convert data returned from DB to helper CalendarEpisode.
+showSeasonEpisodeToCalendarEpisode :: TZ.TZ -> (Entity Show, Entity Season, Entity Episode, Maybe (Entity EpisodeStatus)) -> CalendarEpisode
+showSeasonEpisodeToCalendarEpisode tz (showEntity, seasonEntity, episodeEntity, maybeEpisodeStatus) = _ce
     where
+        _ce = CalendarEpisode { calendarEpisodeTitle = episodeTitle _episode
+                              , calendarEpisodeShowTitle = showTitle _show
+                              , calendarEpisodeSeasonNumber = seasonNumber _season
+                              , calendarEpisodeNumber = episodeNumber _episode
+                              , calendarEpisodeSeen = _isSeen maybeEpisodeStatus
+                              , calendarEpisodeTime = TZ.utcToLocalTimeTZ tz (episodeAirDateTime _episode)
+                              , calendarEpisodeId = entityKey episodeEntity
+                              , calendarEpisodeShowId = entityKey showEntity
+                              , calendarEpisodeTVRageId = (fmap fromIntegral) (showTvRageId _show) }
         _episode = entityVal episodeEntity
         _show = entityVal showEntity
         _season = entityVal seasonEntity
+        _isSeen _mestatus = case _mestatus of
+            Just (Entity _ _status) -> (episodeStatusStatus _status == "seen")
+            _ -> False
 
 
 getHomeR :: Handler Html
@@ -179,12 +189,17 @@ getCalendarR = do
 getCalendarMonthR :: Int -> Int -> Handler Html
 getCalendarMonthR year month = do
     ma <- maybeAuthId
+    now <- liftIO C.getCurrentTime
 
     timeZone <- getUserTimeZone
 
+    let localTime = TZ.utcToLocalTimeTZ timeZone now
+    let localDay = TLT.localDay localTime
+    let isToday = (==) localDay
+
     -- convert start and end of month to UTC times
     let d1 = C.fromGregorian (toInteger year) month 1 -- eg 2012 05 01
-    let d2 = C.addGregorianMonthsClip 1 d1            -- eg 2012 05 01
+    let d2 = C.addGregorianMonthsClip 1 d1            -- eg 2012 06 01
 
     let lt1 = TLT.LocalTime { TLT.localDay = d1, TLT.localTimeOfDay = TLT.midnight }
     let lt2 = TLT.LocalTime { TLT.localDay = d2, TLT.localTimeOfDay = TLT.midnight }
@@ -192,21 +207,28 @@ getCalendarMonthR year month = do
     let utc1 = TZ.localTimeToUTCTZ timeZone lt1
     let utc2 = TZ.localTimeToUTCTZ timeZone lt2
 
-    calendarEpisodeRows <- case ma of
-        Just authId -> do
-            let sql = selectEpisodesForCalendarSql
-            let params = [toPersistValue authId, toPersistValue authId, toPersistValue utc1, toPersistValue utc2]
-            runDB $ rawSql sql params
-        Nothing -> return []
+    -- calendarEpisodeRows <- case ma of
+    --     Just authId -> do
+    --         let sql = selectEpisodesForCalendarSql
+    --         let params = [toPersistValue authId, toPersistValue authId, toPersistValue utc1, toPersistValue utc2]
+    --         runDB $ rawSql sql params
+    --     Nothing -> return []
 
     popularCalendarEpisodes <- case ma of
         Just _ -> return []
         Nothing -> do
             sse <- runDB $ getPopularShowsEpisodesByMonth 32 utc1 utc2
-            return $ map (showSeasonEpisodeToCalendarEpisode timeZone) sse
+            let sses = map (\(_show, _season, _episode) -> (_show, _season, _episode, Nothing)) sse
+            return $ map (showSeasonEpisodeToCalendarEpisode timeZone) sses
+
+    userCalendarEpisodes <- case ma of
+        Nothing -> return []
+        Just _acc -> do
+            sses <- runDB $ getUserShowsEpisodesByMonth _acc utc1 utc2
+            return $ map (showSeasonEpisodeToCalendarEpisode timeZone) sses
 
     let calendarEpisodes = case ma of
-            Just _ -> mapMaybe (calEpRowToMaybeCalEp timeZone) calendarEpisodeRows
+            Just _ -> userCalendarEpisodes
             Nothing -> popularCalendarEpisodes
 
     let calendar = createCalendar (toInteger year) month calendarEpisodes
@@ -214,56 +236,10 @@ getCalendarMonthR year month = do
     let prevMonth = C.addGregorianMonthsClip (-1) (C.fromGregorian (toInteger year) month 1)
     let nextMonth = C.addGregorianMonthsClip 1 (C.fromGregorian (toInteger year) month 1)
 
+    episodeLinks <- getUserEpisodeLinks ma
+
     defaultLayout $ do
         setTitle "Episodes"
         addScript $ PureScriptR $ getPureScriptRoute ["Calendar"]
         $(widgetFile "calendar")
-
-
-    where
-        -- TODO: gather custom SQL results using Persist's machinery
-        calEpRowToMaybeCalEp tz row =
-            case (_mTitle,
-                    _mShowTitle,
-                    _mSeasonNumber,
-                    _mEpisodeNumber,
-                    _mEpisodeSeen,
-                    _mEpisodeTime,
-                    _mEpisodeId,
-                    _mShowId) of
-                (Just _title,
-                    Just _showTitle,
-                    Just _seasonNumber,
-                    Just _episodeNumber,
-                    Just _episodeSeen,
-                    Just _episodeTime,
-                    Just _episodeId,
-                    Just _showId) -> Just CalendarEpisode { calendarEpisodeTitle = _title
-                                                          , calendarEpisodeShowTitle = _showTitle
-                                                          , calendarEpisodeSeasonNumber = _seasonNumber
-                                                          , calendarEpisodeNumber = _episodeNumber
-                                                          , calendarEpisodeSeen = case _episodeSeen of
-                                                                                     1 -> True
-                                                                                     _ -> False
-                                                          , calendarEpisodeTime = TZ.utcToLocalTimeTZ tz _episodeTime
-                                                          , calendarEpisodeId = _episodeId
-                                                          , calendarEpisodeShowId = _showId }
-                _ -> Nothing
-            where
-                (_pTitle, _pShowTitle, _pSeasonNumber, _pEpisodeNumber, _pEpisodeSeen, _pEpisodeTime, _pEpisodeId, _pShowId) = row
-
-                (_mTitle :: Maybe Text) = fromSinglePersistValueToMaybe _pTitle
-                (_mShowTitle :: Maybe Text) = fromSinglePersistValueToMaybe _pShowTitle
-                _mSeasonNumber = fromSinglePersistValueToMaybe _pSeasonNumber
-                _mEpisodeNumber = fromSinglePersistValueToMaybe _pEpisodeNumber
-                (_mEpisodeSeen :: Maybe Int) = fromSinglePersistValueToMaybe _pEpisodeSeen
-                _mEpisodeTime = fromSinglePersistValueToMaybe _pEpisodeTime
-                (_mEpisodeId :: Maybe EpisodeId) = fromSinglePersistValueToMaybe _pEpisodeId
-                (_mShowId :: Maybe ShowId) = fromSinglePersistValueToMaybe _pShowId
-
-                fromSinglePersistValueToMaybe = eitherToMaybe . fromPersistValue . unSingle
-                eitherToMaybe e = case e of
-                                    Left _ -> Nothing
-                                    Right r -> r
-
 

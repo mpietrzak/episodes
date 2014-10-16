@@ -24,7 +24,7 @@ import Data.Time.Zones (TZ)
 import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Database.Persist
-import qualified Debug.Trace as DT
+-- import qualified Debug.Trace as DT
 
 import Episodes.Auth (authEpisodes)
 import Episodes.DB (checkPassword, createAccount)
@@ -149,7 +149,7 @@ instance YesodAuth App where
     logoutDest _ = HomeR
 
     getAuthId creds = runDB $ do
-        let ident = DT.trace ("creds ident: " ++ show (credsIdent creds) ++ ", creds plugin: " ++ show (credsPlugin creds) ++ ", creds extra: " ++ show (credsExtra creds)) $ credsIdent creds
+        let ident = credsIdent creds
         let getter = case T.any ((==) '@') ident of
                 True -> getBy . UniqueAccountEmail . Just
                 False -> getBy . UniqueAccountNickname . Just

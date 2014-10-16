@@ -70,9 +70,14 @@ widgetFile = (if development then widgetFileReload
 data Extra = Extra
     { extraCopyright :: Text
     , extraAnalytics :: Maybe Text -- ^ Google Analytics
+    , extraUpdateInterval :: Int
+    , extraUpdateCount :: Int
     } deriving Show
 
 parseExtra :: DefaultEnv -> Object -> Parser Extra
 parseExtra _ o = Extra
     <$> o .:  "copyright"
     <*> o .:? "analytics"
+    <*> o .:? "update-interval" .!= 3600
+    <*> o .:? "update-count" .!= 8
+

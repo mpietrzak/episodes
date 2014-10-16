@@ -2,16 +2,22 @@
 -- |Common stuff used in many places, utility functions only, no business logic.
 module Episodes.Common (
     choose,
+    getUserEpisodeLinks,
     getUserTimeZone,
-    forceText
+    forceText,
+    forceLazyText,
+    formatEpisodeCode
 ) where
 
 
 import Prelude
 import Data.Text (Text)
+import Formatting
 import Yesod
 import Yesod.Auth (maybeAuthId)
 import qualified Data.Map.Strict as M
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
 import qualified Data.Time.Zones as TZ
 
 import Foundation
@@ -40,12 +46,44 @@ getUserTimeZone = do
         Nothing -> return TZ.utcTZ
 
 
+defaultUserEpisodeLinks = T.intercalate "\n" [
+        "https://www.google.com/search?q={{show.title}}+{{episode.code}}",
+        "http://tv.com/search?q={{show.title}}+{{episode.title}}",
+        "http://www.tvrage.com/search.php?search={{show.title}}+{{episode.code}}"
+    ]
+
+
+getUserEpisodeLinks :: Maybe AccountId -> Handler Text
+getUserEpisodeLinks ma = do
+    case ma of
+        Nothing -> return defaultUserEpisodeLinks
+        Just _a -> do
+            mprofile <- runDB $ getProfile _a
+            case mprofile of
+                Nothing -> return defaultUserEpisodeLinks
+                Just _p -> do
+                    let mEpisodeLinks = profileEpisodeLinks _p
+                    case mEpisodeLinks of
+                        Nothing -> return defaultUserEpisodeLinks
+                        Just _l -> return _l
+
 
 -- | Helper for hamlet
 forceText :: Text -> Text
 forceText = id
 
 
+forceLazyText :: TL.Text -> TL.Text
+forceLazyText = id
+
+
 -- | Helper for hamlet
 choose :: Bool -> a -> a -> a
 choose t x y = if t then x else y
+
+
+formatEpisodeCode :: (Integral a, Integral b) => a -> b -> TL.Text
+formatEpisodeCode s e = format ("s" % left 2 '0' % "e" % left 2 '0') si ei
+    where
+        si = fromIntegral s :: Int
+        ei = fromIntegral e :: Int

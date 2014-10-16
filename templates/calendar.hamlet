@@ -1,3 +1,4 @@
+
 <div class="calendar hidden-xs">
     <table class="big-calendar">
         <tbody>
@@ -20,33 +21,43 @@
             $forall week <- monthWeeks calendar
                 <tr>
                     $forall day <- weekDays week
-                        <td class="day">
-                            #{show (dayDay day)}
+                        $with dayClass <- forceLazyText $ bool "day" "day today" (isToday (dayDay day))
+                            <td class="dayHeader #{dayClass}">
+                                #{show (dayDay day)}
                 <tr>
                     $forall day <- weekDays week
-                        <td class="episodes" style="height: 1em">
-                            $with eps <- dayEpisodes day
-                                $case eps
-                                    $of []
-                                    $of _
-                                        <table>
-                                            <tbody>
-                                                $forall episode <- eps
-                                                    $with i <- toPathPiece $ calendarEpisodeId episode
-                                                        <tr class="episode" id="episode-#{i}">
-                                                            <td class="checkbox-td">
-                                                                <input type="hidden" name="episode-id" class="episode-id" value="#{i}">
-                                                                $case calendarEpisodeSeen episode
-                                                                    $of True
-                                                                        <input type="checkbox" class="episode-status checkbox" checked>
-                                                                    $of False
-                                                                        <input type="checkbox" class="episode-status checkbox">
-                                                            <td>
-                                                                <a href="@{ShowDetailsR (calendarEpisodeShowId episode)}">#{calendarEpisodeShowTitle episode}#
-                                                                \: #{calendarEpisodeTitle episode}
+                        $with dayClass <- forceLazyText $ bool "day" "day today" (isToday (dayDay day))
+                            <td class="episodes #{dayClass}" style="height: 1em">
+                                $with eps <- dayEpisodes day
+                                    $case eps
+                                        $of []
+                                        $of _
+                                            <table>
+                                                <tbody>
+                                                    $forall episode <- eps
+                                                        $with i <- toPathPiece $ calendarEpisodeId episode
+                                                            <tr class="episode" id="episode-#{i}">
+                                                                <td class="checkbox-td">
+                                                                    <input type="hidden" name="episode-id" class="episode-id" value="#{i}">
+                                                                    $case calendarEpisodeSeen episode
+                                                                        $of True
+                                                                            <input type="checkbox" class="episode-status checkbox" checked>
+                                                                        $of False
+                                                                            <input type="checkbox" class="episode-status checkbox">
+                                                                <td>
+                                                                    <input type="hidden" class="episode-title" value="#{calendarEpisodeTitle episode}">
+                                                                    <input type="hidden" class="episode-show-title" value="#{calendarEpisodeShowTitle episode}">
+                                                                    <input type="hidden" class="episode-season-number" value="#{calendarEpisodeSeasonNumber episode}">
+                                                                    <input type="hidden" class="episode-number" value="#{calendarEpisodeNumber episode}">
+                                                                    <input type="hidden" class="episode-code" value="#{formatEpisodeCode (calendarEpisodeSeasonNumber episode) (calendarEpisodeNumber episode)}">
+                                                                    <a href="@{ShowDetailsR (calendarEpisodeShowId episode)}">#{calendarEpisodeShowTitle episode}#
+                                                                    \ #{formatEpisodeCode (calendarEpisodeSeasonNumber episode) (calendarEpisodeNumber episode)}#
+                                                                    \: #{calendarEpisodeTitle episode}
+                                                                    <a href="#" class="episode-links" style="opacity: 0">more
 
 <div class="small-calendar visible-xs">
     <p>small calendar
 
 
+<input id="user-episode-links" type="hidden" value="#{episodeLinks}"/>
 

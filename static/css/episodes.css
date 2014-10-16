@@ -1,4 +1,8 @@
 
+body {
+    padding-bottom: 8em;
+}
+
 body, td {
 	font-family: sans-serif;
 }
@@ -26,6 +30,9 @@ table.show-details tbody tr td.show-season {
     text-align: center;
 }
 
+
+/* Calendar */
+
 table.big-calendar {
     border-collapse: collapse;
 }
@@ -38,8 +45,24 @@ table.big-calendar > tbody > tr > td {
     padding: 1pt;
 }
 
-table.big-calendar > tbody > tr > td.day {
+table.big-calendar > tbody > tr > td.dayHeader {
+    text-align: center;
     font-size: 72%;
+}
+
+table.big-calendar > tbody > tr > td.dayHeader.day.today {
+    background-color: #f0f2f3;
+    font-weight: bold;
+    border-width: 2px 2px 1px 2px;
+}
+
+table.big-calendar > tbody > tr > td.episodes.day {
+    font-size: 85%;
+}
+
+table.big-calendar > tbody > tr > td.episodes.day.today {
+    background-color: #f6f7f8;
+    border-width: 1px 2px 2px 2px;
 }
 
 table.big-calendar > tbody > tr > td > table > tbody > tr > td {
@@ -49,6 +72,22 @@ table.big-calendar > tbody > tr > td > table > tbody > tr > td {
 table.big-calendar > tbody > tr > td > table > tbody > tr > td.checkbox-td {
     font-size: 72%;
     padding: 2pt;
+}
+
+table.big-calendar td.episodes div.episode-links {
+    box-shadow: 0.8pt 0.8pt 4pt #555;
+}
+
+table.big-calendar td.episodes div.episode-links > ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+table.big-calendar td.episodes div.episode-links > ul > li {
+    display: block;
+    margin: 0;
+    padding: 0;
 }
 
 

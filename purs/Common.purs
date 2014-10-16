@@ -3,7 +3,7 @@ module Common
 where
 
 
-import Prelude
+import Prelude hiding (show)
 import Control.Monad.Eff
 import Data.Maybe
 import Debug.Trace
@@ -48,9 +48,63 @@ foreign import find
     \  return function(ob) { \
     \    return function() { \
     \      return ob.find(sel); \
-    \    } \
+    \    }; \
     \  }; \
     \}" :: forall eff. String -> J.JQuery -> Eff (dom :: J.DOM | eff) J.JQuery
+
+
+foreign import jQueryShow
+    "function jQueryShow(duration) { \
+    \  return function(ob) { \
+    \    return function() { \
+    \      return ob.show(duration); \
+    \    }; \
+    \  }; \
+    \}" :: forall eff. Number -> J.JQuery -> Eff (dom :: J.DOM | eff) J.JQuery
+
+
+foreign import jQueryHide
+    "function jQueryHide(duration) { \
+    \  return function(ob) { \
+    \    return function() { \
+    \      return ob.hide(duration); \
+    \    }; \
+    \  }; \
+    \}" :: forall eff. Number -> J.JQuery -> Eff (dom :: J.DOM | eff) J.JQuery
+
+
+foreign import jQueryFadeIn
+    "function jQueryFadeIn(duration) { \
+    \  return function(ob) { \
+    \    return function() { \
+    \      return ob.fadeIn(duration); \
+    \    }; \
+    \  }; \
+    \}" :: forall eff. Number -> J.JQuery -> Eff (dom :: J.DOM | eff) J.JQuery
+
+
+foreign import jQueryFadeOut'
+    "function jQueryFadeOut$prime(duration) { \
+    \  return function(act) { \
+    \    return function(ob) { \
+    \      return function() { \
+    \        return ob.fadeOut(duration, act); \
+    \      }; \
+    \    }; \
+    \  }; \
+    \}" :: forall eff a. Number -> (forall e. Eff (dom :: J.DOM | e) a) -> J.JQuery -> Eff (dom :: J.DOM | eff) J.JQuery
+
+
+foreign import animate
+    "function animate(props) { \
+    \  return function(duration) { \
+    \    return function(ob) { \
+    \      return function() { \
+    \        return ob.animate(props, duration); \
+    \      }; \
+    \    }; \
+    \  }; \
+    \}" :: forall eff css. {| css} -> Number -> J.JQuery -> Eff (dom :: J.DOM | eff) Unit
 
 
 foreign import is
@@ -67,7 +121,7 @@ foreign import is
 foreign import getValueText
     "function getValueText(ob) { \
     \  return function() { \
-    \    return ob.val(); \
+    \    return (ob.val() || ''); \
     \  }; \
     \}" :: forall eff. J.JQuery -> Eff (dom :: J.DOM | eff) String
 
@@ -115,5 +169,18 @@ foreign import jqXhrFail
     \}" :: forall eff. JQueryXmlHttpRequest -> JQueryXmlHttpRequestFailHandler -> Eff eff JQueryXmlHttpRequest
 
 
+foreign import getJQueryEventPageX
+    "function getJQueryEventPageX(e) { \
+    \  return function() { \
+    \    return e.pageX; \
+    \  }; \
+    \}" :: forall eff. J.JQueryEvent -> Eff eff Number
 
+
+foreign import getJQueryEventPageY
+    "function getJQueryEventPageY(e) { \
+    \  return function() { \
+    \    return e.pageY; \
+    \  }; \
+    \}" :: forall eff. J.JQueryEvent -> Eff eff Number
 

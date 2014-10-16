@@ -86,7 +86,7 @@ makeFoundation conf = do
     _timezones <- loadCommonTimezones
     let _timezoneMap = M.fromList $ map (\ntz -> (ntzName ntz, ntzTZ ntz)) _timezones
 
-    let ypsOptions = def
+    let ypsOptions = def { ypsErrorDivId = Just "main" }
     purs <- createYesodPureScriptSite ypsOptions
 
     let logger = Yesod.Core.Types.Logger loggerSet' getter
@@ -97,7 +97,9 @@ makeFoundation conf = do
        (Database.Persist.runPool dbconf (runMigration migrateAll) p)
        (messageLoggerSource foundation logger)
 
-    _ <- forkIO $ scheduler dbconf p
+    let updateInterval = (extraUpdateInterval . appExtra) conf
+    let updateCount = extraUpdateCount (appExtra conf)
+    _ <- forkIO $ scheduler updateInterval updateCount dbconf p
 
     return foundation
 
@@ -116,14 +118,13 @@ getApplicationDev =
 -- Jobs are fired in separate threads.
 -- Uses DB pool.
 scheduler :: (PersistConfig c, PersistConfigBackend c ~ ReaderT SqlBackend)
-          => c -> PersistConfigPool c -> IO ()
-scheduler conf pool = do
-        let _minute = 60 * 1000 * 1000
-        -- let _day = 24 * 60 * _minute
-        _ <- forkIO job
-        _ <- delay _minute
-        scheduler conf pool
+          => Int -> Int -> c -> PersistConfigPool c -> IO ()
+scheduler _interval _count conf pool = loop
     where
+        loop = do
+            _ <- forkIO job
+            _ <- delay $ fromIntegral $ _interval * 1000 * 1000
+            loop
         job = do
             runResourceT $ runStderrLoggingT $ runPool conf updateTVRageShows pool
 

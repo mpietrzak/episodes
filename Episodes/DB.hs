@@ -16,6 +16,7 @@ module Episodes.DB (
     getProfile,
     getShowData,
     getShowsToUpdate,
+    getUserShowsEpisodesByMonth,
     setSubscriptionStatus,
     updateEpisodeStatus,
     updateEpisodeViewCount,
@@ -79,6 +80,27 @@ selectPopularShowsEpisodesByMonthSql = [st|
             order by subscription_count desc
             limit ?
         )
+|]
+
+
+-- | Select list of entities of show, season, episode, maybe episode status,
+-- based on account id and a range of timestamps.
+selectUserShowsEpisodesByMonthSql :: Text
+selectUserShowsEpisodesByMonthSql = [st|
+    select ??, ??, ??, ??
+    from
+        subscription join show on (subscription.show = show.id)
+        join season on (season.show = show.id)
+        join episode on (episode.season = season.id)
+        left join (
+            select *
+            from episode_status
+            where episode_status.account = ?) as episode_status
+        on (episode_status.episode = episode.id)
+    where
+        subscription.account = ?
+        and episode.air_date_time >= ?
+        and episode.air_date_time <= ?
 |]
 
 
@@ -229,6 +251,19 @@ getPopularShowsEpisodesByMonth :: (MonadIO m)
                                -> UTCTime
                                -> SqlPersistT m [(Entity Show, Entity Season, Entity Episode)]
 getPopularShowsEpisodesByMonth cnt t1 t2 = rawSql selectPopularShowsEpisodesByMonthSql [toPersistValue t1, toPersistValue t2, toPersistValue cnt]
+
+
+getUserShowsEpisodesByMonth :: (MonadIO m)
+                           => AccountId
+                           -> UTCTime
+                           -> UTCTime
+                           -> SqlPersistT m [(Entity Show, Entity Season, Entity Episode, Maybe (Entity EpisodeStatus))]
+getUserShowsEpisodesByMonth acc t1 t2 = rawSql selectUserShowsEpisodesByMonthSql params
+    where
+        params = [ toPersistValue acc
+                 , toPersistValue acc -- two ? in query for account
+                 , toPersistValue t1
+                 , toPersistValue t2 ]
 
 
 updateEpisodeViewCount :: MonadIO m => EpisodeId -> Int -> SqlPersistT m ()

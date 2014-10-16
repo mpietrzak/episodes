@@ -68,6 +68,7 @@ library
                  , directory                     >= 1.1
                  , fast-logger                   >= 2.2
                  , filepath
+                 , formatting                    >= 5.4
                  , hjsmin                        >= 0.1
                  , HTTP                          >= 4000.2.18
                  , http-conduit                  >= 2.1
