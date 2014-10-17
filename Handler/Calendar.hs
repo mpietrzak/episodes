@@ -11,10 +11,10 @@ import           Data.Function (on)
 import           Data.List (groupBy)
 import           Data.Text (Text)
 import           Database.Persist (Entity(Entity), entityKey, entityVal)
--- import           Database.Persist.Sql (Single(..), rawSql)
+import           Formatting ((%), int, sformat)
+import           Formatting.Time (datetime)
 import           Prelude hiding (Show)
-import           Text.Shakespeare.Text (st)
-import           Yesod (Html, addScript, defaultLayout, runDB, setTitle, toPathPiece)
+import           Yesod (Html, addScript, defaultLayout, logDebug, runDB, setTitle, toPathPiece)
 import           Yesod.Auth (maybeAuthId)
 import           Yesod.PureScript (getPureScriptRoute)
 import qualified Data.Map as M
@@ -31,37 +31,6 @@ import Episodes.Format (formatMonth)
 
 import Model
 import Settings (widgetFile)
-
-
-selectEpisodesForCalendarSql :: Text
-selectEpisodesForCalendarSql = [st|
-    select
-        episode.title,
-        show.title,
-        season.number,
-        episode.number,
-        case when episode_status.id is not null and episode_status.status = 'seen'
-            then 1
-            else 0
-        end as episode_seen,
-        episode.air_date_time,
-        episode.id,
-        show.id,
-        show.tv_rage_id
-    from
-         subscription join show on (subscription.show = show.id)
-         join season on (season.show = show.id)
-         join episode on (episode.season = season.id)
-         left join (
-            select episode, id, status
-            from episode_status
-            where episode_status.account = ?) as episode_status
-          on (episode_status.episode = episode.id)
-    where
-         subscription.account = ?
-         and episode.air_date_time >= ?
-         and episode.air_date_time <= ?;
-|]
 
 
 -- Episode data in calendar.
@@ -207,29 +176,26 @@ getCalendarMonthR year month = do
     let utc1 = TZ.localTimeToUTCTZ timeZone lt1
     let utc2 = TZ.localTimeToUTCTZ timeZone lt2
 
-    -- calendarEpisodeRows <- case ma of
-    --     Just authId -> do
-    --         let sql = selectEpisodesForCalendarSql
-    --         let params = [toPersistValue authId, toPersistValue authId, toPersistValue utc1, toPersistValue utc2]
-    --         runDB $ rawSql sql params
-    --     Nothing -> return []
-
-    popularCalendarEpisodes <- case ma of
-        Just _ -> return []
-        Nothing -> do
-            sse <- runDB $ getPopularShowsEpisodesByMonth 32 utc1 utc2
-            let sses = map (\(_show, _season, _episode) -> (_show, _season, _episode, Nothing)) sse
-            return $ map (showSeasonEpisodeToCalendarEpisode timeZone) sses
-
-    userCalendarEpisodes <- case ma of
-        Nothing -> return []
-        Just _acc -> do
-            sses <- runDB $ getUserShowsEpisodesByMonth _acc utc1 utc2
-            return $ map (showSeasonEpisodeToCalendarEpisode timeZone) sses
-
-    let calendarEpisodes = case ma of
-            Just _ -> userCalendarEpisodes
-            Nothing -> popularCalendarEpisodes
+    calendarEpisodes <- case ma of
+            Just _acc -> do
+                sses <- runDB $ getUserShowsEpisodesByMonth _acc utc1 utc2
+                $(logDebug) $
+                    sformat
+                        ("got " % int % " user's episodes for " % datetime % " to " % datetime)
+                        (length sses)
+                        utc1
+                        utc2
+                return $ map (showSeasonEpisodeToCalendarEpisode timeZone) sses
+            Nothing -> do
+                sse <- runDB $ getPopularShowsEpisodesByMonth 32 utc1 utc2
+                let sses = map (\(_show, _season, _episode) -> (_show, _season, _episode, Nothing)) sse
+                $(logDebug) $
+                    sformat
+                        ("got " % int % " popular episodes for " % datetime % " to " % datetime)
+                        (length sses)
+                        utc1
+                        utc2
+                return $ map (showSeasonEpisodeToCalendarEpisode timeZone) sses
 
     let calendar = createCalendar (toInteger year) month calendarEpisodes
 
