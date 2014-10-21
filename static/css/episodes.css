@@ -74,21 +74,7 @@ table.big-calendar > tbody > tr > td > table > tbody > tr > td.checkbox-td {
     padding: 2pt;
 }
 
-table.big-calendar td.episodes div.episode-links {
-    box-shadow: 0.8pt 0.8pt 4pt #555;
-}
 
-table.big-calendar td.episodes div.episode-links > ul {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-}
-
-table.big-calendar td.episodes div.episode-links > ul > li {
-    display: block;
-    margin: 0;
-    padding: 0;
-}
 
 
 /* Show subscriptions */
@@ -114,5 +100,40 @@ tr.subscribed .subscribe-show {
 
 tr.not-subscribed .unsubscribe-show {
     display: none;
+}
+
+
+/* Episode links */
+
+.episode a.episode-links {
+    font-size: 80%;
+}
+
+.episode div.episode-links {
+    box-shadow: 0.8pt 0.8pt 4pt #555;
+}
+
+.episode div.episode-links {
+    font-size: 8pt;
+}
+
+.episode div.episode-links > ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+.episode div.episode-links > ul > li {
+    display: block;
+    margin: 0;
+    padding: 0;
+}
+
+.episode div.episode-links p.info {
+    margin: 2pt 0;
+    padding: 0;
+    text-align: right;
+    font-size: 90%;
+    font-style: italic;
 }
 

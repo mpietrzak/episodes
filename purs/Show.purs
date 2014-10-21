@@ -5,8 +5,12 @@ where
 
 
 import qualified Debug.Trace as DT
+import qualified EpisodeLinks as EL
 import qualified EpisodeStatus as ES
 
 
-main = ES.main
+
+main = do
+    ES.main
+    EL.main
 

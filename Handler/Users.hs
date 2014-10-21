@@ -13,11 +13,12 @@ import qualified Data.Text.Encoding as TE
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUID4
 
+import qualified Episodes.Common as EC
 import qualified Episodes.Time as ET
 
 
 data ProfileForm = ProfileForm { profileFormTimezone :: Text
-                               , profileFormEpisodeLinks :: Maybe Textarea }
+                               , profileFormEpisodeLinks :: Textarea }
 
 
 data RegisterForm = RegisterForm { registerFormEmail :: Text
@@ -41,10 +42,10 @@ bootstrapFormLayout = BootstrapHorizontalForm labelOffset labelSize inputOffset 
         inputSize = ColSm 6
 
 
-profileForm :: [(Text, Text)] -> Text -> Maybe Text -> Html -> MForm Handler (FormResult ProfileForm, Widget)
+profileForm :: [(Text, Text)] -> Text -> Text -> Html -> MForm Handler (FormResult ProfileForm, Widget)
 profileForm tzOpts defaultTimezone episodeLinks = renderBootstrap3 bootstrapFormLayout $ ProfileForm
     <$> areq (selectFieldList tzOpts) (bfs ("Timezone" :: T.Text))    (Just defaultTimezone)
-    <*> aopt textareaField            (bfs ("Episode Links" :: Text)) (Just $ Textarea <$> episodeLinks)
+    <*> areq textareaField            (bfs ("Episode Links" :: Text)) (Just (Textarea episodeLinks))
     <* bootstrapSubmit (BootstrapSubmit ("Save" :: T.Text) "btn btn-default" [])
 
 
@@ -87,8 +88,8 @@ getProfileR = do
             Just (Entity _ profile) -> maybe "UTC" id $ profileTimezone profile
             _ -> "UTC"
     let episodeLinks = case mEntProfile of
-            Just (Entity _ _p) -> profileEpisodeLinks _p
-            _ -> Nothing
+            Just (Entity _ _p) -> maybe EC.defaultUserEpisodeLinks id (profileEpisodeLinks _p)
+            _ -> EC.defaultUserEpisodeLinks
 
     (formWidget, formEnctype) <- generateFormPost (profileForm tzOpts currentTimezone episodeLinks)
     -- (passFormWidget, passFormEnctype) <- generateFormPost passwordForm
@@ -110,8 +111,8 @@ postProfileR = do
     let currentTimezone = case mEntProfile of
             Just (Entity _ profile) -> maybe "UTC" id $ profileTimezone profile
             Nothing -> "UTC"
-    let episodeLinks = case mEntProfile of
-            Just (Entity _ _p) -> profileEpisodeLinks _p
+    let episodeLinks = maybe EC.defaultUserEpisodeLinks id $ case mEntProfile of
+            Just (Entity _ _p) -> (profileEpisodeLinks _p)
             _ -> Nothing
 
     ((formResult, formWidget), formEnctype) <- runFormPost (profileForm tzOpts currentTimezone episodeLinks)
@@ -121,14 +122,14 @@ postProfileR = do
     case formResult of
         FormSuccess profileFormValues -> do
             let newProfileTimezone = profileFormTimezone profileFormValues
-            let newEpisodeLinks = unTextarea <$> profileFormEpisodeLinks profileFormValues
+            let newEpisodeLinks = unTextarea $ profileFormEpisodeLinks profileFormValues
             let newProfile = case mEntProfile of
                     Just (Entity _ profile) -> profile { profileTimezone = Just newProfileTimezone
-                                                       , profileEpisodeLinks = newEpisodeLinks
+                                                       , profileEpisodeLinks = Just newEpisodeLinks
                                                        , profileModified = now }
                     _ -> Profile { profileTimezone = Just newProfileTimezone
                                  , profileAccount = authId
-                                 , profileEpisodeLinks = newEpisodeLinks
+                                 , profileEpisodeLinks = Just newEpisodeLinks
                                  , profileCreated = now
                                  , profileModified = now
                                  , profileCookie = Just randomProfileCookie }

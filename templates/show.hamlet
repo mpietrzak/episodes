@@ -1,12 +1,12 @@
 
-<h2>#{showTitle show_}
+<h2>#{showTitle show}
 
 
 <table class="show-details">
     <tbody>
         <tr>
             <td colspan="6" class="show-title">
-                #{showTitle show_}
+                #{showTitle show}
 
         $forall seasonEntity <- showSeasons
             $with season <- entityVal seasonEntity
@@ -34,11 +34,28 @@
                                 #{formatEpisodeCode (seasonNumber season) (episodeNumber episode)}
                             <td colspan="3">
                                 #{episodeTitle episode}
+                                <input type="hidden" class="episode-title" value="#{episodeTitle episode}">
+                                <input type="hidden" class="episode-show-title" value="#{showTitle show}">
+                                <input type="hidden" class="episode-season-number" value="#{seasonNumber season}">
+                                <input type="hidden" class="episode-number" value="#{episodeNumber episode}">
+                                <input type="hidden" class="episode-code" value="#{formatEpisodeCode (seasonNumber season) (episodeNumber episode)}">
+                                <a href="#" class="episode-links" style="visibility: hidden">more
                             <td>
                                 #{formatInUserTimeZone (episodeAirDateTime episode)}
 
 
 
-$maybe tvRageId <- showTvRageId show_
-    <p style="font-size: 75%">TVRage Id: #{tvRageId}
+
+<p style="font-size: 75%; margin-top: 4em">
+    $maybe tvRageId <- showTvRageId show
+        TVRage Id: #{tvRageId}<br>
+    Last update: #{formatTime $ showLastUpdate show}<br>
+    Next update: #{formatTime $ showNextUpdate show}<br>
+    Created: #{formatTime $ showCreated show}<br>
+    Modified: #{formatTime $ showModified show}<br>
+
+<input id="user-episode-links" type="hidden" value="#{episodeLinks}"/>
+
+
+
 

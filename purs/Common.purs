@@ -8,6 +8,7 @@ import Control.Monad.Eff
 import Data.Maybe
 import Debug.Trace
 import qualified Control.Monad.JQuery as J
+import qualified Data.String.Regex as R
 
 
 -- | PureScript version of Ajax Settings as documented here: http://api.jquery.com/jquery.ajax/#jQuery-ajax-settings
@@ -51,6 +52,14 @@ foreign import find
     \    }; \
     \  }; \
     \}" :: forall eff. String -> J.JQuery -> Eff (dom :: J.DOM | eff) J.JQuery
+
+
+foreign import parent
+    "function parent(ob) { \
+    \  return function() { \
+    \    return ob.parent(); \
+    \  }; \
+    \}" :: forall eff. J.JQuery -> Eff (dom :: J.DOM | eff) J.JQuery
 
 
 foreign import jQueryShow
@@ -183,4 +192,12 @@ foreign import getJQueryEventPageY
     \    return e.pageY; \
     \  }; \
     \}" :: forall eff. J.JQueryEvent -> Eff eff Number
+
+
+foreign import split
+    "function split(r) { \
+    \  return function(s) { \
+    \    return s.split(r); \
+    \  }; \
+    \}" :: R.Regex -> String -> [String]
 

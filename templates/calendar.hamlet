@@ -53,7 +53,7 @@
                                                                     <a href="@{ShowDetailsR (calendarEpisodeShowId episode)}">#{calendarEpisodeShowTitle episode}#
                                                                     \ #{formatEpisodeCode (calendarEpisodeSeasonNumber episode) (calendarEpisodeNumber episode)}#
                                                                     \: #{calendarEpisodeTitle episode}
-                                                                    <a href="#" class="episode-links" style="opacity: 0">more
+                                                                    <a href="#" class="episode-links" style="visibility: hidden">more
 
 <div class="small-calendar visible-xs">
     <p>small calendar

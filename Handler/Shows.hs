@@ -4,30 +4,36 @@
 module Handler.Shows where
 
 
-import           Import
-
-import           Control.Applicative ((<*))
+import           Prelude hiding (show, Show)
+import           Control.Applicative
 import           Data.Function (on)
 import           Data.List (sortBy)
+import           Data.Text (Text)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
-import           Data.Time.Format (formatTime)
-import           Data.Time.Zones (TZ, utcToLocalTimeTZ, utcTZ)
-import           System.Locale (defaultTimeLocale)
+import           Data.Time.Zones (utcTZ)
+-- import           System.Locale (defaultTimeLocale)
+import           Yesod
 import           Yesod.Auth
 import           Yesod.Form.Bootstrap3
 
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.Text as T
-import qualified Data.Text.Format as TF
-import qualified Data.Text.Lazy as TL
+-- import qualified Data.Text.Format as TF
+-- import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Read as T
 import qualified Yesod.PureScript as YPS
 
-import           Episodes.Common (choose, forceText)
+
+import           Foundation
+import           Episodes.Common (choose,
+                                  forceText, formatEpisodeCode, formatInTimeZone, formatTime,
+                                  getUserEpisodeLinks)
 import           Episodes.DB (getEpisodeStatusesByShowAndUser,
                               getPopularShows,
                               updateShowSubscriptionCount)
+import           Model
+import           Settings (widgetFile)
 import qualified TVRage as TVR
 
 
@@ -98,23 +104,11 @@ groupEpisodesBySeason episodeList = sortEpisodes $ foldr _add M.empty episodeLis
         episodeSortBy = compare `on` (episodeNumber . entityVal)
 
 
-formatEpisodeCode :: Int -> Int -> Text
-formatEpisodeCode season episode = TL.toStrict $ TF.format "s{}e{}" [TF.left 2 '0' season, TF.left 2 '0' episode]
-
-
-formatInTimeZone :: TZ -> UTCTime -> Text
-formatInTimeZone tz t = formatToText lt
-    where
-        lt = utcToLocalTimeTZ tz t
-        formatToText = T.pack . (formatTime defaultTimeLocale fmt)
-        fmt = "%Y-%m-%d %H:%M:%S"
-
-
 getShowDetailsR :: ShowId -> Handler Html
 getShowDetailsR showId = do
     app <- getYesod
     mai <- maybeAuthId
-    show_ <- runDB $ get404 showId
+    show <- runDB $ get404 showId
 
     -- todo - make utility function or better yet automate this
     tz <- case mai of
@@ -143,6 +137,9 @@ getShowDetailsR showId = do
     let getEpisodeStatusByEpisodeId = \eid -> M.findWithDefault "unseen" eid episodeStatusByEpisodeId
 
     let formatInUserTimeZone = formatInTimeZone tz
+
+    episodeLinks <- getUserEpisodeLinks mai
+
     defaultLayout $ do
         setTitle "Show Details"
         addScript $ PureScriptR $ YPS.getPureScriptRoute ["ShowDetails"]

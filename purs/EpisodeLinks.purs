@@ -11,6 +11,7 @@ import Data.String
 import Data.Traversable (for, sequence)
 import Global
 import qualified Control.Monad.JQuery as J
+import qualified Data.String.Regex as DSR
 import qualified Debug.Trace as DT
 
 import qualified Common as C
@@ -42,7 +43,8 @@ formatEpisodeLink _ei _linkTemplate = _fmt _linkTemplate
 formatEpisodeLinks :: EpisodeInfo -> String -> [String]
 formatEpisodeLinks _episodeInfo _linksFormat = map (formatEpisodeLink _episodeInfo) linkPatterns
     where
-        linkPatterns = split "\n" _linksFormat
+        _r = DSR.regex "[\\r\\n]+" (DSR.parseFlags "")
+        linkPatterns = C.split _r _linksFormat
 
 
 -- | Assumes there's a hidden input.episode-id inside closest .episode.
@@ -68,15 +70,19 @@ getUserEpisodeLinks = do
 -- | Mouse over tr: show "more" link.
 onEpisodeMouseEnter :: forall e. J.JQueryEvent -> J.JQuery -> Eff (trace :: DT.Trace, dom :: J.DOM | e) Unit
 onEpisodeMouseEnter _e _j = do
+    DT.trace "enter episode"
     _moreLink <- C.find "a.episode-links" _j
-    C.animate {"opacity": 1} 100 _moreLink
+    -- C.animate {"opacity": 1} 100 _moreLink
+    J.css {visibility: "visible"} _moreLink
     return unit
 
 
 onEpisodeMouseLeave :: forall e. J.JQueryEvent -> J.JQuery -> Eff (trace :: DT.Trace, dom :: J.DOM | e) Unit
 onEpisodeMouseLeave _e _j = do
+    DT.trace "leave episode"
     _moreLink <- C.find "a.episode-links" _j
-    C.animate {"opacity": 0} 100 _moreLink
+    -- C.animate {"opacity": 0} 100 _moreLink
+    J.css {visibility: "hidden"} _moreLink
     return unit
 
 
@@ -102,11 +108,12 @@ createEpisodeLink :: forall e. String -> Eff (dom :: J.DOM, trace :: DT.Trace | 
 createEpisodeLink _href = J.create "<a>"
     >>= J.setText _href
     >>= J.setAttr "href" _href
-    >>= J.setAttr "target" "_new"
+    >>= J.setAttr "target" "_blank"
 
 
-onEpisodeLinksDivLeave :: forall e. J.JQueryEvent -> J.JQuery -> Eff (dom :: J.DOM | e) Unit
+onEpisodeLinksDivLeave :: forall e. J.JQueryEvent -> J.JQuery -> Eff (dom :: J.DOM, trace :: DT.Trace | e) Unit
 onEpisodeLinksDivLeave _e _div = do
+    DT.trace "leave links div"
     C.jQueryFadeOut' 100 (J.remove _div) _div
     return unit
 
@@ -116,45 +123,60 @@ onEpisodeLinksDivLeave _e _div = do
 onEpisodeLinkClick :: forall e. String -> J.JQueryEvent -> J.JQuery -> Eff (trace :: DT.Trace, dom :: J.DOM | e) Unit
 onEpisodeLinkClick _linksTemplate _e _j = do
     DT.trace "click"
+
+    -- prepare, get vars
     J.preventDefault _e
+    x <- C.getJQueryEventPageX _e
+    y <- C.getJQueryEventPageY _e
     _episodeElement <- C.closest ".episode" _j
     _episodeInfo <- getEpisodeInfo _episodeElement
 
+    -- format links
     let _episodeLinks = formatEpisodeLinks _episodeInfo _linksTemplate :: [String]
+
+    -- create inner div, for display
     _div <- J.create "<div>"
     _ul <- J.create "<ul>"
     _links <- for _episodeLinks createEpisodeLink
+    DT.trace $ "_links formatted: " ++ show _episodeLinks
     let _addLink _link = do
+            DT.trace "append link..."
             _li <- J.create "<li>"
             J.append _link _li
             J.append _li _ul
     for _links _addLink
     J.append _ul _div
+    let _infoText = "You can change those links in profile preferences."
+    let _appendTo = flip J.append
+    J.create "<p>" >>= J.addClass "info" >>= J.setText _infoText >>= _appendTo _div
 
-    x <- C.getJQueryEventPageX _e
-    y <- C.getJQueryEventPageY _e
-    let props = {
-                position: "absolute",
-                left: x - 10,
-                top: y - 10,
+    let _divCss = {
                 border: "1px solid black",
-                padding: "1em",
-                "background-color": "white",
-                display: "none"
+                padding: "4pt",
+                "background-color": "white"
             }
-    J.css props _div
-    J.on "mouseleave" onEpisodeLinksDivLeave _div
+    J.css _divCss _div
     J.addClass "episode-links" _div
-    J.append _div _episodeElement
-    C.jQueryFadeIn 50 _div
+
+    -- create outer div, for mouse leave event
+    _outerDiv <- J.create "<div>"
+    J.css {position: "absolute", left: x - 32, top: y - 32, padding: 16, display: "none"} _outerDiv
+
+    -- add to dom, show and bind leave event
+    _parent <- C.parent _j
+    J.append _div _outerDiv
+    J.append _outerDiv _parent
+    C.jQueryFadeIn 50 _outerDiv
+    J.on "mouseleave" onEpisodeLinksDivLeave _outerDiv
+
     return unit
 
 
 bindEvents :: forall eff. String -> Eff (dom :: J.DOM, trace :: DT.Trace | eff) Unit
 bindEvents _linksTemplate = do
     DT.trace "binding events"
-    _episodes <- J.select ".day.episodes tr.episode"
-    _episodeMoreLink <- J.select ".day.episodes tr.episode a.episode-links"
+    _episodes <- J.select "tr.episode"
+    _episodeMoreLink <- J.select "tr.episode a.episode-links"
     J.on "mouseenter" onEpisodeMouseEnter _episodes
     J.on "mouseleave" onEpisodeMouseLeave _episodes
     J.on "click" (onEpisodeLinkClick _linksTemplate) _episodeMoreLink
@@ -162,8 +184,5 @@ bindEvents _linksTemplate = do
 
 
 main :: forall eff. Eff (dom :: J.DOM, trace :: DT.Trace | eff) Unit
-main = do
-    _links <- getUserEpisodeLinks
-    bindEvents _links
-    return unit
+main = getUserEpisodeLinks >>= bindEvents
 
