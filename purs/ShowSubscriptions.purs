@@ -6,6 +6,7 @@ import Prelude
 import Global
 import Control.Monad
 import Control.Monad.Eff
+import DOM
 import qualified Control.Monad.JQuery as J
 import qualified Debug.Trace as DT
 
@@ -13,7 +14,7 @@ import Common
 
 
 -- | Extract ShowId (Number) from subscription link (JQuery).
-getSubscriptionLinkShowId :: forall e. J.JQuery -> Eff (dom :: J.DOM | e) Number
+getSubscriptionLinkShowId :: forall e. J.JQuery -> Eff (dom :: DOM | e) Number
 getSubscriptionLinkShowId link = do
     x0 <- closest ".episodes-show" link
     x1 <- find ".show-id" x0
@@ -34,7 +35,7 @@ onSetSubscriptionStatusFail _ s r = do
     return {}
 
 
-onSubscriptionButtonClick :: forall e. Boolean -> J.JQueryEvent -> J.JQuery -> Eff (trace :: DT.Trace, dom :: J.DOM | e) {}
+onSubscriptionButtonClick :: forall e. Boolean -> J.JQueryEvent -> J.JQuery -> Eff (trace :: DT.Trace, dom :: DOM | e) {}
 onSubscriptionButtonClick status e target = do
     J.preventDefault e
     showId <- getSubscriptionLinkShowId target
@@ -61,7 +62,7 @@ onSubscriptionButtonClick status e target = do
     return {}
 
 
-bindButtonActions :: forall e. Eff (trace :: DT.Trace, dom :: J.DOM | e) {}
+bindButtonActions :: forall e. Eff (trace :: DT.Trace, dom :: DOM | e) {}
 bindButtonActions = do
     subButtons <- J.select ".subscribe-show"
     unsubButtons <- J.select ".unsubscribe-show"
@@ -70,5 +71,5 @@ bindButtonActions = do
     return {}
 
 
-main :: forall e. Eff (trace :: DT.Trace, dom :: J.DOM | e) {}
+main :: forall e. Eff (trace :: DT.Trace, dom :: DOM | e) {}
 main = do bindButtonActions

@@ -7,6 +7,7 @@ import Control.Monad
 import Control.Monad.Eff
 import Data.Foreign
 import Data.Maybe
+import DOM
 import Prelude
 import Global
 import qualified Control.Monad.JQuery as J
@@ -39,7 +40,7 @@ onSetEpisodeStatusFail _ s r = do
     return {}
 
 
-onEpisodeStatusCheckboxClick :: forall e. J.JQueryEvent -> J.JQuery -> Eff (trace :: DT.Trace, dom :: J.DOM | e) {}
+onEpisodeStatusCheckboxClick :: forall e. J.JQueryEvent -> J.JQuery -> Eff (trace :: DT.Trace, dom :: DOM | e) {}
 onEpisodeStatusCheckboxClick event target = do
     episodeId <- getCheckboxEpisodeId target
     status <- getCheckboxStatus target

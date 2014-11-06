@@ -2,13 +2,12 @@
 module EpisodeLinks where
 
 
-import Prelude
-import Control.Monad
 import Control.Monad.Eff
 import Data.Array (map)
 import Data.Foldable (foldl)
 import Data.String
 import Data.Traversable (for, sequence)
+import DOM
 import Global
 import qualified Control.Monad.JQuery as J
 import qualified Data.String.Regex as DSR
@@ -48,7 +47,7 @@ formatEpisodeLinks _episodeInfo _linksFormat = map (formatEpisodeLink _episodeIn
 
 
 -- | Assumes there's a hidden input.episode-id inside closest .episode.
-getParentEpisodeId :: forall eff. J.JQuery -> Eff (dom :: J.DOM, trace :: DT.Trace | eff) Number
+getParentEpisodeId :: forall eff. J.JQuery -> Eff (dom :: DOM, trace :: DT.Trace | eff) Number
 getParentEpisodeId el = do
     x0 <- C.closest ".episode" el
     x1 <- C.find ".episode-id" x0
@@ -59,7 +58,7 @@ getParentEpisodeId el = do
 
 -- | Get user links as a list of String, assumes there's hidden
 -- input element with id "user-episode-links" somewhere in the page.
-getUserEpisodeLinks :: forall eff. Eff (dom :: J.DOM, trace :: DT.Trace | eff) String
+getUserEpisodeLinks :: forall eff. Eff (dom :: DOM, trace :: DT.Trace | eff) String
 getUserEpisodeLinks = do
     _linksInput <- J.select "#user-episode-links"
     _links <- C.getValueText _linksInput
@@ -68,18 +67,16 @@ getUserEpisodeLinks = do
 
 
 -- | Mouse over tr: show "more" link.
-onEpisodeMouseEnter :: forall e. J.JQueryEvent -> J.JQuery -> Eff (trace :: DT.Trace, dom :: J.DOM | e) Unit
+onEpisodeMouseEnter :: forall e. J.JQueryEvent -> J.JQuery -> Eff (trace :: DT.Trace, dom :: DOM | e) Unit
 onEpisodeMouseEnter _e _j = do
-    DT.trace "enter episode"
     _moreLink <- C.find "a.episode-links" _j
     -- C.animate {"opacity": 1} 100 _moreLink
     J.css {visibility: "visible"} _moreLink
     return unit
 
 
-onEpisodeMouseLeave :: forall e. J.JQueryEvent -> J.JQuery -> Eff (trace :: DT.Trace, dom :: J.DOM | e) Unit
+onEpisodeMouseLeave :: forall e. J.JQueryEvent -> J.JQuery -> Eff (trace :: DT.Trace, dom :: DOM | e) Unit
 onEpisodeMouseLeave _e _j = do
-    DT.trace "leave episode"
     _moreLink <- C.find "a.episode-links" _j
     -- C.animate {"opacity": 0} 100 _moreLink
     J.css {visibility: "hidden"} _moreLink
@@ -87,7 +84,7 @@ onEpisodeMouseLeave _e _j = do
 
 
 -- | Get episode data from DOM.
-getEpisodeInfo :: forall e. J.JQuery -> Eff (dom :: J.DOM, trace :: DT.Trace | e) EpisodeInfo
+getEpisodeInfo :: forall e. J.JQuery -> Eff (dom :: DOM, trace :: DT.Trace | e) EpisodeInfo
 getEpisodeInfo _el = do
     episodeTitle <- C.find "input.episode-title" _el >>= C.getValueText
     showTitle <- C.find "input.episode-show-title" _el >>= C.getValueText
@@ -104,14 +101,14 @@ getEpisodeInfo _el = do
     return ei
 
 
-createEpisodeLink :: forall e. String -> Eff (dom :: J.DOM, trace :: DT.Trace | e) J.JQuery
+createEpisodeLink :: forall e. String -> Eff (dom :: DOM, trace :: DT.Trace | e) J.JQuery
 createEpisodeLink _href = J.create "<a>"
     >>= J.setText _href
     >>= J.setAttr "href" _href
     >>= J.setAttr "target" "_blank"
 
 
-onEpisodeLinksDivLeave :: forall e. J.JQueryEvent -> J.JQuery -> Eff (dom :: J.DOM, trace :: DT.Trace | e) Unit
+onEpisodeLinksDivLeave :: forall e. J.JQueryEvent -> J.JQuery -> Eff (dom :: DOM, trace :: DT.Trace | e) Unit
 onEpisodeLinksDivLeave _e _div = do
     DT.trace "leave links div"
     C.jQueryFadeOut' 100 (J.remove _div) _div
@@ -120,7 +117,7 @@ onEpisodeLinksDivLeave _e _div = do
 
 -- | Episode "more" link was clicked, we need to format and show links for this episode.
 -- We also bind mouseleave event to hide and destroy links div.
-onEpisodeLinkClick :: forall e. String -> J.JQueryEvent -> J.JQuery -> Eff (trace :: DT.Trace, dom :: J.DOM | e) Unit
+onEpisodeLinkClick :: forall eff. String -> J.JQueryEvent -> J.JQuery -> Eff (dom :: DOM, trace :: DT.Trace | eff) Unit
 onEpisodeLinkClick _linksTemplate _e _j = do
     DT.trace "click"
 
@@ -140,7 +137,6 @@ onEpisodeLinkClick _linksTemplate _e _j = do
     _links <- for _episodeLinks createEpisodeLink
     DT.trace $ "_links formatted: " ++ show _episodeLinks
     let _addLink _link = do
-            DT.trace "append link..."
             _li <- J.create "<li>"
             J.append _link _li
             J.append _li _ul
@@ -172,9 +168,8 @@ onEpisodeLinkClick _linksTemplate _e _j = do
     return unit
 
 
-bindEvents :: forall eff. String -> Eff (dom :: J.DOM, trace :: DT.Trace | eff) Unit
+bindEvents :: forall eff. String -> Eff (dom :: DOM, trace :: DT.Trace | eff) Unit
 bindEvents _linksTemplate = do
-    DT.trace "binding events"
     _episodes <- J.select "tr.episode"
     _episodeMoreLink <- J.select "tr.episode a.episode-links"
     J.on "mouseenter" onEpisodeMouseEnter _episodes
@@ -183,6 +178,6 @@ bindEvents _linksTemplate = do
     return unit
 
 
-main :: forall eff. Eff (dom :: J.DOM, trace :: DT.Trace | eff) Unit
+main :: forall eff. Eff (dom :: DOM, trace :: DT.Trace | eff) Unit
 main = getUserEpisodeLinks >>= bindEvents
 

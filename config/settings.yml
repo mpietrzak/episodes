@@ -2,12 +2,12 @@ Default: &defaults
   host: "*4" # any IPv4 host
   port: 3000
   approot: "http://localhost:3000"
-  copyright: Insert copyright statement here
+  copyright: Maciej Pietrzak
   #analytics: UA-YOURCODE
 
 Development:
   <<: *defaults
-  update-interval: 30
+  update-interval: 3600
   update-count: 4
 
 Testing:
@@ -17,7 +17,7 @@ Staging:
   <<: *defaults
 
 Production:
-  #approot: "http://www.example.com"
+  approot: "http://3.pisod.es"
   <<: *defaults
   update-interval: 36000
   update-count: 128

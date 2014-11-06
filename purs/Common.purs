@@ -7,6 +7,7 @@ import Prelude hiding (show)
 import Control.Monad.Eff
 import Data.Maybe
 import Debug.Trace
+import DOM
 import qualified Control.Monad.JQuery as J
 import qualified Data.String.Regex as R
 
@@ -29,9 +30,9 @@ defaultAjaxSettings :: AjaxSettings
 defaultAjaxSettings = AjaxSettings { ajaxData: Nothing }
 
 
-type JQueryXmlHttpRequestDoneHandler = forall eff. JQueryXmlHttpData -> String -> JQueryXmlHttpRequest -> Eff (dom :: J.DOM, trace :: Trace | eff) {}
+type JQueryXmlHttpRequestDoneHandler = forall eff. JQueryXmlHttpData -> String -> JQueryXmlHttpRequest -> Eff (dom :: DOM, trace :: Trace | eff) {}
 
-type JQueryXmlHttpRequestFailHandler = forall eff. JQueryXmlHttpRequest -> String -> String -> Eff (dom :: J.DOM, trace :: Trace | eff) {}
+type JQueryXmlHttpRequestFailHandler = forall eff. JQueryXmlHttpRequest -> String -> String -> Eff (dom :: DOM, trace :: Trace | eff) {}
 
 
 foreign import closest
@@ -41,7 +42,7 @@ foreign import closest
     \      return ob.closest(sel); \
     \    } \
     \  }; \
-    \}" :: forall eff. String -> J.JQuery -> Eff (dom :: J.DOM | eff) J.JQuery
+    \}" :: forall eff. String -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
 
 
 foreign import find
@@ -51,7 +52,7 @@ foreign import find
     \      return ob.find(sel); \
     \    }; \
     \  }; \
-    \}" :: forall eff. String -> J.JQuery -> Eff (dom :: J.DOM | eff) J.JQuery
+    \}" :: forall eff. String -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
 
 
 foreign import parent
@@ -59,7 +60,7 @@ foreign import parent
     \  return function() { \
     \    return ob.parent(); \
     \  }; \
-    \}" :: forall eff. J.JQuery -> Eff (dom :: J.DOM | eff) J.JQuery
+    \}" :: forall eff. J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
 
 
 foreign import jQueryShow
@@ -69,7 +70,7 @@ foreign import jQueryShow
     \      return ob.show(duration); \
     \    }; \
     \  }; \
-    \}" :: forall eff. Number -> J.JQuery -> Eff (dom :: J.DOM | eff) J.JQuery
+    \}" :: forall eff. Number -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
 
 
 foreign import jQueryHide
@@ -79,7 +80,7 @@ foreign import jQueryHide
     \      return ob.hide(duration); \
     \    }; \
     \  }; \
-    \}" :: forall eff. Number -> J.JQuery -> Eff (dom :: J.DOM | eff) J.JQuery
+    \}" :: forall eff. Number -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
 
 
 foreign import jQueryFadeIn
@@ -89,7 +90,7 @@ foreign import jQueryFadeIn
     \      return ob.fadeIn(duration); \
     \    }; \
     \  }; \
-    \}" :: forall eff. Number -> J.JQuery -> Eff (dom :: J.DOM | eff) J.JQuery
+    \}" :: forall eff. Number -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
 
 
 foreign import jQueryFadeOut'
@@ -101,7 +102,7 @@ foreign import jQueryFadeOut'
     \      }; \
     \    }; \
     \  }; \
-    \}" :: forall eff a. Number -> (forall e. Eff (dom :: J.DOM | e) a) -> J.JQuery -> Eff (dom :: J.DOM | eff) J.JQuery
+    \}" :: forall eff a. Number -> (forall e. Eff (dom :: DOM | e) a) -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
 
 
 foreign import animate
@@ -113,7 +114,7 @@ foreign import animate
     \      }; \
     \    }; \
     \  }; \
-    \}" :: forall eff css. {| css} -> Number -> J.JQuery -> Eff (dom :: J.DOM | eff) Unit
+    \}" :: forall eff css. {| css} -> Number -> J.JQuery -> Eff (dom :: DOM | eff) Unit
 
 
 foreign import is
@@ -123,7 +124,7 @@ foreign import is
     \      return ob.is(sel); \
     \    }; \
     \  }; \
-    \}" :: forall eff. String -> J.JQuery -> Eff (dom :: J.DOM | eff) Boolean
+    \}" :: forall eff. String -> J.JQuery -> Eff (dom :: DOM | eff) Boolean
 
 
 -- Get the value of a text field as String
@@ -132,7 +133,7 @@ foreign import getValueText
     \  return function() { \
     \    return (ob.val() || ''); \
     \  }; \
-    \}" :: forall eff. J.JQuery -> Eff (dom :: J.DOM | eff) String
+    \}" :: forall eff. J.JQuery -> Eff (dom :: DOM | eff) String
 
 
 foreign import jsonStringify

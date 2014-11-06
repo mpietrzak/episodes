@@ -39,9 +39,9 @@ library
 
     if flag(dev) || flag(library-only)
         cpp-options:   -DDEVELOPMENT
-        ghc-options:   -Wall -O1
+        ghc-options:   -Wall -fwarn-tabs -O0
     else
-        ghc-options:   -Wall -O2
+        ghc-options:   -Wall -fwarn-tabs -O2
 
     default-extensions: TemplateHaskell
                         QuasiQuotes
@@ -82,7 +82,7 @@ library
                  , parsec
                  , pbkdf                         >= 1.1
                  , persistent
-                 , persistent-postgresql
+                 , persistent-postgresql         >= 2.1
                  , persistent-template
                  , process                       >= 1.1.0.2
                  , resourcet
@@ -104,11 +104,11 @@ library
                  , xml-conduit
                  , yaml                          >= 0.8
                  , yesod                         >= 1.4
-                 , yesod-core                    >= 1.4
+                 , yesod-core                    >= 1.4.3
                  , yesod-auth                    >= 1.4
                  , yesod-static                  >= 1.4
                  , yesod-form                    >= 1.4
-                 , yesod-purescript              >= 0.0.2
+                 , yesod-purescript              >= 0.0.3
 
 
 executable         episodes
@@ -154,7 +154,6 @@ test-suite test
                  , yesod-core
                  , yesod
                  , persistent
-                 , persistent-sqlite
                  , resourcet
                  , monad-logger
                  , transformers

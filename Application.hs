@@ -13,13 +13,12 @@ import Control.Monad.Logger (runLoggingT, runStderrLoggingT)
 import Control.Monad.Trans.Reader (ReaderT)
 import Control.Monad.Trans.Resource (runResourceT)
 import Data.Default (def)
-import Database.Persist.Sql (SqlBackend)
-import Database.Persist.Sql (runMigration)
+import Database.Persist.Sql (SqlBackend, runMigration)
+import Database.Persist.Postgresql (createPostgresqlPool, pgConnStr, pgPoolSize)
 import Import
 import Network.HTTP.Client.Conduit (newManager)
 import Network.Wai.Logger (clockDateCacher)
 import Network.Wai.Middleware.RequestLogger (mkRequestLogger, outputFormat, OutputFormat (..), IPAddrSource (..), destination)
-import Settings
 import System.Log.FastLogger (newStdoutLoggerSet, defaultBufSize)
 import Yesod.Auth
 import Yesod.Core.Types (loggerSet, Logger (Logger))
@@ -78,7 +77,6 @@ makeFoundation conf = do
     dbconf <- withYamlEnvironment "config/postgresql.yml" (appEnv conf)
               Database.Persist.loadConfig >>=
               Database.Persist.applyEnv
-    p <- Database.Persist.createPoolConfig (dbconf :: Settings.PersistConf)
 
     loggerSet' <- newStdoutLoggerSet defaultBufSize
     (getter, _) <- clockDateCacher
@@ -86,22 +84,38 @@ makeFoundation conf = do
     _timezones <- loadCommonTimezones
     let _timezoneMap = M.fromList $ map (\ntz -> (ntzName ntz, ntzTZ ntz)) _timezones
 
-    let ypsOptions = def { ypsErrorDivId = Just "main" }
-    purs <- createYesodPureScriptSite ypsOptions
+    let ypso = def { ypsoErrorDivId = Just "main" }
+    purs <- createYesodPureScriptSite ypso
 
     let logger = Yesod.Core.Types.Logger loggerSet' getter
-    let foundation = App conf s p manager dbconf logger _timezones _timezoneMap purs
+        mkFoundation p = App
+            { settings = conf
+            , getStatic = s
+            , connPool = p
+            , httpManager = manager
+            , persistConfig = dbconf
+            , appLogger = logger
+            , commonTimeZones = _timezones
+            , commonTimeZoneMap = _timezoneMap
+            , getPureScriptSite = purs
+            }
+        tempFoundation = mkFoundation $ error "connPool forced in tempFoundation"
+        logFunc = messageLoggerSource tempFoundation logger
+
+    p <- flip runLoggingT logFunc
+       $ createPostgresqlPool (pgConnStr dbconf) (pgPoolSize dbconf)
+    let foundation = mkFoundation p
 
     -- Perform database migration using our application's logging settings.
-    runLoggingT
-       (Database.Persist.runPool dbconf (runMigration migrateAll) p)
-       (messageLoggerSource foundation logger)
+    flip runLoggingT logFunc
+        (Database.Persist.runPool dbconf (runMigration migrateAll) p)
 
     let updateInterval = (extraUpdateInterval . appExtra) conf
     let updateCount = extraUpdateCount (appExtra conf)
     _ <- forkIO $ scheduler updateInterval updateCount dbconf p
 
     return foundation
+
 
 -- for yesod devel
 getApplicationDev :: IO (Int, Application)
