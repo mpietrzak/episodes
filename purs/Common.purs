@@ -202,3 +202,22 @@ foreign import split
     \  }; \
     \}" :: R.Regex -> String -> [String]
 
+
+foreign import on
+  """
+  function on(evt) {
+    return function(act) {
+      return function(ob) {
+        return function() {
+          return ob.on(evt, function(e) {
+            act(e)(jQuery(this))();
+          });
+        };
+      };
+    };
+  }
+  """ :: forall eff eff' a. String -> (J.JQueryEvent -> J.JQuery -> Eff eff' a) -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
+
+
+
+

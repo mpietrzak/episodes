@@ -58,5 +58,5 @@ onEpisodeStatusCheckboxClick event target = do
 
 main = do
     checkboxes <- J.select ".episode-status.checkbox"
-    J.on "change" onEpisodeStatusCheckboxClick checkboxes
+    C.on "change" onEpisodeStatusCheckboxClick checkboxes
 

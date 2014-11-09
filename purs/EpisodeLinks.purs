@@ -163,7 +163,7 @@ onEpisodeLinkClick _linksTemplate _e _j = do
     J.append _div _outerDiv
     J.append _outerDiv _parent
     C.jQueryFadeIn 50 _outerDiv
-    J.on "mouseleave" onEpisodeLinksDivLeave _outerDiv
+    C.on "mouseleave" onEpisodeLinksDivLeave _outerDiv
 
     return unit
 
@@ -172,9 +172,9 @@ bindEvents :: forall eff. String -> Eff (dom :: DOM, trace :: DT.Trace | eff) Un
 bindEvents _linksTemplate = do
     _episodes <- J.select "tr.episode"
     _episodeMoreLink <- J.select "tr.episode a.episode-links"
-    J.on "mouseenter" onEpisodeMouseEnter _episodes
-    J.on "mouseleave" onEpisodeMouseLeave _episodes
-    J.on "click" (onEpisodeLinkClick _linksTemplate) _episodeMoreLink
+    C.on "mouseenter" onEpisodeMouseEnter _episodes
+    C.on "mouseleave" onEpisodeMouseLeave _episodes
+    C.on "click" (onEpisodeLinkClick _linksTemplate) _episodeMoreLink
     return unit
 
 

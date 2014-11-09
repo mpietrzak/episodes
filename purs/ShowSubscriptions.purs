@@ -66,8 +66,8 @@ bindButtonActions :: forall e. Eff (trace :: DT.Trace, dom :: DOM | e) {}
 bindButtonActions = do
     subButtons <- J.select ".subscribe-show"
     unsubButtons <- J.select ".unsubscribe-show"
-    J.on "click" (onSubscriptionButtonClick true) subButtons
-    J.on "click" (onSubscriptionButtonClick false) unsubButtons
+    on "click" (onSubscriptionButtonClick true) subButtons
+    on "click" (onSubscriptionButtonClick false) unsubButtons
     return {}
 
 
