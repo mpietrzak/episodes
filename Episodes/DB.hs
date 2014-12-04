@@ -17,6 +17,7 @@ module Episodes.DB (
     getShowData,
     getShowsToUpdate,
     getUserShowsEpisodesByMonth,
+    getUserShowsEpisodesForExport,
     setSubscriptionStatus,
     updateEpisodeStatus,
     updateEpisodeViewCount,
@@ -233,6 +234,38 @@ insertEpisodeSql = [st|
 |]
 
 
+-- | This query gets latest (numbering-wise) episode for each show subscribed by user.
+-- This probably should be rewritten to use nl subqueries.
+selectUserShowsEpisodesForExport :: Text
+selectUserShowsEpisodesForExport = [st|
+    select ??, ??, ??
+    from
+        show
+        join season on (season.show = show.id)
+        join episode on (episode.season = season.id)
+    where
+        episode.id in (
+            select e.id
+            from (
+                select
+                    episode.id,
+                    row_number() over (partition by season.show order by season.number desc, episode.number desc) as p
+                from
+                    episode_status
+                    join episode on (episode.id = episode_status.episode)
+                    join season on (season.id = episode.season)
+                where
+                    episode_status.status = 'seen'
+                    and episode_status.account = ?
+            ) as e
+            where e.p = 1
+        )
+    order by
+        show.title,
+        show.id
+|]
+
+
 getPopularShows :: MonadIO m
                 => Int
                 -> SqlPersistT m [Entity Show]
@@ -254,16 +287,26 @@ getPopularShowsEpisodesByMonth cnt t1 t2 = rawSql selectPopularShowsEpisodesByMo
 
 
 getUserShowsEpisodesByMonth :: (MonadIO m)
-                           => AccountId
-                           -> UTCTime
-                           -> UTCTime
-                           -> SqlPersistT m [(Entity Show, Entity Season, Entity Episode, Maybe (Entity EpisodeStatus))]
+                            => AccountId
+                            -> UTCTime
+                            -> UTCTime
+                            -> SqlPersistT m [(Entity Show, Entity Season, Entity Episode, Maybe (Entity EpisodeStatus))]
 getUserShowsEpisodesByMonth acc t1 t2 = rawSql selectUserShowsEpisodesByMonthSql params
     where
         params = [ toPersistValue acc
                  , toPersistValue acc -- two ? in query for account
                  , toPersistValue t1
                  , toPersistValue t2 ]
+
+
+-- | Query that returns for given user for each subscribed show, the latest season and episode watched
+-- (that is, the one with greatest season number and episode number).
+getUserShowsEpisodesForExport :: (MonadIO m)
+                              => AccountId
+                              -> SqlPersistT m [(Entity Show, Entity Season, Entity Episode)]
+getUserShowsEpisodesForExport accountId = rawSql selectUserShowsEpisodesForExport params
+    where
+        params = [ toPersistValue accountId ]
 
 
 updateEpisodeViewCount :: MonadIO m => EpisodeId -> Int -> SqlPersistT m ()
@@ -348,9 +391,11 @@ createAccount usernameOrEmail mPassword now = do
     return accId
 
 
--- Check if given user/pass match with what is stored in DB.
--- All legacy hashes (from previous DB) are pbkdf2.py "$p5k2$$" hashes (default iterations, random salt), so we don't support anything else.
--- Haskell's pbkdf implementation is more generic than Python, so we have to build salt manually (Python's salt includes prefix etc).
+-- | Check if given user/pass match with what is stored in DB.
+-- All legacy hashes (from previous DB) are pbkdf2.py "$p5k2$$" hashes (default iterations, random salt),
+-- so we wont't support anything else here.
+-- Haskell's pbkdf implementation is more generic than Python,
+-- so we have to build salt manually (Python's salt includes prefix etc, while Haskells "salt" is just bits).
 -- Returns True if given pass' hash matches the one from db.
 checkPassword :: MonadIO m
               => Text
@@ -358,12 +403,15 @@ checkPassword :: MonadIO m
               -> SqlPersistT m Bool
 checkPassword username password = do
 
+    -- these are the defaults from legacy
     let rounds = 400
     let hashlen = 24
 
+    -- we search by email if username contains '@', otherwise we search by username
     maybeAcc <- case T.any ((==) '@') username of
-        True -> getBy $ UniqueAccountEmail $ Just username
-        False -> getBy $ UniqueAccountNickname $ Just username
+            True -> getBy $ UniqueAccountEmail $ Just username
+            False -> getBy $ UniqueAccountNickname $ Just username
+
     case maybeAcc of
         Nothing -> return False
         Just accEntity -> do

@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Handler.Export (
+    getExportFileR,
+    getExportMainR,
     getICalR,
     getICalPageR
 ) where
@@ -9,6 +11,7 @@ module Handler.Export (
 import Prelude hiding (Show, show)
 import Yesod
 import Text.ICalendar
+import Data.Csv as CSV
 import Data.Default (def)
 import Data.Text (Text)
 import Data.Time (addUTCTime)
@@ -22,7 +25,7 @@ import qualified Yesod.Auth as YA
 
 import Foundation
 import Model
-import Episodes.DB (getEpisodesForICal, getProfile)
+import Episodes.DB (getEpisodesForICal, getProfile, getUserShowsEpisodesForExport)
 import Settings (widgetFile)
 
 
@@ -113,4 +116,32 @@ getICalR _cookie = do
     let icalbs = generateICal sse
     let contentType = "text/calendar" :: BS.ByteString
     return $ toTypedContent (contentType, toContent icalbs)
+
+
+getExportMainR :: Handler Html
+getExportMainR = do
+    defaultLayout $ do
+        setTitle "Export"
+        $(widgetFile "export")
+
+
+createExportFile :: [(Text, Int, Int)]
+                 -> BL.ByteString
+createExportFile _values = BL.concat [_header, _rows]
+    where
+        _header = CSV.encode _headers
+        _headers = [("Show", "Season", "Episode")] :: [(Text, Text, Text)]
+        _rows = CSV.encode _values
+
+
+getExportFileR :: Text -> Handler TypedContent
+getExportFileR _name = do
+    accId <- YA.requireAuthId
+    esse <- runDB $     getUserShowsEpisodesForExport accId
+    let une (Entity _ _sh, Entity _ _se, Entity _ _ep) = (showTitle _sh, seasonNumber _se, episodeNumber _ep)
+    let sse = map une esse
+    let contentType = "text/csv" :: BS.ByteString
+    let contentLBS = createExportFile sse
+    let content = toContent contentLBS
+    return $ toTypedContent (contentType, content)
 
