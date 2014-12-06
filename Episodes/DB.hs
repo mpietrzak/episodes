@@ -424,13 +424,16 @@ checkPassword username password = do
                     let dbPassHashBS = DT.trace ("password hash from db: " ++ show dbPassHashBS0) dbPassHashBS0
                     let dbPassParts = BS.split '$' dbPassHashBS
                     case dbPassParts of
-                        ["", "p5k2", "", "", _] -> do
+                        ["", "p5k2", "", _, _] -> do
                             -- pbkdf2.py uses "$p5k2$$xxx" as salt, where xxx is mostly random
                             let pbkdf2Salt0 = BS.intercalate "$" (take 4 dbPassParts)
                             let pbkdf2Salt = DT.trace ("pbkdf2 salt: " ++ show pbkdf2Salt0) pbkdf2Salt0
                             let allegedPassBS = encodeUtf8 password
                             let allegedPassHash = sha1PBKDF2 allegedPassBS pbkdf2Salt rounds hashlen
-                            let allegedPassHashB64 = BSB64.encode allegedPassHash
+                            let _trhc c = case c of
+                                    '+' -> '.'
+                                    _ -> c
+                            let allegedPassHashB64 = BS.map _trhc $ BSB64.encode allegedPassHash
                             let allegedPassHashB64WithSalt0 = BS.intercalate "$" (concat [(take 4 dbPassParts), [allegedPassHashB64]])
                             let allegedPassHashB64WithSalt = DT.trace ("user supplied pass after hashing with salt from db: " ++ show allegedPassHashB64WithSalt0) allegedPassHashB64WithSalt0
                             return (dbPassHashBS == allegedPassHashB64WithSalt)

@@ -10,8 +10,6 @@ import Prelude
 import Yesod
 import Data.Text (Text)
 import Data.Time (getCurrentTime)
-import Database.Persist
-import Database.Persist.Class
 import Database.Persist.Sql
 import qualified Data.HashMap.Strict as HM
 import qualified Network.HTTP.Types as HT

@@ -6,7 +6,7 @@ import           Import
 
 import           Control.Applicative ((<*))
 import           Data.Time (getCurrentTime)
-import           Yesod.Auth (requireAuthId)
+import           Yesod.Auth (requireAuth, requireAuthId)
 import           Yesod.Form.Bootstrap3
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -25,7 +25,7 @@ data RegisterForm = RegisterForm { registerFormEmail :: Text
                                  , registerFormPassword :: Text }
 
 
--- data PasswordForm = PasswordForm { passwordFormPassword :: Text }
+data PasswordForm = PasswordForm { passwordFormPassword :: Text }
 
 
 textFieldSettings :: Text -> Text -> FieldSettings site
@@ -56,10 +56,10 @@ registerForm = renderBootstrap3 bootstrapFormLayout $ RegisterForm
     <* bootstrapSubmit (BootstrapSubmit ("Register" :: T.Text) "btn btn-default" [])
 
 
--- passwordForm :: Form PasswordForm
--- passwordForm = renderBootstrap3 bootstrapFormLayout $ PasswordForm
---     <$> areq passwordField (bfs ("Password" :: Text)) Nothing
---     <* bootstrapSubmit (BootstrapSubmit ("Set Password" :: T.Text) "btn btn-default" [])
+passwordForm :: Form PasswordForm
+passwordForm = renderBootstrap3 bootstrapFormLayout $ PasswordForm
+    <$> areq passwordField (bfs ("Password" :: Text)) Nothing
+    <* bootstrapSubmit (BootstrapSubmit ("Set Password" :: T.Text) "btn btn-default" [])
 
 
 timeZoneToTzOpt :: ET.NamedTimeZone -> (Text, Text)
@@ -91,8 +91,9 @@ getProfileR = do
             Just (Entity _ _p) -> maybe EC.defaultUserEpisodeLinks id (profileEpisodeLinks _p)
             _ -> EC.defaultUserEpisodeLinks
 
-    (formWidget, formEnctype) <- generateFormPost (profileForm tzOpts currentTimezone episodeLinks)
-    -- (passFormWidget, passFormEnctype) <- generateFormPost passwordForm
+    (profileFormWidget, profileFormEnctype) <- generateFormPost (profileForm tzOpts currentTimezone episodeLinks)
+    (passFormWidget, passFormEnctype) <- generateFormPost passwordForm
+
     defaultLayout $ do
         setTitle "Profile"
         $(widgetFile "profile")
@@ -103,6 +104,7 @@ postProfileR = do
     authId <- requireAuthId
     app <- getYesod
     now <- liftIO getCurrentTime
+
     let timezones = commonTimeZones app
     let tzOpts = map timeZoneToTzOpt timezones
 
@@ -115,11 +117,11 @@ postProfileR = do
             Just (Entity _ _p) -> (profileEpisodeLinks _p)
             _ -> Nothing
 
-    ((formResult, formWidget), formEnctype) <- runFormPost (profileForm tzOpts currentTimezone episodeLinks)
+    ((profileFormResult, profileFormWidget), profileFormEnctype) <- runFormPost (profileForm tzOpts currentTimezone episodeLinks)
 
     randomProfileCookie <- liftIO generateRandomProfileCookie
 
-    case formResult of
+    case profileFormResult of
         FormSuccess profileFormValues -> do
             let newProfileTimezone = profileFormTimezone profileFormValues
             let newEpisodeLinks = unTextarea $ profileFormEpisodeLinks profileFormValues
@@ -139,7 +141,7 @@ postProfileR = do
                 _ -> runDB $ insert_ newProfile
             redirect HomeR
         _ -> do
-            -- (passFormWidget, passFormEnctype) <- generateFormPost passwordForm
+            (passFormWidget, passFormEnctype) <- generateFormPost passwordForm
             defaultLayout $ do
                 setTitle "Profile"
                 $(widgetFile "profile")
@@ -167,30 +169,35 @@ postProfileR = do
 --         _ -> defaultLayout $ $(widgetFile "register")
 
 
--- postProfilePasswordR :: Handler Html
--- postProfilePasswordR = do
---     auth <- requireAuth
---     authId <- requireAuthId
---
---     -- :'(
---     app <- getYesod
---     let timezones = commonTimeZones app
---     let tzOpts = map timeZoneToTzOpt timezones
---     mEntProfile <- runDB $ getBy $ UniqueProfileAccount authId
---     let curTimezone = case mEntProfile of
---             Just (Entity _ profile) -> maybe "UTC" id $ profileTimezone profile
---             _ -> "UTC"
---     (formWidget, formEnctype) <- generateFormPost (profileForm tzOpts curTimezone)
---
---     ((passFormResult, passFormWidget), passFormEnctype) <- runFormPost passwordForm
---     case passFormResult of
---         FormSuccess passFormValues -> do
---             -- let password = passwordFormPassword passFormValues
---             let nu = entityVal auth
---             runDB $ replace authId nu
---             setMessage "Password changed"
---             redirect ProfileR
---         _ -> defaultLayout $ do
---             setTitle "Profile"
---             $(widgetFile "profile")
+postProfilePasswordR :: Handler Html
+postProfilePasswordR = do
+    auth <- requireAuth
+    authId <- requireAuthId
+
+    -- :'(
+    app <- getYesod
+    let timezones = commonTimeZones app
+    let tzOpts = map timeZoneToTzOpt timezones
+    mEntProfile <- runDB $ getBy $ UniqueProfileAccount authId
+    let curTimezone = case mEntProfile of
+            Just (Entity _ profile) -> maybe "UTC" id $ profileTimezone profile
+            _ -> "UTC"
+    let episodeLinks = maybe EC.defaultUserEpisodeLinks id $ case mEntProfile of
+            Just (Entity _ _p) -> (profileEpisodeLinks _p)
+            _ -> Nothing
+    (profileFormWidget, profileFormEnctype) <- generateFormPost (profileForm tzOpts curTimezone episodeLinks)
+
+    ((passFormResult, passFormWidget), passFormEnctype) <- runFormPost passwordForm
+    case passFormResult of
+        FormSuccess passFormValues -> do
+            let newPass = passwordFormPassword passFormValues
+            let newPassHash = TE.decodeUtf8 $ EC.hashPassword "test" $ TE.encodeUtf8 newPass
+            let _cu = entityVal auth
+            let _nu = _cu { accountPassword = Just newPassHash }
+            runDB $ replace authId _nu
+            setMessage "Password changed"
+            redirect ProfileR
+        _ -> defaultLayout $ do
+            setTitle "Profile"
+            $(widgetFile "profile")
 

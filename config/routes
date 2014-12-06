@@ -22,7 +22,9 @@
 
 /ical ICalPageR GET
 /calendar/#Text ICalR GET
+/export ExportMainR GET
+/export/#Text ExportFileR GET
 
--- /profile-password ProfilePasswordR POST
+/profile-password ProfilePasswordR POST
 -- /register RegisterR GET POST
 

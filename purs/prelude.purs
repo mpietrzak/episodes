@@ -1,5 +1,6 @@
 module Prelude
-  ( flip
+  ( otherwise
+  , flip
   , const
   , asTypeOf
   , Semigroupoid, (<<<), (>>>)
@@ -7,7 +8,7 @@ module Prelude
   , ($), (#)
   , (:), cons
   , Show, show
-  , Functor, (<$>), void
+  , Functor, (<$>), (<#>), void
   , Apply, (<*>)
   , Applicative, pure, liftA1
   , Bind, (>>=)
@@ -22,6 +23,9 @@ module Prelude
   , Semigroup, (<>), (++)
   , Unit(..), unit
   ) where
+
+  otherwise :: Boolean
+  otherwise = true
 
   flip :: forall a b c. (a -> b -> c) -> b -> a -> c
   flip f b a = f a b
@@ -111,9 +115,13 @@ module Prelude
     show = showArrayImpl show
 
   infixl 4 <$>
+  infixl 1 <#>
 
   class Functor f where
     (<$>) :: forall a b. (a -> b) -> f a -> f b
+
+  (<#>) :: forall f a b. (Functor f) => f a -> (a -> b) -> f b
+  (<#>) fa f = f <$> fa
 
   void :: forall f a. (Functor f) => f a -> f Unit
   void fa = const unit <$> fa

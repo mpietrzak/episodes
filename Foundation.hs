@@ -129,8 +129,7 @@ instance Yesod App where
             | development = "autogen-" ++ base64md5 lbs
             | otherwise   = base64md5 lbs
 
-    -- Place Javascript at bottom of the body tag so the rest of the page loads first
-    jsLoader _ = BottomOfBody
+    jsLoader _m = BottomOfHeadBlocking
 
     -- What messages should be logged. The following includes all messages when
     -- in development, and warnings and errors in production.

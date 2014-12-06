@@ -14,16 +14,12 @@
 
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
             <ul class="nav navbar-nav">
-                <li>
-                    <a href="@{CalendarR}">Calendar
-                <li>
-                    <a href="@{ShowsR}">Shows
-                <li>
-                    <a href="@{AddShowR}">Add Show
-                <li>
-                    <a href="@{StatsR}">Stats
-                <li>
-                    <a href="@{ICalPageR}">ICal
+                <li><a href="@{CalendarR}">Calendar</a></li>
+                <li><a href="@{ShowsR}">Shows</a></li>
+                <li><a href="@{AddShowR}">Add Show</a></li>
+                <li><a href="@{StatsR}">Stats</a></li>
+                <li><a href="@{ICalPageR}">ICal</a></li>
+                <li><a href="@{ExportMainR}">Export</a></li>
             <!--
             <form class="navbar-form navbar-left" role="search">
                 <div class="form-group">

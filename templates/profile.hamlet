@@ -1,10 +1,16 @@
 
-<div>
-    <form .form-horizontal role="form" method="post" action="@{ProfileR}" enctype="#{formEnctype}">
-        ^{formWidget}
 
-    <!--
-    <form .form-horizontal role="form" method="post" action="@{ProfilePasswordR}" enctype="#{passFormEnctype}">
-        ^{passFormWidget}
-    -->
+<div class="container">
+    <h3>Profile
+
+    <div>
+        <form .form-horizontal role="form" method="post" action="@{ProfileR}" enctype="#{profileFormEnctype}">
+            ^{profileFormWidget}
+
+
+    <h3>Password
+
+    <div>
+        <form .form-horizontal role="form" method="post" action="@{ProfilePasswordR}" enctype="#{passFormEnctype}">
+            ^{passFormWidget}
 
