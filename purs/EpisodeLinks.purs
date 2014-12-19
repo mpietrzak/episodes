@@ -179,5 +179,5 @@ bindEvents _linksTemplate = do
 
 
 main :: forall eff. Eff (dom :: DOM, trace :: DT.Trace | eff) Unit
-main = getUserEpisodeLinks >>= bindEvents
+main = J.ready (getUserEpisodeLinks >>= bindEvents) >>= \_ -> return unit
 
