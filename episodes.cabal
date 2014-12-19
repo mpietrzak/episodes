@@ -106,11 +106,11 @@ library
                  , xml-conduit
                  , yaml                          >= 0.8
                  , yesod                         >= 1.4
-                 , yesod-core                    >= 1.4.4.1
+                 , yesod-core                    >= 1.4.6
                  , yesod-auth                    >= 1.4
                  , yesod-static                  >= 1.4
-                 , yesod-form                    >= 1.4
-                 , yesod-purescript              >= 0.0.3
+                 , yesod-form                    >= 1.4.3
+                 , yesod-purescript              >= 0.0.4
 
 
 executable         episodes
@@ -136,7 +136,8 @@ executable         tvrage
     build-depends:      base,
                         bytestring >= 0.10,
                         HTTP,
-                        network,
+                        network >= 2.6,
+                        network-uri >= 2.6,
                         options,
                         text,
                         xml-conduit >= 1.2,
