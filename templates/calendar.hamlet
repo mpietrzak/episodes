@@ -1,5 +1,5 @@
 
-<div class="calendar hidden-xs">
+<div class="calendar">
     <table class="big-calendar">
         <tbody>
             <tr>
@@ -55,9 +55,22 @@
                                                                     \: #{calendarEpisodeTitle episode}
                                                                     <a href="#" class="episode-links" style="visibility: hidden">more
 
-<div class="small-calendar visible-xs">
-    <p>small calendar
-
+<!--
+    <div class="small-calendar visible-xs">
+        <table>
+            <tbody>
+                $forall week <- monthWeeks calendar
+                    <tr class="week">
+                        <td>Week
+                    $forall day <- weekDays week
+                        <tr>
+                            <td>#{show (dayDay day)}
+                        $with episodes <- dayEpisodes day
+                            $forall episode <- episodes
+                                <tr class="episode">
+                                    <td>
+                                        #{calendarEpisodeTitle episode}
+-->
 
 <input id="user-episode-links" type="hidden" value="#{episodeLinks}"/>
 
