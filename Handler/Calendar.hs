@@ -7,6 +7,7 @@ module Handler.Calendar where
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Trans.Class (lift)
 import           Data.Bool (bool)
+import           Data.Default (def)
 import           Data.Function (on)
 import           Data.List (groupBy)
 import           Data.Text (Text)
@@ -14,9 +15,9 @@ import           Database.Persist (Entity(Entity), entityKey, entityVal)
 import           Formatting ((%), int, sformat)
 import           Formatting.Time (datetime)
 import           Prelude hiding (Show)
-import           Yesod (Html, addScript, defaultLayout, logDebug, runDB, setTitle, toPathPiece)
+import           Yesod (Html, addScript, defaultLayout, julius, logDebug, runDB, setTitle, toPathPiece, toWidget)
 import           Yesod.Auth (maybeAuthId)
-import           Yesod.PureScript (getPureScriptRoute)
+import           Yesod.PureScript (addPureScriptWidget, getPureScriptRoute)
 import qualified Data.Map as M
 import qualified Data.Time.Calendar as C
 import qualified Data.Time.Calendar.WeekDate as C
@@ -30,7 +31,7 @@ import Episodes.DB (getPopularShowsEpisodesByMonth, getUserShowsEpisodesByMonth)
 import Episodes.Format (formatMonth)
 
 import Model
-import Settings (widgetFile)
+import Settings (widgetFile, yesodPureScriptOptions)
 
 
 -- Episode data in calendar.
@@ -206,6 +207,7 @@ getCalendarMonthR year month = do
 
     defaultLayout $ do
         setTitle "Episodes"
-        addScript $ PureScriptR $ getPureScriptRoute ["Calendar"]
+        -- addScript $ PureScriptR $ getPureScriptRoute ["Calendar"]
+        $(addPureScriptWidget yesodPureScriptOptions "Calendar")
         $(widgetFile "calendar")
 

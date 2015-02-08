@@ -17,10 +17,18 @@ import Control.Applicative
 import Settings.Development
 import Data.Default (def)
 import Text.Hamlet
+import Yesod.PureScript (YesodPureScriptOptions(ypsoErrorDivId, ypsoSourceIgnores))
 
 
 -- | Which Persistent backend this site is using.
 type PersistConf = PostgresConf
+
+
+-- Yesod PureScript Options
+yesodPureScriptOptions = def { ypsoErrorDivId = Just "main"
+                             , ypsoSourceIgnores = [ "examples"
+                                                   , "quickcheck-test-src" ] }
+
 
 -- Static setting below. Changing these requires a recompile
 

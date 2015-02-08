@@ -15,15 +15,14 @@ import           Data.Time.Zones (utcTZ)
 import           Yesod
 import           Yesod.Auth
 import           Yesod.Form.Bootstrap3
-
+import           Yesod.PureScript (addPureScriptWidget)
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.Text as T
 -- import qualified Data.Text.Format as TF
 -- import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Read as T
-import qualified Yesod.PureScript as YPS
-
+-- import qualified Yesod.PureScript as YPS
 
 import           Foundation
 import           Episodes.Common (choose,
@@ -33,7 +32,7 @@ import           Episodes.DB (getEpisodeStatusesByShowAndUser,
                               getPopularShows,
                               updateShowSubscriptionCount)
 import           Model
-import           Settings (widgetFile)
+import           Settings (widgetFile, yesodPureScriptOptions)
 import qualified TVRage as TVR
 
 
@@ -84,7 +83,8 @@ getShowsR = do
             return $ S.fromList $ map (\s -> subscriptionShow $ entityVal s) subscriptions
     defaultLayout $ do
         setTitle "Shows"
-        addScript $ PureScriptR $ YPS.getPureScriptRoute ["ShowSubscriptions"]
+        -- addScript $ PureScriptR $ YPS.getPureScriptRoute ["ShowSubscriptions"]
+        $(addPureScriptWidget yesodPureScriptOptions "ShowSubscriptions")
         $(widgetFile "shows")
 
 
@@ -142,7 +142,8 @@ getShowDetailsR showId = do
 
     defaultLayout $ do
         setTitle "Show Details"
-        addScript $ PureScriptR $ YPS.getPureScriptRoute ["ShowDetails"]
+        -- addScript $ PureScriptR $ YPS.getPureScriptRoute ["ShowDetails"]
+        $(addPureScriptWidget yesodPureScriptOptions "ShowDetails")
         $(widgetFile "show")
 
 

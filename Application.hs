@@ -40,6 +40,7 @@ import Handler.Export (
     getICalR,
     getICalPageR)
 import Handler.Stats (getStatsR)
+import Settings (yesodPureScriptOptions)
 
 import Episodes.Time (NamedTimeZone(..), loadCommonTimezones)
 import Episodes.Update (updateTVRageShows)
@@ -88,8 +89,7 @@ makeFoundation conf = do
     _timezones <- loadCommonTimezones
     let _timezoneMap = M.fromList $ map (\ntz -> (ntzName ntz, ntzTZ ntz)) _timezones
 
-    let ypso = def { ypsoErrorDivId = Just "main" }
-    purs <- createYesodPureScriptSite ypso
+    purs <- createYesodPureScriptSite yesodPureScriptOptions
 
     let logger = Yesod.Core.Types.Logger loggerSet' getter
         mkFoundation p = App
@@ -127,8 +127,7 @@ getApplicationDev =
     defaultDevelApp loader (fmap fst . makeApplication)
   where
     loader = Yesod.Default.Config.loadConfig (configSettings Development)
-        { csParseExtra = parseExtra
-        }
+        { csParseExtra = parseExtra }
 
 
 -- | Code that runs jobs.
