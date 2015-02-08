@@ -4,10 +4,10 @@
 module Handler.Calendar where
 
 
+import           Control.Applicative
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Trans.Class (lift)
 import           Data.Bool (bool)
-import           Data.Default (def)
 import           Data.Function (on)
 import           Data.List (groupBy)
 import           Data.Text (Text)
@@ -15,10 +15,20 @@ import           Database.Persist (Entity(Entity), entityKey, entityVal)
 import           Formatting ((%), int, sformat)
 import           Formatting.Time (datetime)
 import           Prelude hiding (Show)
-import           Yesod (Html, addScript, defaultLayout, julius, logDebug, runDB, setTitle, toPathPiece, toWidget)
+import           Yesod (
+    Html,
+    addScript,
+    defaultLayout,
+    getRequest,
+    logDebug,
+    lookupGetParam,
+    runDB,
+    setTitle,
+    toPathPiece)
 import           Yesod.Auth (maybeAuthId)
 import           Yesod.PureScript (addPureScriptWidget, getPureScriptRoute)
 import qualified Data.Map as M
+import qualified Data.Text.Read as TR
 import qualified Data.Time.Calendar as C
 import qualified Data.Time.Calendar.WeekDate as C
 import qualified Data.Time.Clock as C
@@ -144,16 +154,28 @@ getHomeR :: Handler Html
 getHomeR = getCalendarR
 
 
--- Get calendar for default date.
--- Currently this formats calendar for current time, but it will eventually accept optional year and month.
+-- Get calendar, optionally accept year and month parameters.
 getCalendarR :: Handler Html
 getCalendarR = do
-    now <- lift C.getCurrentTime
-    timeZone <- getUserTimeZone
-    let localTime = TZ.utcToLocalTimeTZ timeZone now
-    let localDay = TLT.localDay localTime
-    let (year, month, _) = C.toGregorian localDay
-    getCalendarMonthR (fromInteger year) month
+        -- req <- getRequest
+        myear <- mdecimal <$> lookupGetParam "year"
+        mmonth <- mdecimal <$> lookupGetParam "month"
+        (year, month) <- case (myear, mmonth) of
+                (Just y, Just m) -> return (y, m)
+                _ -> do
+                    now <- lift C.getCurrentTime
+                    timeZone <- getUserTimeZone
+                    let localTime = TZ.utcToLocalTimeTZ timeZone now
+                    let localDay = TLT.localDay localTime
+                    let (year, month, _) = C.toGregorian localDay
+                    return (year, month)
+        getCalendarMonthR (fromInteger year) month
+    where
+        mdecimal mx = case mx of
+            Nothing -> Nothing
+            Just x -> case TR.decimal x of
+                Left _ -> Nothing
+                Right (d, _) -> Just d
 
 
 getCalendarMonthR :: Int -> Int -> Handler Html
