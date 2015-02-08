@@ -71,5 +71,5 @@ bindButtonActions = do
     return {}
 
 
-main :: forall e. Eff (trace :: DT.Trace, dom :: DOM | e) {}
-main = do bindButtonActions
+main = J.ready bindButtonActions
+

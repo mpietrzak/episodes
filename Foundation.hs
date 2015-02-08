@@ -7,7 +7,7 @@ module Foundation where
 import Control.Applicative ((<$>))
 import Data.Text (Text)
 import Data.Time (getCurrentTime)
-import Database.Persist.Sql (SqlBackend)
+import Database.Persist.Sql (SqlBackend, ConnectionPool, runSqlPool)
 import Network.HTTP.Client.Conduit (Manager, HasHttpManager (getHttpManager))
 import Prelude
 import Text.Hamlet (hamletFile)
@@ -17,24 +17,25 @@ import Yesod.Auth
 import Yesod.Auth.BrowserId
 import Yesod.Auth.GoogleEmail2
 import Yesod.Core.Types (Logger)
-import Yesod.Default.Config
 import Yesod.Default.Util (addStaticContentExternal)
 import Yesod.PureScript
 import Yesod.Static
 import Data.Time.Zones (TZ)
 import qualified Data.Map as M
 import qualified Data.Text as T
-import qualified Database.Persist
--- import qualified Debug.Trace as DT
 
 import Episodes.Auth (authEpisodes)
 import Episodes.DB (checkPassword, createAccount)
 import Episodes.Time (NamedTimeZone)
 import Model
-import Settings (widgetFile, Extra (..))
-import Settings.Development (development)
+import Settings (
+    appShouldLogAll,
+    appStaticDir,
+    combineScripts,
+    combineStylesheets,
+    widgetFile,
+    AppSettings (..))
 import Settings.StaticFiles
-import qualified Settings
 
 
 -- | The site argument for your application. This can be a good place to
@@ -42,30 +43,19 @@ import qualified Settings
 -- starts running, such as database connections. Every handler will have
 -- access to the data present here.
 data App = App
-    { settings :: AppConfig DefaultEnv Extra
-    , getStatic :: Static -- ^ Settings for static file serving.
-    , connPool :: Database.Persist.PersistConfigPool Settings.PersistConf -- ^ Database connection pool.
-    , httpManager :: Manager
-    , persistConfig :: Settings.PersistConf
+    { appSettings :: AppSettings
+    , appStatic :: Static
+    , appConnPool :: ConnectionPool
+    , appHttpManager :: Manager
     , appLogger :: Logger
-    , commonTimeZones :: [NamedTimeZone]
-    , commonTimeZoneMap :: M.Map Text TZ
-    , getPureScriptSite :: PureScriptSite
+    , appCommonTimeZones :: [NamedTimeZone]
+    , appCommonTimeZoneMap :: M.Map Text TZ
+    , appPureScriptSite :: PureScriptSite
     }
 
 instance HasHttpManager App where
-    getHttpManager = httpManager
+    getHttpManager = appHttpManager
 
--- Set up i18n messages. See the message folder.
-mkMessage "App" "messages" "en"
-
--- This is where we define all of the routes in our application. For a full
--- explanation of the syntax, please see:
--- http://www.yesodweb.com/book/routing-and-handlers
---
--- Note that this is really half the story; in Application.hs, mkYesodDispatch
--- generates the rest of the code. Please see the linked documentation for an
--- explanation for this split.
 mkYesodData "App" $(parseRoutesFile "config/routes")
 
 type Form x = Html -> MForm (HandlerT App IO) (FormResult x, Widget)
@@ -73,7 +63,7 @@ type Form x = Html -> MForm (HandlerT App IO) (FormResult x, Widget)
 -- Please see the documentation for the Yesod typeclass. There are a number
 -- of settings which can be configured by overriding methods here.
 instance Yesod App where
-    approot = ApprootMaster $ appRoot . settings
+    approot = ApprootMaster $ appRoot . appSettings
 
     -- Store session data on the client in encrypted cookies.
     makeSessionBackend _ = Just <$> defaultClientSessionBackend
@@ -101,12 +91,6 @@ instance Yesod App where
             $(widgetFile "default-layout")
         withUrlRenderer $(hamletFile "templates/default-layout-wrapper.hamlet")
 
-    -- This is done to provide an optimization for serving static files from
-    -- a separate domain. Please see the staticRoot setting in Settings.hs
-    urlRenderOverride y (StaticR s) =
-        Just $ uncurry (joinPath y (Settings.staticRoot $ settings y)) $ renderRoute s
-    urlRenderOverride _ _ = Nothing
-
     -- The page to be redirected to when authentication is required.
     authRoute _ = Just $ AuthR LoginR
 
@@ -121,30 +105,41 @@ instance Yesod App where
     -- and names them based on a hash of their content. This allows
     -- expiration dates to be set far in the future without worry of
     -- users receiving stale content.
-    addStaticContent =
-        addStaticContentExternal minifym genFileName Settings.staticDir (StaticR . flip StaticRoute [])
+    addStaticContent ext mime content = do
+        master <- getYesod
+        let staticDir = appStaticDir $ appSettings master
+        addStaticContentExternal
+            minifym
+            genFileName
+            staticDir
+            (StaticR . flip StaticRoute [])
+            ext
+            mime
+            content
       where
         -- Generate a unique filename based on the content itself
-        genFileName lbs
-            | development = "autogen-" ++ base64md5 lbs
-            | otherwise   = base64md5 lbs
-
-    jsLoader _m = BottomOfHeadBlocking
+        genFileName lbs = "autogen-" ++ base64md5 lbs
 
     -- What messages should be logged. The following includes all messages when
     -- in development, and warnings and errors in production.
-    shouldLog _ _source level =
-        development || level == LevelWarn || level == LevelError
+    shouldLog app _source level =
+        appShouldLogAll (appSettings app)
+            || level == LevelWarn
+            || level == LevelError
 
     makeLogger = return . appLogger
+
+    jsLoader _ = BottomOfHeadBlocking
 
 
 -- How to run database actions.
 instance YesodPersist App where
     type YesodPersistBackend App = SqlBackend
-    runDB = defaultRunDB persistConfig connPool
+    runDB action = do
+        master <- getYesod
+        runSqlPool action $ appConnPool master
 instance YesodPersistRunner App where
-    getDBRunner = defaultGetDBRunner connPool
+    getDBRunner = defaultGetDBRunner appConnPool
 
 
 instance YesodAuth App where
@@ -172,7 +167,7 @@ instance YesodAuth App where
                     , authGoogleEmail "779562207992-3n0vomdr0qiifco6elap9mi2cruhftgf.apps.googleusercontent.com" "UYfhViD4cQgsxhWwjwj0qBJM"
                     , authEpisodes checkPassword ]
 
-    authHttpManager = httpManager
+    authHttpManager = getHttpManager
 
 
 instance YesodAuthPersist App
@@ -186,13 +181,4 @@ instance YesodPureScript App
 instance RenderMessage App FormMessage where
     renderMessage _ _ = defaultFormMessage
 
--- | Get the 'Extra' value, used to hold data from the settings.yml file.
-getExtra :: Handler Extra
-getExtra = fmap (appExtra . settings) getYesod
 
--- Note: previous versions of the scaffolding included a deliver function to
--- send emails. Unfortunately, there are too many different options for us to
--- give a reasonable default. Instead, the information is available on the
--- wiki:
---
--- https://github.com/yesodweb/yesod/wiki/Sending-email

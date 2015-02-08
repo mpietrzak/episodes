@@ -117,7 +117,7 @@ getShowDetailsR showId = do
             case meProfile of
                 Just (Entity _ profile) -> do
                     let tzName = maybe "UTC" id $ profileTimezone profile
-                    let mtz = M.lookup tzName (commonTimeZoneMap app)
+                    let mtz = M.lookup tzName (appCommonTimeZoneMap app)
                     case mtz of
                         Just _tz -> return _tz
                         Nothing -> return utcTZ

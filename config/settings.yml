@@ -1,25 +1,21 @@
-Default: &defaults
-  host: "*4" # any IPv4 host
-  port: 3000
-  approot: "http://localhost:3000"
-  copyright: Maciej Pietrzak
-  update-interval: 36000
-  update-count: 2
-  #analytics: UA-YOURCODE
+host: "*4" # any IPv4 host
+port: 3000
+approot: "http://localhost:3000"
+copyright: Maciej Pietrzak
+update-interval: 36000
+update-count: 2
+#analytics: UA-YOURCODE
+static-dir: "_env:STATIC_DIR:static"
+ip-from-header: "_env:IP_FROM_HEADER:false"
+update-interval: 3600
+update-count: 1
 
-Development:
-  <<: *defaults
-  update-interval: 3600
-  update-count: 4
+database:
+  user: episodes
+  password: episodes
+  host: localhost
+  port: 5432
+  database: episodes
+  poolsize: 10
 
-Testing:
-  <<: *defaults
 
-Staging:
-  <<: *defaults
-
-Production:
-  approot: "http://3.pisod.es"
-  <<: *defaults
-  update-interval: 36000
-  update-count: 128

@@ -1,18 +1,44 @@
 {-# LANGUAGE TupleSections, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Handler.Users where
 
 
-import           Import
-
-import           Control.Applicative ((<*))
+import           Prelude
+import           Control.Applicative
+import           Control.Monad.IO.Class
+import           Data.Text (Text)
 import           Data.Time (getCurrentTime)
+import           Database.Persist
+import           Yesod (
+    defaultLayout,
+    getYesod,
+    redirect,
+    runDB,
+    setMessage,
+    setTitle,
+    Html)
 import           Yesod.Auth (requireAuth, requireAuthId)
+import           Yesod.Form (
+    areq,
+    generateFormPost,
+    passwordField,
+    runFormPost,
+    selectFieldList,
+    textareaField,
+    textField,
+    FieldSettings,
+    FormResult(..),
+    MForm,
+    Textarea(..))
 import           Yesod.Form.Bootstrap3
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUID4
 
+import Foundation
+import Model
+import Settings (widgetFile)
 import qualified Episodes.Common as EC
 import qualified Episodes.Time as ET
 
@@ -78,7 +104,7 @@ getProfileR :: Handler Html
 getProfileR = do
     authId <- requireAuthId
     app <- getYesod
-    let timezones = commonTimeZones app
+    let timezones = appCommonTimeZones app
     let tzOpts = map timeZoneToTzOpt timezones
 
     -- we need profile vals from db or defaults
@@ -105,7 +131,7 @@ postProfileR = do
     app <- getYesod
     now <- liftIO getCurrentTime
 
-    let timezones = commonTimeZones app
+    let timezones = appCommonTimeZones app
     let tzOpts = map timeZoneToTzOpt timezones
 
     -- we need profile vals from db for defaults
@@ -176,7 +202,7 @@ postProfilePasswordR = do
 
     -- :'(
     app <- getYesod
-    let timezones = commonTimeZones app
+    let timezones = appCommonTimeZones app
     let tzOpts = map timeZoneToTzOpt timezones
     mEntProfile <- runDB $ getBy $ UniqueProfileAccount authId
     let curTimezone = case mEntProfile of

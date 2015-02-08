@@ -48,7 +48,7 @@ getUserTimeZone = do
                     let mTimeZoneName = profileTimezone profile
                     case mTimeZoneName of
                         Just timeZoneName -> do
-                            let timeZoneMap = commonTimeZoneMap app
+                            let timeZoneMap = appCommonTimeZoneMap app
                             let _tz = M.findWithDefault TZ.utcTZ timeZoneName timeZoneMap
                             return _tz
                         Nothing -> return TZ.utcTZ
