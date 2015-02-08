@@ -6,6 +6,7 @@ import Prelude
 import Global
 import Control.Monad
 import Control.Monad.Eff
+import Data.Maybe
 import DOM
 import qualified Control.Monad.JQuery as J
 import qualified Debug.Trace as DT
@@ -35,31 +36,35 @@ onSetSubscriptionStatusFail _ s r = do
     return {}
 
 
-onSubscriptionButtonClick :: forall e. Boolean -> J.JQueryEvent -> J.JQuery -> Eff (trace :: DT.Trace, dom :: DOM | e) {}
+onSubscriptionButtonClick :: forall e. Boolean -> J.JQueryEvent -> J.JQuery -> Eff (trace :: DT.Trace, dom :: DOM | e) Unit
 onSubscriptionButtonClick status e target = do
     J.preventDefault e
-    showId <- getSubscriptionLinkShowId target
-    let req = { status: status, showId: showId }
-    reqJson <- jsonStringify req
-    let settings = { "data": reqJson
-            , "url": "/api/set-show-subscription-status"
-            , "method": "POST"
-            , "dataType": "json" }
-    r0 <- ajax settings
-    r1 <- jqXhrDone r0 onSetSubscriptionStatusDone
-    r <- jqXhrFail r1 onSetSubscriptionStatusFail
-    -- three of those
-    let showsClass = ".show-" ++ show showId ++ ".episodes-show"
-    DT.trace showsClass
-    showElements <- J.select showsClass
-    case status of
-        true -> do
-            J.removeClass "not-subscribed" showElements
-            J.addClass "subscribed" showElements
-        false -> do
-            J.removeClass "subscribed" showElements
-            J.addClass "not-subscribed" showElements
-    return {}
+    ma <- getAuthId
+    case ma of
+        Nothing -> redirect "/auth/login"
+        Just _ -> do
+            DT.trace $ "auth id: " ++ show ma
+            showId <- getSubscriptionLinkShowId target
+            let req = { status: status, showId: showId }
+            reqJson <- jsonStringify req
+            let settings = { "data": reqJson
+                    , "url": "/api/set-show-subscription-status"
+                    , "method": "POST"
+                    , "dataType": "json" }
+            r0 <- ajax settings
+            r1 <- jqXhrDone r0 onSetSubscriptionStatusDone
+            r <- jqXhrFail r1 onSetSubscriptionStatusFail
+            -- three of those
+            let showsClass = ".show-" ++ show showId ++ ".episodes-show"
+            showElements <- J.select showsClass
+            case status of
+                true -> do
+                    J.removeClass "not-subscribed" showElements
+                    J.addClass "subscribed" showElements
+                false -> do
+                    J.removeClass "subscribed" showElements
+                    J.addClass "not-subscribed" showElements
+            return unit
 
 
 bindButtonActions :: forall e. Eff (trace :: DT.Trace, dom :: DOM | e) {}

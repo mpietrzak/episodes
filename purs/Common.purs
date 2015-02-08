@@ -3,13 +3,14 @@ module Common
 where
 
 
-import Prelude hiding (show)
+import Prelude -- hiding (show)
 import Control.Monad.Eff
 import Data.Maybe
 import Debug.Trace
 import DOM
 import qualified Control.Monad.JQuery as J
 import qualified Data.String.Regex as R
+import qualified Debug.Trace as DT
 
 
 -- | PureScript version of Ajax Settings as documented here: http://api.jquery.com/jquery.ajax/#jQuery-ajax-settings
@@ -30,9 +31,9 @@ defaultAjaxSettings :: AjaxSettings
 defaultAjaxSettings = AjaxSettings { ajaxData: Nothing }
 
 
-type JQueryXmlHttpRequestDoneHandler = forall eff. JQueryXmlHttpData -> String -> JQueryXmlHttpRequest -> Eff (dom :: DOM, trace :: Trace | eff) {}
+type JQueryXmlHttpRequestDoneHandler = forall eff. JQueryXmlHttpData -> String -> JQueryXmlHttpRequest -> Eff (dom :: DOM, trace :: DT.Trace | eff) {}
 
-type JQueryXmlHttpRequestFailHandler = forall eff. JQueryXmlHttpRequest -> String -> String -> Eff (dom :: DOM, trace :: Trace | eff) {}
+type JQueryXmlHttpRequestFailHandler = forall eff. JQueryXmlHttpRequest -> String -> String -> Eff (dom :: DOM, trace :: DT.Trace | eff) {}
 
 
 foreign import closest
@@ -219,5 +220,34 @@ foreign import on
   """ :: forall eff eff' a. String -> (J.JQueryEvent -> J.JQuery -> Eff eff' a) -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
 
 
+foreign import size
+    """
+        function size(jq) {
+            return jq.size();
+        }
+    """ :: J.JQuery -> Number
 
+
+foreign import redirect
+    """
+        function redirect(p) {
+            return function() {
+                window.location.href = p;
+            }
+        }
+    """ :: forall eff. String -> Eff eff Unit
+
+
+-- | Find user auth id. Search for "#auth-id" input value, return it if found.
+getAuthId :: forall eff. Eff (dom :: DOM, trace :: DT.Trace | eff) (Maybe String)
+getAuthId = do
+    _authIdInput <- J.select "#auth-id"
+    let _cnt = size _authIdInput
+    DT.trace $ "cnt: " ++ show _cnt
+    case _cnt of
+            1 -> do
+                _authId <- getValueText _authIdInput
+                DT.trace $ "_authId: " ++ _authId
+                return (Just _authId)
+            _ -> return Nothing
 

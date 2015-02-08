@@ -44,3 +44,5 @@
 
     ^{widget}
 
+$maybe acc <- ma
+    <input id="auth-id" type="hidden" value="#{toPathPiece $ entityKey acc}"/>

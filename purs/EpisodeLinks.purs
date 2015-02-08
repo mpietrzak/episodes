@@ -62,7 +62,6 @@ getUserEpisodeLinks :: forall eff. Eff (dom :: DOM, trace :: DT.Trace | eff) Str
 getUserEpisodeLinks = do
     _linksInput <- J.select "#user-episode-links"
     _links <- C.getValueText _linksInput
-    DT.trace $ "_links: " ++ _links
     return _links
 
 

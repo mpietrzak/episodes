@@ -40,20 +40,24 @@ onSetEpisodeStatusFail _ s r = do
     return {}
 
 
-onEpisodeStatusCheckboxClick :: forall e. J.JQueryEvent -> J.JQuery -> Eff (trace :: DT.Trace, dom :: DOM | e) {}
+onEpisodeStatusCheckboxClick :: forall e. J.JQueryEvent -> J.JQuery -> Eff (trace :: DT.Trace, dom :: DOM | e) Unit
 onEpisodeStatusCheckboxClick event target = do
-    episodeId <- getCheckboxEpisodeId target
-    status <- getCheckboxStatus target
-    let req = { episodeStatus: status, episodeId: episodeId }
-    reqJson <- C.jsonStringify req
-    let settings = { "data": reqJson
-            , "url": "/api/set-episode-status"
-            , "method": "POST"
-            , "dataType": "json" }
-    r0 <- C.ajax settings
-    r1 <- C.jqXhrDone r0 onSetEpisodeStatusDone
-    r <- C.jqXhrFail r1 onSetEpisodeStatusFail
-    return {}
+    authId <- C.getAuthId
+    case authId of
+        Nothing -> C.redirect "/auth/login"
+        Just _ -> do
+            episodeId <- getCheckboxEpisodeId target
+            status <- getCheckboxStatus target
+            let req = { episodeStatus: status, episodeId: episodeId }
+            reqJson <- C.jsonStringify req
+            let settings = { "data": reqJson
+                    , "url": "/api/set-episode-status"
+                    , "method": "POST"
+                    , "dataType": "json" }
+            r0 <- C.ajax settings
+            r1 <- C.jqXhrDone r0 onSetEpisodeStatusDone
+            r <- C.jqXhrFail r1 onSetEpisodeStatusFail
+            return unit
 
 
 main = J.ready $ do

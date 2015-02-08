@@ -11,7 +11,6 @@ import           Data.List (sortBy)
 import           Data.Text (Text)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Time.Zones (utcTZ)
--- import           System.Locale (defaultTimeLocale)
 import           Yesod
 import           Yesod.Auth
 import           Yesod.Form.Bootstrap3
@@ -19,10 +18,7 @@ import           Yesod.PureScript (addPureScriptWidget)
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.Text as T
--- import qualified Data.Text.Format as TF
--- import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Read as T
--- import qualified Yesod.PureScript as YPS
 
 import           Foundation
 import           Episodes.Common (choose,
