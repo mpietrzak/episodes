@@ -16,11 +16,12 @@ import Data.Char
 import Data.Maybe (fromJust, mapMaybe)
 import Data.Text (Text)
 import Data.Time.Clock
+import Data.Time.Locale.Compat (defaultTimeLocale)
 import Data.Time.LocalTime
 import Options
 import Prelude hiding (Show, shows)
 import Text.XML.Cursor (($//), ($/), (&/))
-import System.Locale (defaultTimeLocale)
+
 import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.Text as T
 import qualified Data.Text.Read as T

@@ -61,6 +61,7 @@ onEpisodeStatusCheckboxClick event target = do
 
 
 main = J.ready $ do
-        checkboxes <- J.select ".episode-status.checkbox"
-        C.on "change" onEpisodeStatusCheckboxClick checkboxes
+    checkboxes <- J.select ".episode-status.checkbox"
+    C.on "change" onEpisodeStatusCheckboxClick checkboxes
+    DT.trace $ "EpisodeStatus: main: done"
 

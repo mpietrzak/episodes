@@ -13,4 +13,5 @@ import qualified EpisodeStatus as ES
 main = do
     ES.main
     EL.main
+    DT.trace "ShowDetails: main: done"
 

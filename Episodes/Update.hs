@@ -28,7 +28,7 @@ import qualified TVRage as TVR
 
 
 showCountPerUpdate :: Int
-showCountPerUpdate = 128
+showCountPerUpdate = 16
 
 
 class LogParam a where

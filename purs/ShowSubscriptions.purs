@@ -73,6 +73,7 @@ bindButtonActions = do
     unsubButtons <- J.select ".unsubscribe-show"
     on "click" (onSubscriptionButtonClick true) subButtons
     on "click" (onSubscriptionButtonClick false) unsubButtons
+    DT.trace "ShowSubscriptions: bindButtonActions: done"
     return {}
 
 

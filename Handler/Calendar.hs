@@ -17,16 +17,14 @@ import           Formatting.Time (datetime)
 import           Prelude hiding (Show)
 import           Yesod (
     Html,
-    addScript,
     defaultLayout,
-    getRequest,
     logDebug,
     lookupGetParam,
     runDB,
     setTitle,
     toPathPiece)
 import           Yesod.Auth (maybeAuthId)
-import           Yesod.PureScript (addPureScriptWidget, getPureScriptRoute)
+import           Yesod.PureScript (yesodPureScript)
 import qualified Data.Map as M
 import qualified Data.Text.Read as TR
 import qualified Data.Time.Calendar as C
@@ -41,7 +39,7 @@ import Episodes.DB (getPopularShowsEpisodesByMonth, getUserShowsEpisodesByMonth)
 import Episodes.Format (formatMonth)
 
 import Model
-import Settings (widgetFile, yesodPureScriptOptions)
+import Settings (development, widgetFile, yesodPureScriptOptions)
 
 
 -- Episode data in calendar.
@@ -230,6 +228,7 @@ getCalendarMonthR year month = do
     defaultLayout $ do
         setTitle "Episodes"
         -- addScript $ PureScriptR $ getPureScriptRoute ["Calendar"]
-        $(addPureScriptWidget yesodPureScriptOptions "Calendar")
+        -- $(addPureScriptWidget yesodPureScriptOptions "Calendar")
+        $(yesodPureScript development 'PureScriptR yesodPureScriptOptions "Calendar")
         $(widgetFile "calendar")
 

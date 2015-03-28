@@ -14,6 +14,7 @@ import qualified Data.String.Regex as DSR
 import qualified Debug.Trace as DT
 
 import qualified Common as C
+import qualified Debug.Trace as DT
 
 
 type EpisodeInfo = { showTitle :: String
@@ -174,6 +175,7 @@ bindEvents _linksTemplate = do
     C.on "mouseenter" onEpisodeMouseEnter _episodes
     C.on "mouseleave" onEpisodeMouseLeave _episodes
     C.on "click" (onEpisodeLinkClick _linksTemplate) _episodeMoreLink
+    DT.trace "EpisodeLinks: bindEvents: done"
     return unit
 
 

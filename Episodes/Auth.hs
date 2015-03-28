@@ -17,7 +17,6 @@ import Yesod ( HandlerT
              , TypedContent
              , YesodDB
              , YesodPersist
-             , YesodPersistBackend
              , getRouteToParent
              , hamlet
              , notFound

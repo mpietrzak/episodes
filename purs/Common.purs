@@ -243,11 +243,9 @@ getAuthId :: forall eff. Eff (dom :: DOM, trace :: DT.Trace | eff) (Maybe String
 getAuthId = do
     _authIdInput <- J.select "#auth-id"
     let _cnt = size _authIdInput
-    DT.trace $ "cnt: " ++ show _cnt
     case _cnt of
             1 -> do
                 _authId <- getValueText _authIdInput
-                DT.trace $ "_authId: " ++ _authId
                 return (Just _authId)
             _ -> return Nothing
 
