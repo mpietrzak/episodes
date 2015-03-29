@@ -36,7 +36,7 @@ development =
 
 -- Yesod PureScript Options
 yesodPureScriptOptions :: YesodPureScriptOptions
-yesodPureScriptOptions = def { ypsoSourceDirectories = ["purs", "bower_components", "../purs"]
+yesodPureScriptOptions = def { ypsoSourceDirectories = ["purs", "bower_components"]
                              , ypsoErrorDivId = Just "main"
                              , ypsoSourceIgnores = [ "examples"
                                                    , "quickcheck-test-src" ] }
