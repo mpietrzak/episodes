@@ -2,29 +2,30 @@
 /auth        AuthR       Auth           getAuth
 /purs        PureScriptR PureScriptSite appPureScriptSite
 
-/favicon.ico FaviconR GET
-/robots.txt RobotsR GET
+/favicon.ico                      FaviconR                   GET
+/robots.txt                       RobotsR                    GET
 
-/ HomeR GET
-/month CalendarR GET
-/month/#Int/#Int CalendarMonthR GET
-/shows ShowsR GET
-/add-show AddShowR GET POST
-/add-tvr-show AddTVRShowR POST
-/show/#ShowId ShowDetailsR GET
-/stats StatsR GET
-/profile ProfileR GET POST
-/subscribeShow/#ShowId SubscribeShowR GET
-/unsubscribeShow/#ShowId UnsubscribeShowR GET
+/                                 HomeR                      GET
+/month                            CalendarR                  GET
+/month/#Int/#Int                  CalendarMonthR             GET
+/last                             LastEpisodesR              GET
+/shows                            ShowsR                     GET
+/add-show                         AddShowR                   GET POST
+/add-tvr-show                     AddTVRShowR                POST
+/show/#ShowId                     ShowDetailsR               GET
+/stats                            StatsR                     GET
+/profile                          ProfileR                   GET POST
+/subscribeShow/#ShowId            SubscribeShowR             GET
+/unsubscribeShow/#ShowId          UnsubscribeShowR           GET
 
-/api/set-episode-status SetEpisodeStatusR POST
+/api/set-episode-status           SetEpisodeStatusR          POST
 /api/set-show-subscription-status SetShowSubscriptionStatusR POST
 
-/ical ICalPageR GET
-/calendar/#Text ICalR GET
-/export ExportMainR GET
-/export/#Text ExportFileR GET
+/ical                             ICalPageR                  GET
+/calendar/#Text                   ICalR                      GET
+/export                           ExportMainR                GET
+/export/#Text                     ExportFileR                GET
 
-/profile-password ProfilePasswordR POST
+/profile-password                 ProfilePasswordR           POST
 -- /register RegisterR GET POST
 
