@@ -1,0 +1,26 @@
+
+<h2>Last episodes
+
+<table>
+    <thead>
+        <tr>
+            <th>Show
+            <th>Last Episode
+            <th>Next Episode
+    <tbody>
+        $forall (_showInfo, _lastEpInfo, _nextEpInfo) <- lastShowEpisodes
+            $with (_showId, _showTitle) <- _showInfo
+                <tr>
+                    <td>
+                        <a href="@{ShowDetailsR _showId}">
+                            #{_showTitle}
+                    <td>
+                        $maybe (_seasonNumber, _episodeNumber, _epTitle, _epAirDT) <- _lastEpInfo
+                            <small>#{formatTime _epAirDT}</small> -
+                            #{formatEpisodeCode _seasonNumber _episodeNumber} -
+                            #{_epTitle}
+                    <td>
+                        $maybe (_seasonNumber, _episodeNumber, _epTitle, _epAirDT) <- _nextEpInfo
+                            <small>#{formatTime _epAirDT}</small> -
+                            #{formatEpisodeCode _seasonNumber _episodeNumber} -
+                            #{_epTitle}

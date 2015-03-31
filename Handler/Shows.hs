@@ -26,6 +26,7 @@ import           Episodes.Common (choose,
                                   getUserEpisodeLinks)
 import           Episodes.DB (getEpisodeStatusesByShowAndUser,
                               getPopularShows,
+                              getUserShowsEpisodesLastSeen,
                               updateShowSubscriptionCount)
 import           Model
 import           Settings (widgetFile, yesodPureScriptOptions)
@@ -266,4 +267,17 @@ getUnsubscribeShowR showId = do
         Nothing -> return ()
     _ <- runDB $ updateShowSubscriptionCount showId (-1)
     redirect ShowsR
+
+
+getLastEpisodesR :: Handler Html
+getLastEpisodesR = do
+    ma <- maybeAuthId
+    lastShowEpisodes <- case ma of
+            Just _a -> runDB $ getUserShowsEpisodesLastSeen _a
+            Nothing -> return []
+    defaultLayout $ do
+        setTitle "Last Episodes"
+        -- $(addPureScriptWidget yesodPureScriptOptions "ShowSubscriptions")
+        $(widgetFile "last-episodes")
+
 

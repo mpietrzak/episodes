@@ -1,5 +1,7 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 
 module Episodes.DB (
     checkPassword,
@@ -18,6 +20,7 @@ module Episodes.DB (
     getShowsToUpdate,
     getUserShowsEpisodesByMonth,
     getUserShowsEpisodesForExport,
+    getUserShowsEpisodesLastSeen,
     setSubscriptionStatus,
     updateEpisodeStatus,
     updateEpisodeViewCount,
@@ -27,6 +30,7 @@ module Episodes.DB (
 ) where
 
 
+import Control.Applicative ((<$>))
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Crypto.PBKDF.ByteString (sha1PBKDF2)
 import Data.Text (Text)
@@ -43,6 +47,13 @@ import qualified Data.Text.IO as TIO
 import qualified Debug.Trace as DT
 
 import Model
+
+-- import Formatting (sformat, string)
+-- import Control.Monad.Logger (MonadLogger(..))
+-- import Control.Monad.Trans.Resource (MonadResource(..))
+-- import Yesod (logDebug)
+-- import qualified Data.Conduit as C
+-- import qualified Data.Conduit.List as CL
 
 
 selectPopularEpisodesSql :: Text
@@ -297,6 +308,101 @@ getUserShowsEpisodesByMonth acc t1 t2 = rawSql selectUserShowsEpisodesByMonthSql
                  , toPersistValue acc -- two ? in query for account
                  , toPersistValue t1
                  , toPersistValue t2 ]
+
+
+
+getUserShowsEpisodesLastSeenSql :: Text
+getUserShowsEpisodesLastSeenSql = [st|
+    select
+        show.id,
+        show.title,
+        last_season.number,
+        last_episode.number,
+        last_episode.title,
+        last_episode.air_date_time,
+        next_season.number,
+        next_episode.number,
+        next_episode.title,
+        next_episode.air_date_time
+    from
+        (
+            select
+                show.id as show_id,
+                (
+                    select episode.id
+                    from
+                        (select * from season order by number desc) as season
+                        join episode on (episode.season = season.id)
+                        join episode_status on (episode_status.episode = episode.id and episode_status.account = account.id and episode_status.status = 'seen')
+                    where
+                        season.show = show.id
+                    order by
+                        season.number desc, episode.number desc
+                    limit 1
+                ) as last_episode_id,
+                (
+                    select episode.id
+                    from
+                        season
+                        join episode on (episode.season = season.id)
+                    where
+                        season.show = show.id
+                        and (
+                            (select status from episode_status where episode_status.account = account.id and episode_status.episode = episode.id) <> 'seen'
+                            or (select status from episode_status where episode_status.account = account.id and episode_status.episode = episode.id) is null)
+                    order by
+                        season.number asc, episode.number asc
+                    limit 1
+                ) as next_episode_id
+            from
+                account
+                join subscription on (subscription.account = account.id)
+                join show on (show.id = subscription.show)
+            where
+                account.id = ?
+        ) as l
+        join show on (show.id = l.show_id)
+        left join episode as last_episode on (last_episode.id = l.last_episode_id)
+        left join season as last_season on (last_season.id = last_episode.season)
+        left join episode as next_episode on (next_episode.id = l.next_episode_id)
+        left join season as next_season on (next_season.id = next_episode.season)
+    order by
+        (abs (extract(epoch from (current_timestamp - coalesce(last_episode.air_date_time, next_episode.air_date_time)))))
+|]
+
+
+-- | [(show, last ep, next ep)]
+getUserShowsEpisodesLastSeen :: (MonadIO m)
+                             => AccountId
+                             -> SqlPersistT m [
+                                        -- each row is tuple of:
+                                        -- show info
+                                        -- maybe last episode info
+                                        -- maybe next episode info
+                                        (
+                                            (ShowId, Text),
+                                            Maybe (Int, Int, Text, UTCTime),
+                                            Maybe (Int, Int, Text, UTCTime)
+                                        )
+                                    ]
+getUserShowsEpisodesLastSeen accId = rawSql getUserShowsEpisodesLastSeenSql params >>= (\rows -> return (map _unsr rows))
+    where
+        params = [ toPersistValue accId ]
+        _uns2 (a, b) = (unSingle a, unSingle b)
+        _uns4 (a, b, c, d) = (unSingle a, unSingle b, unSingle c, unSingle d)
+        _unsr (s, le, ne) = (_uns2 s, _uns4 <$> le, _uns4 <$> ne)
+--                              -> SqlPersistT m [( Entity Show
+--                                                , Entity Season
+--                                                , Entity Episode )]
+-- getUserShowsEpisodesLastSeen accId = do
+--         v <- rawQuery getUserShowsEpisodesLastSeenSql params C.$$ CL.fold f []
+--         $(logDebug) $ sformat
+--                         ("rawQuery results: " % string)
+--                         (show v)
+--         return []
+--     where
+--         params = [ toPersistValue accId ]
+--         f l x = (x:l)
 
 
 -- | Query that returns for given user for each subscribed show, the latest season and episode watched
