@@ -325,47 +325,14 @@ getUserShowsEpisodesLastSeenSql = [st|
         next_episode.title,
         next_episode.air_date_time
     from
-        (
-            select
-                show.id as show_id,
-                (
-                    select episode.id
-                    from
-                        (select * from season order by number desc) as season
-                        join episode on (episode.season = season.id)
-                        join episode_status on (episode_status.episode = episode.id and episode_status.account = account.id and episode_status.status = 'seen')
-                    where
-                        season.show = show.id
-                    order by
-                        season.number desc, episode.number desc
-                    limit 1
-                ) as last_episode_id,
-                (
-                    select episode.id
-                    from
-                        season
-                        join episode on (episode.season = season.id)
-                    where
-                        season.show = show.id
-                        and (
-                            (select status from episode_status where episode_status.account = account.id and episode_status.episode = episode.id) <> 'seen'
-                            or (select status from episode_status where episode_status.account = account.id and episode_status.episode = episode.id) is null)
-                    order by
-                        season.number asc, episode.number asc
-                    limit 1
-                ) as next_episode_id
-            from
-                account
-                join subscription on (subscription.account = account.id)
-                join show on (show.id = subscription.show)
-            where
-                account.id = ?
-        ) as l
-        join show on (show.id = l.show_id)
-        left join episode as last_episode on (last_episode.id = l.last_episode_id)
+        subscription
+        join show on (show.id = subscription.show)
+        left join episode as last_episode on (last_episode.id = subscription.last_episode)
         left join season as last_season on (last_season.id = last_episode.season)
-        left join episode as next_episode on (next_episode.id = l.next_episode_id)
+        left join episode as next_episode on (next_episode.id = subscription.next_episode)
         left join season as next_season on (next_season.id = next_episode.season)
+    where
+        subscription.account = ?
     order by
         (abs (extract(epoch from (current_timestamp - coalesce(last_episode.air_date_time, next_episode.air_date_time)))))
 |]
@@ -391,18 +358,6 @@ getUserShowsEpisodesLastSeen accId = rawSql getUserShowsEpisodesLastSeenSql para
         _uns2 (a, b) = (unSingle a, unSingle b)
         _uns4 (a, b, c, d) = (unSingle a, unSingle b, unSingle c, unSingle d)
         _unsr (s, le, ne) = (_uns2 s, _uns4 <$> le, _uns4 <$> ne)
---                              -> SqlPersistT m [( Entity Show
---                                                , Entity Season
---                                                , Entity Episode )]
--- getUserShowsEpisodesLastSeen accId = do
---         v <- rawQuery getUserShowsEpisodesLastSeenSql params C.$$ CL.fold f []
---         $(logDebug) $ sformat
---                         ("rawQuery results: " % string)
---                         (show v)
---         return []
---     where
---         params = [ toPersistValue accId ]
---         f l x = (x:l)
 
 
 -- | Query that returns for given user for each subscribed show, the latest season and episode watched
@@ -419,8 +374,88 @@ updateEpisodeViewCount :: MonadIO m => EpisodeId -> Int -> SqlPersistT m ()
 updateEpisodeViewCount episodeId change = update episodeId [EpisodeViewCount +=. change]
 
 
+getSubscriptionIdByAccIdEpisodeId :: MonadIO m => AccountId -> EpisodeId -> SqlPersistT m (Maybe SubscriptionId)
+getSubscriptionIdByAccIdEpisodeId accId epId = do
+        slm <- rawSql _sql _params -- list of Single (Maybe SubscriptionId)
+        let lm = map unSingle slm  -- list of Maybe SubscriptionId
+        return (_headMay lm)       -- Maybe SubscriptionId
+    where
+        _sql = [st|
+                select subscription.id
+                from
+                    episode
+                    join season on (season.id = episode.season)
+                    join show on (show.id = season.show)
+                    join subscription on (subscription.show = show.id)
+                where
+                    subscription.account = ?
+                    and episode.id = ?
+            |]
+        _params = [
+                toPersistValue accId,
+                toPersistValue epId
+            ]
+        -- Note: this is not safe's headMay, it works on list of maybes.
+        _headMay :: [Maybe x] -> Maybe x
+        _headMay l = case l of
+                [] -> Nothing
+                _ -> head l
+
+
 updateShowSubscriptionCount :: MonadIO m => ShowId -> Int -> SqlPersistT m ()
 updateShowSubscriptionCount showId change = update showId [ShowSubscriptionCount +=. change]
+
+
+updateShowSubscriptionLastNextEpisodeSql :: Text
+updateShowSubscriptionLastNextEpisodeSql = [st|
+    update subscription
+    set
+        last_episode = (
+            select
+                episode.id
+            from
+                show
+                join season on (season.show = show.id)
+                join episode on (episode.season = season.id)
+                join episode_status on (episode_status.episode = episode.id and episode_status.status = 'seen')
+                join account on (episode_status.account = account.id)
+            where
+                show.id = subscription.show
+                and account.id = subscription.account
+            order by
+                season.number desc, episode.number desc
+            limit 1
+        ),
+        next_episode = (
+            select
+                episode.id
+            from
+                show
+                join season on (season.show = show.id)
+                join episode on (episode.season = season.id)
+left            join (
+                        select * from episode_status where account = subscription.account
+                    ) as episode_status
+                    on (episode_status.episode = episode.id and episode_status.status = 'seen')
+            where
+                show.id = subscription.show
+                and (
+                        episode_status.status != 'seen'
+                        or episode_status.status is null
+                    )
+            order by
+                season.number asc, episode.number asc
+            limit 1
+        )
+    where
+        subscription.id = ?
+|]
+
+
+updateShowSubscriptionLastNextEpisode :: MonadIO m => SubscriptionId -> SqlPersistT m ()
+updateShowSubscriptionLastNextEpisode subscriptionId = rawExecute updateShowSubscriptionLastNextEpisodeSql params
+    where
+        params = [toPersistValue subscriptionId]
 
 
 setSubscriptionStatus :: MonadIO m
@@ -436,9 +471,12 @@ setSubscriptionStatus now accId showId status = do
             let subscription = Subscription {
                     subscriptionAccount = accId,
                     subscriptionShow = showId,
+                    subscriptionLastEpisode = Nothing,
+                    subscriptionNextEpisode = Nothing,
                     subscriptionCreated = now,
                     subscriptionModified = now }
-            insert_ subscription
+            subscriptionId <- insert subscription
+            updateShowSubscriptionLastNextEpisode subscriptionId
         False -> do
             -- delete
             deleteBy $ UniqueSubscriptionAccountShow accId showId
@@ -476,6 +514,10 @@ updateEpisodeStatus accountId episodeKey now status = do
         Just (Entity k _) -> do
             let u = [EpisodeStatusStatus =. newStatusText, EpisodeStatusModified =. now]
             update k u
+    mSubscriptionId <- getSubscriptionIdByAccIdEpisodeId accountId episodeKey
+    case mSubscriptionId of
+        Just subscriptionId -> updateShowSubscriptionLastNextEpisode subscriptionId
+        _ -> return ()
     return ()
 
 

@@ -27,6 +27,7 @@ import           Episodes.Common (choose,
 import           Episodes.DB (getEpisodeStatusesByShowAndUser,
                               getPopularShows,
                               getUserShowsEpisodesLastSeen,
+                              setSubscriptionStatus,
                               updateShowSubscriptionCount)
 import           Model
 import           Settings (widgetFile, yesodPureScriptOptions)
@@ -249,11 +250,7 @@ getSubscribeShowR showId = do
     now <- liftIO getCurrentTime
     case mSubscription of
         Just _ -> return ()
-        Nothing -> runDB $ insert_ Subscription {
-            subscriptionAccount = authId,
-            subscriptionShow = showId,
-            subscriptionCreated = now,
-            subscriptionModified = now}
+        Nothing -> runDB $ setSubscriptionStatus now authId showId True
     _ <- runDB $ updateShowSubscriptionCount showId 1
     redirect ShowsR
 

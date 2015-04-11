@@ -42,6 +42,8 @@ Episode
 Subscription
     account AccountId
     show ShowId
+    nextEpisode EpisodeId Maybe
+    lastEpisode EpisodeId Maybe
     created UTCTime
     modified UTCTime
     UniqueSubscriptionAccountShow account show
