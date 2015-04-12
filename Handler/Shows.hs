@@ -23,7 +23,7 @@ import qualified Data.Text.Read as T
 import           Foundation
 import           Episodes.Common (choose,
                                   forceText, formatEpisodeCode, formatInTimeZone, formatTime,
-                                  getUserEpisodeLinks)
+                                  getUserEpisodeLinks, getUserTimeZone)
 import           Episodes.DB (getEpisodeStatusesByShowAndUser,
                               getPopularShows,
                               getUserShowsEpisodesLastSeen,
@@ -108,19 +108,7 @@ getShowDetailsR showId = do
     mai <- maybeAuthId
     show <- runDB $ get404 showId
 
-    -- todo - make utility function or better yet automate this
-    tz <- case mai of
-        Just authId -> do
-            meProfile <- runDB $ getBy $ UniqueProfileAccount authId
-            case meProfile of
-                Just (Entity _ profile) -> do
-                    let tzName = maybe "UTC" id $ profileTimezone profile
-                    let mtz = M.lookup tzName (appCommonTimeZoneMap app)
-                    case mtz of
-                        Just _tz -> return _tz
-                        Nothing -> return utcTZ
-                _ -> return utcTZ
-        Nothing -> return utcTZ
+    tz <- getUserTimeZone
 
     showSeasons :: [Entity Season] <- runDB $ selectList [SeasonShow ==. showId] [Asc SeasonNumber]
     let showSeasonKeys = map (\s -> entityKey s) showSeasons

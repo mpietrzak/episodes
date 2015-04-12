@@ -12,7 +12,7 @@ import           Data.Function (on)
 import           Data.List (groupBy)
 import           Data.Text (Text)
 import           Database.Persist (Entity(Entity), entityKey, entityVal)
-import           Formatting ((%), int, sformat)
+import           Formatting ((%), int, sformat, shown)
 import           Formatting.Time (datetime)
 import           Prelude hiding (Show)
 import           Yesod (
@@ -183,6 +183,8 @@ getCalendarMonthR year month = do
 
     timeZone <- getUserTimeZone
 
+    $(logDebug) $ sformat ("user tz: " % shown) timeZone
+
     let localTime = TZ.utcToLocalTimeTZ timeZone now
     let localDay = TLT.localDay localTime
     let isToday = (==) localDay
@@ -191,11 +193,17 @@ getCalendarMonthR year month = do
     let d1 = C.fromGregorian (toInteger year) month 1 -- eg 2012 05 01
     let d2 = C.addGregorianMonthsClip 1 d1            -- eg 2012 06 01
 
+    $(logDebug) $ sformat ("d1: " % shown % ", d2: " % shown) d1 d2
+
     let lt1 = TLT.LocalTime { TLT.localDay = d1, TLT.localTimeOfDay = TLT.midnight }
     let lt2 = TLT.LocalTime { TLT.localDay = d2, TLT.localTimeOfDay = TLT.midnight }
 
+    $(logDebug) $ sformat ("lt1: " % shown % ", lt2: " % shown) lt1 lt2
+
     let utc1 = TZ.localTimeToUTCTZ timeZone lt1
     let utc2 = TZ.localTimeToUTCTZ timeZone lt2
+
+    $(logDebug) $ sformat ("utc1: " % shown % ", utc2: " % shown) utc1 utc2
 
     calendarEpisodes <- case ma of
             Just _acc -> do

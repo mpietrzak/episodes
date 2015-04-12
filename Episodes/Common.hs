@@ -35,11 +35,16 @@ import Model
 import Episodes.DB (getProfile)
 
 
--- | Get users timezone, return UTC if not found.
+-- | Get users timezone, return default timezone if not found.
 getUserTimeZone :: Handler TZ.TZ
 getUserTimeZone = do
     app <- getYesod
     mAccId <- maybeAuthId
+    let timeZoneMap = appCommonTimeZoneMap app
+    -- workaround for TZ's UTC bug
+    let defaultTimeZone = case M.lookup "Europe/London" timeZoneMap of
+            Just _tz -> _tz
+            Nothing -> error "default TZ not found"
     case mAccId of
         Just accId -> do
             mprofile <- runDB $ getProfile accId
@@ -48,12 +53,11 @@ getUserTimeZone = do
                     let mTimeZoneName = profileTimezone profile
                     case mTimeZoneName of
                         Just timeZoneName -> do
-                            let timeZoneMap = appCommonTimeZoneMap app
-                            let _tz = M.findWithDefault TZ.utcTZ timeZoneName timeZoneMap
+                            let _tz = M.findWithDefault defaultTimeZone timeZoneName timeZoneMap
                             return _tz
-                        Nothing -> return TZ.utcTZ
-                Nothing -> return TZ.utcTZ
-        Nothing -> return TZ.utcTZ
+                        Nothing -> return defaultTimeZone
+                Nothing -> return defaultTimeZone
+        Nothing -> return defaultTimeZone
 
 
 defaultUserEpisodeLinks :: Text

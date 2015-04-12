@@ -394,7 +394,7 @@ commonTimezoneNames = [
     "Europe/Zagreb",
     "Europe/Zaporozhye",
     "Europe/Zurich",
-    "GMT",
+    -- "GMT",
     "Indian/Antananarivo",
     "Indian/Chagos",
     "Indian/Christmas",
@@ -450,8 +450,9 @@ commonTimezoneNames = [
     "US/Eastern",
     "US/Hawaii",
     "US/Mountain",
-    "US/Pacific",
-    "UTC"]
+    "US/Pacific"
+    -- "UTC"
+    ]
 
 
 loadTZ :: Text -> IO NamedTimeZone
