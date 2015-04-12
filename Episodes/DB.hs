@@ -10,6 +10,7 @@ module Episodes.DB (
     createSeason,
     deleteEmptySeasons,
     deleteEpisodeByEpisodeCode,
+    getAccountByEmail,
     getEpisodesForICal,
     getEpisodeStatusesByShowAndUser,
     getPopularShowsEpisodesByMonth,
@@ -275,6 +276,15 @@ selectUserShowsEpisodesForExport = [st|
         show.title,
         show.id
 |]
+
+
+getAccountByEmail :: MonadIO m => Text -> SqlPersistT m (Maybe (Entity Account))
+getAccountByEmail _email = rawSql _sql _params >>= \_rows -> return (_maybeFirst _rows)
+    where
+        _sql = "select ?? from account where lower(email) = lower(?) order by created asc limit 1"
+        _params = [toPersistValue _email]
+        _maybeFirst [] = Nothing
+        _maybeFirst (x:_) = Just x
 
 
 getPopularShows :: MonadIO m
@@ -557,7 +567,7 @@ checkPassword username password = do
 
     -- we search by email if username contains '@', otherwise we search by username
     maybeAcc <- case T.any ((==) '@') username of
-            True -> getBy $ UniqueAccountEmail $ Just username
+            True -> getAccountByEmail username
             False -> getBy $ UniqueAccountNickname $ Just username
 
     case maybeAcc of

@@ -25,7 +25,7 @@ import qualified Data.Map as M
 import qualified Data.Text as T
 
 import Episodes.Auth (authEpisodes)
-import Episodes.DB (checkPassword, createAccount)
+import Episodes.DB (getAccountByEmail, checkPassword, createAccount)
 import Episodes.Time (NamedTimeZone)
 import Model
 import Settings (
@@ -153,7 +153,7 @@ instance YesodAuth App where
     getAuthId creds = runDB $ do
         let ident = credsIdent creds
         let getter = case T.any ((==) '@') ident of
-                True -> getBy . UniqueAccountEmail . Just
+                True -> getAccountByEmail -- getBy . UniqueAccountEmail . Just
                 False -> getBy . UniqueAccountNickname . Just
         _mAccEntity <- getter ident
         case _mAccEntity of
