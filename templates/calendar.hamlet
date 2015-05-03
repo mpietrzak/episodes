@@ -9,15 +9,17 @@
                             <tr>
                                 <td style="text-align: left">
                                     $with (y, m, _) <- C.toGregorian prevMonth
-                                        <a href="@{CalendarMonthR (fromInteger y) m}">
-                                            prev #{formatMonth prevMonth}
+                                        $if y >= 1900
+                                            <a href="@{CalendarMonthR (fromInteger y) m}">
+                                                prev #{formatMonth prevMonth}
                                 <td style="text-align: center">
                                     <a href="@{CalendarMonthR year month}">
                                         #{formatMonth (C.fromGregorian (toInteger year) month 1)}
                                 <td style="text-align: right">
                                     $with (y, m, _) <- C.toGregorian nextMonth
-                                        <a href="@{CalendarMonthR (fromInteger y) m}">
-                                            next #{formatMonth nextMonth}
+                                        $if y <= 2100
+                                            <a href="@{CalendarMonthR (fromInteger y) m}">
+                                                next #{formatMonth nextMonth}
             $forall week <- monthWeeks calendar
                 <tr>
                     $forall day <- weekDays week

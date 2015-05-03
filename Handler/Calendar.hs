@@ -20,6 +20,7 @@ import           Yesod (
     defaultLayout,
     logDebug,
     lookupGetParam,
+    notFound,
     runDB,
     setTitle,
     toPathPiece)
@@ -178,65 +179,68 @@ getCalendarR = do
 
 getCalendarMonthR :: Int -> Int -> Handler Html
 getCalendarMonthR year month = do
-    ma <- maybeAuthId
-    now <- liftIO C.getCurrentTime
+    if year >= 1900 && year <= 2100 then do
+        ma <- maybeAuthId
+        now <- liftIO C.getCurrentTime
 
-    timeZone <- getUserTimeZone
+        timeZone <- getUserTimeZone
 
-    $(logDebug) $ sformat ("user tz: " % shown) timeZone
+        $(logDebug) $ sformat ("user tz: " % shown) timeZone
 
-    let localTime = TZ.utcToLocalTimeTZ timeZone now
-    let localDay = TLT.localDay localTime
-    let isToday = (==) localDay
+        let localTime = TZ.utcToLocalTimeTZ timeZone now
+        let localDay = TLT.localDay localTime
+        let isToday = (==) localDay
 
-    -- convert start and end of month to UTC times
-    let d1 = C.fromGregorian (toInteger year) month 1 -- eg 2012 05 01
-    let d2 = C.addGregorianMonthsClip 1 d1            -- eg 2012 06 01
+        -- convert start and end of month to UTC times
+        let d1 = C.fromGregorian (toInteger year) month 1 -- eg 2012 05 01
+        let d2 = C.addGregorianMonthsClip 1 d1            -- eg 2012 06 01
 
-    $(logDebug) $ sformat ("d1: " % shown % ", d2: " % shown) d1 d2
+        $(logDebug) $ sformat ("d1: " % shown % ", d2: " % shown) d1 d2
 
-    let lt1 = TLT.LocalTime { TLT.localDay = d1, TLT.localTimeOfDay = TLT.midnight }
-    let lt2 = TLT.LocalTime { TLT.localDay = d2, TLT.localTimeOfDay = TLT.midnight }
+        let lt1 = TLT.LocalTime { TLT.localDay = d1, TLT.localTimeOfDay = TLT.midnight }
+        let lt2 = TLT.LocalTime { TLT.localDay = d2, TLT.localTimeOfDay = TLT.midnight }
 
-    $(logDebug) $ sformat ("lt1: " % shown % ", lt2: " % shown) lt1 lt2
+        $(logDebug) $ sformat ("lt1: " % shown % ", lt2: " % shown) lt1 lt2
 
-    let utc1 = TZ.localTimeToUTCTZ timeZone lt1
-    let utc2 = TZ.localTimeToUTCTZ timeZone lt2
+        let utc1 = TZ.localTimeToUTCTZ timeZone lt1
+        let utc2 = TZ.localTimeToUTCTZ timeZone lt2
 
-    $(logDebug) $ sformat ("utc1: " % shown % ", utc2: " % shown) utc1 utc2
+        $(logDebug) $ sformat ("utc1: " % shown % ", utc2: " % shown) utc1 utc2
 
-    calendarEpisodes <- case ma of
-            Just _acc -> do
-                sses <- runDB $ getUserShowsEpisodesByMonth _acc utc1 utc2
-                $(logDebug) $
-                    sformat
-                        ("got " % int % " user's episodes for " % datetime % " to " % datetime)
-                        (length sses)
-                        utc1
-                        utc2
-                return $ map (showSeasonEpisodeToCalendarEpisode timeZone) sses
-            Nothing -> do
-                sse <- runDB $ getPopularShowsEpisodesByMonth 32 utc1 utc2
-                let sses = map (\(_show, _season, _episode) -> (_show, _season, _episode, Nothing)) sse
-                $(logDebug) $
-                    sformat
-                        ("got " % int % " popular episodes for " % datetime % " to " % datetime)
-                        (length sses)
-                        utc1
-                        utc2
-                return $ map (showSeasonEpisodeToCalendarEpisode timeZone) sses
+        calendarEpisodes <- case ma of
+                Just _acc -> do
+                    sses <- runDB $ getUserShowsEpisodesByMonth _acc utc1 utc2
+                    $(logDebug) $
+                        sformat
+                            ("got " % int % " user's episodes for " % datetime % " to " % datetime)
+                            (length sses)
+                            utc1
+                            utc2
+                    return $ map (showSeasonEpisodeToCalendarEpisode timeZone) sses
+                Nothing -> do
+                    sse <- runDB $ getPopularShowsEpisodesByMonth 32 utc1 utc2
+                    let sses = map (\(_show, _season, _episode) -> (_show, _season, _episode, Nothing)) sse
+                    $(logDebug) $
+                        sformat
+                            ("got " % int % " popular episodes for " % datetime % " to " % datetime)
+                            (length sses)
+                            utc1
+                            utc2
+                    return $ map (showSeasonEpisodeToCalendarEpisode timeZone) sses
 
-    let calendar = createCalendar (toInteger year) month calendarEpisodes
+        let calendar = createCalendar (toInteger year) month calendarEpisodes
 
-    let prevMonth = C.addGregorianMonthsClip (-1) (C.fromGregorian (toInteger year) month 1)
-    let nextMonth = C.addGregorianMonthsClip 1 (C.fromGregorian (toInteger year) month 1)
+        let prevMonth = C.addGregorianMonthsClip (-1) (C.fromGregorian (toInteger year) month 1)
+        let nextMonth = C.addGregorianMonthsClip 1 (C.fromGregorian (toInteger year) month 1)
 
-    episodeLinks <- getUserEpisodeLinks ma
+        episodeLinks <- getUserEpisodeLinks ma
 
-    defaultLayout $ do
-        setTitle "Episodes"
-        -- addScript $ PureScriptR $ getPureScriptRoute ["Calendar"]
-        -- $(addPureScriptWidget yesodPureScriptOptions "Calendar")
-        $(yesodPureScript development 'PureScriptR yesodPureScriptOptions "Calendar")
-        $(widgetFile "calendar")
+        defaultLayout $ do
+            setTitle "Episodes"
+            -- addScript $ PureScriptR $ getPureScriptRoute ["Calendar"]
+            -- $(addPureScriptWidget yesodPureScriptOptions "Calendar")
+            $(yesodPureScript development 'PureScriptR yesodPureScriptOptions "Calendar")
+            $(widgetFile "calendar")
+    else
+        notFound
 
