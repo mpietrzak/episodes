@@ -16,7 +16,6 @@
   "dependencies": {
     "purescript-globals": "*",
     "purescript-jquery": "*",
-    "purescript-lists": "*",
-    "purescript-strings": "*"
+    "purescript-strings": "0.4.5"
   }
 }
