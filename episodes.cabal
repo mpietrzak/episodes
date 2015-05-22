@@ -85,8 +85,8 @@ library
                  , iCalendar                     >= 0.4.0.2
                  , monad-control                 >= 0.3
                  , monad-logger                  >= 0.3
-                 , network                       >= 2.6.0.2
-                 , network-uri                   >= 2.6.0.1
+                 , network                       >= 2.6.1
+                 , network-uri                   >= 2.6.0.3
                  , old-locale
                  , options
                  , parsec
@@ -116,8 +116,8 @@ library
                  , yaml                          >= 0.8
                  , yesod                         >= 1.4.1.4
                  , yesod-core                    >= 1.4.9
-                 , yesod-auth                    >= 1.4.4
-                 , yesod-static                  >= 1.4.0.4
+                 , yesod-auth                    >= 1.4.5
+                 , yesod-static                  >= 1.5
                  , yesod-form                    >= 1.4.4.1
                  , yesod-purescript              >= 0.0.5
 
