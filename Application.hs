@@ -192,5 +192,5 @@ scheduler _interval _count conf pool = loop
             _ <- delay $ fromIntegral $ _interval * 1000 * 1000
             loop
         job = do
-            runResourceT $ runStderrLoggingT $ runPool conf updateTVRageShows pool
+            runResourceT $ runStderrLoggingT $ runPool conf (updateTVRageShows _count) pool
 

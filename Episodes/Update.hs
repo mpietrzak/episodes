@@ -27,10 +27,6 @@ import qualified Episodes.DB as DB
 import qualified TVRage as TVR
 
 
-showCountPerUpdate :: Int
-showCountPerUpdate = 16
-
-
 class LogParam a where
     toText :: a -> Text
 
@@ -48,14 +44,15 @@ _log _lp = liftIO $ TIO.putStrLn (toText _lp)
 
 
 -- | Job that updates TVRage shows, executed from time to time (eg once per day).
-updateTVRageShows :: MonadIO m
-                  => SqlPersistT m ()
-updateTVRageShows = do
+updateTVRageShows :: (MonadIO m)
+                  => Int
+                  -> SqlPersistT m ()
+updateTVRageShows _cnt = do
         _log ("updateTVRageShows" :: Text)
 
         now <- liftIO getCurrentTime
 
-        showsToUpdateEntities <- DB.getShowsToUpdate showCountPerUpdate
+        showsToUpdateEntities <- DB.getShowsToUpdate _cnt
 
         let showsToUpdate = map entityVal showsToUpdateEntities
         let showTitles = map showTitle showsToUpdate
@@ -112,7 +109,7 @@ combineLocalAndRemoteShowData :: MonadIO m
 combineLocalAndRemoteShowData _showEntity _local _remote _now = actions
     where
         actions = concat [deletes, updates, inserts]
-        updates = []
+        updates = episodeUpdates
 
         _show = entityVal _showEntity
         _showId = entityKey _showEntity
@@ -132,6 +129,17 @@ combineLocalAndRemoteShowData _showEntity _local _remote _now = actions
                         (_, _episode) = _map HM.! _code
                         _title = TVR.episodeTitle _episode
                         _airDateTime = TVR.episodeAirDateTime _episode
+        episodeUpdates = map _episodeUpdateAction _toUpdateEpisodes
+            where
+                _episodeUpdateAction _ep = DB.updateEpisode _episodeId _episodeNewTitle _episodeNewAirDateTime _now
+                    where
+                        (_, Entity _ _epSeason, Entity _episodeId _epEpisode) = _ep
+                        _epSeasonNum = seasonNumber _epSeason
+                        _epEpisodeNum = episodeNumber _epEpisode
+                        _code = (fromIntegral _epSeasonNum, fromIntegral _epEpisodeNum)
+                        (_, _tvrEpisode) = _remoteEpisodeByCode HM.! _code
+                        _episodeNewTitle = TVR.episodeTitle _tvrEpisode
+                        _episodeNewAirDateTime = TVR.episodeAirDateTime _tvrEpisode
 
         -- seasons
         _localSeasonNumbers = traceValue "local season numbers" $ HS.fromList $ map (fromIntegral . seasonNumber . entityVal . (\(_, _s, _) -> _s)) _local :: HS.HashSet Integer
@@ -163,18 +171,21 @@ combineLocalAndRemoteShowData _showEntity _local _remote _now = actions
 
         _toUpdateEpisodes = filter _shouldUpdate _local
             where
-                _shouldUpdate (_, Entity _ _season, Entity _ _episode) = _isneq (_show, _season, _episode) _remoteEpisode
+                _shouldUpdate (_, Entity _ _season, Entity _ _episode) = case _mRemoteEpisode of
+                        Nothing -> False
+                        Just (_, _remoteEpisode) -> _isneq (_show, _season, _episode) _remoteEpisode
+                            where
+                                _isneq (_show, _season, _episode) _remoteEpisode = _titlesNeq || _airDateNeq
+                                    where
+                                        _titlesNeq = traceValue ("are titles not equal: " ++ show _localTitle ++ ", " ++ show _remoteTitle) $ _localTitle /= _remoteTitle
+                                        _airDateNeq = _localAirDate /= _remoteAirDate
+                                        _localTitle = episodeTitle _episode
+                                        _remoteTitle = TVR.episodeTitle _remoteEpisode
+                                        _localAirDate = episodeAirDateTime _episode
+                                        _remoteAirDate = TVR.episodeAirDateTime _remoteEpisode
                     where
                         _code = (fromIntegral $ seasonNumber _season, fromIntegral $ episodeNumber _episode) :: (Integer, Integer)
-                        (_, _remoteEpisode) = _remoteEpisodeByCode HM.! _code
-                        _isneq (_show, _season, _episode) _remoteEpisode = _titlesNeq || _airDateNeq
-                            where
-                                _titlesNeq = _localTitle /= _remoteTitle
-                                _airDateNeq = _localAirDate /= _remoteAirDate
-                                _localTitle = episodeTitle _episode
-                                _remoteTitle = TVR.episodeTitle _remoteEpisode
-                                _localAirDate = episodeAirDateTime _episode
-                                _remoteAirDate = TVR.episodeAirDateTime _remoteEpisode
+                        _mRemoteEpisode = HM.lookup _code _remoteEpisodeByCode
 
         -- helpers
         _getShowEntityRowEpisodeCode (_show, _season, _episode) = (

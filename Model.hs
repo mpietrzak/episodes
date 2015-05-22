@@ -15,6 +15,6 @@ share [mkPersist sqlSettings, mkMigrate "migrateAll"]
     $(persistFileWith lowerCaseSettings "config/models")
 
 
-deriving instance Prelude.Show Episode
-deriving instance Prelude.Show Profile
+-- deriving instance Prelude.Show Episode
+-- deriving instance Prelude.Show Profile
 

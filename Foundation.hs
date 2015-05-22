@@ -163,9 +163,12 @@ instance YesodAuth App where
                 _id <- createAccount ident Nothing now
                 return (Just _id)
 
-    authPlugins _ = [ authBrowserId def
-                    , authGoogleEmail "779562207992-3n0vomdr0qiifco6elap9mi2cruhftgf.apps.googleusercontent.com" "UYfhViD4cQgsxhWwjwj0qBJM"
-                    , authEpisodes checkPassword ]
+    authPlugins _app = [ authBrowserId def
+                       , authGoogleEmail _id _secret
+                       , authEpisodes checkPassword ]
+        where
+            _id = appGoogleAuthClientId $ appSettings $ _app
+            _secret = appGoogleAuthClientSecret $ appSettings $ _app
 
     authHttpManager = getHttpManager
 

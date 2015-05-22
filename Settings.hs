@@ -78,6 +78,9 @@ data AppSettings = AppSettings
     -- ^ Google Analytics code
     , appUpdateInterval         :: Int
     , appUpdateCount            :: Int
+
+    , appGoogleAuthClientId     :: Text
+    , appGoogleAuthClientSecret :: Text
     }
 
 instance FromJSON AppSettings where
@@ -106,6 +109,9 @@ instance FromJSON AppSettings where
 
         appUpdateInterval         <- o .: "update-interval"
         appUpdateCount            <- o .: "update-count"
+
+        appGoogleAuthClientId     <- o .: "google-auth-client-id"
+        appGoogleAuthClientSecret <- o .: "google-auth-client-secret"
 
         return AppSettings {..}
 

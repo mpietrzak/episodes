@@ -18,11 +18,14 @@ module Episodes.DB (
     getPopularEpisodes,
     getProfile,
     getShowData,
+    getShowEpisodes,
+    getShowSeasons,
     getShowsToUpdate,
     getUserShowsEpisodesByMonth,
     getUserShowsEpisodesForExport,
     getUserShowsEpisodesLastSeen,
     setSubscriptionStatus,
+    updateEpisode,
     updateEpisodeStatus,
     updateEpisodeViewCount,
     updateShowLastUpdate,
@@ -500,6 +503,19 @@ getEpisodesForICal :: MonadIO m => Text -> SqlPersistT m [(Entity Show, Entity S
 getEpisodesForICal _cookie = rawSql selectEpisodesForICal [toPersistValue _cookie]
 
 
+updateEpisode :: MonadIO m
+              => EpisodeId
+              -> Text
+              -> UTCTime
+              -> UTCTime
+              -> SqlPersistT m ()
+updateEpisode _episodeId _episodeTitle _episodeAirDateTime _episodeModified = update _episodeId _updates
+    where
+        _updates = [EpisodeTitle =. _episodeTitle,
+                    EpisodeAirDateTime =. _episodeAirDateTime,
+                    EpisodeModified =. _episodeModified ]
+
+
 -- Update episode status.
 -- If does not exist, then create new.
 updateEpisodeStatus :: MonadIO m
@@ -617,6 +633,35 @@ getShowData :: MonadIO m
             => ShowId
             -> SqlPersistT m [(Entity Show, Entity Season, Entity Episode)]
 getShowData showKey = rawSql selectShowData [toPersistValue showKey]
+
+
+getShowEpisodes :: MonadIO m
+                => ShowId
+                -> SqlPersistT m [Entity Episode]
+getShowEpisodes showKey = rawSql _sql _params
+    where
+        _sql = [st|
+                    select ??
+                    from show
+                        join season on (season.show = show.id)
+                        join episode on (episode.season = season.id)
+                    where
+                        show.id = ?
+            |]
+        _params = [toPersistValue showKey]
+
+
+getShowSeasons :: MonadIO m
+               => ShowId
+               -> SqlPersistT m [Entity Season]
+getShowSeasons showKey = rawSql _sql _params
+    where
+        _sql = [st|
+                    select ??
+                    from show join season on (season.show = show.id)
+                    where show.id = ?
+            |]
+        _params = [toPersistValue showKey]
 
 
 updateShowLastUpdate :: MonadIO m

@@ -6,6 +6,7 @@ module Handler.Shows where
 
 import           Prelude hiding (show, Show)
 import           Control.Applicative
+import           Control.Concurrent.Async (concurrently)
 import           Data.Function (on)
 import           Data.List (sortBy)
 import           Data.Text (Text)
@@ -26,6 +27,8 @@ import           Episodes.Common (choose,
                                   getUserEpisodeLinks, getUserTimeZone)
 import           Episodes.DB (getEpisodeStatusesByShowAndUser,
                               getPopularShows,
+                              getShowEpisodes,
+                              getShowSeasons,
                               getUserShowsEpisodesLastSeen,
                               setSubscriptionStatus,
                               updateShowSubscriptionCount)
@@ -99,7 +102,7 @@ groupEpisodesBySeason episodeList = sortEpisodes $ foldr _add M.empty episodeLis
                 newSeasonEpisodes = episode:oldSeasonEpisodes
                 oldSeasonEpisodes = M.findWithDefault [] seasonId m
         sortEpisodes = M.map (sortBy episodeSortBy)
-        episodeSortBy = compare `on` (episodeNumber . entityVal)
+        episodeSortBy = compare `on` (\ev -> (episodeNumber (entityVal ev), entityKey ev))
 
 
 getShowDetailsR :: ShowId -> Handler Html
@@ -110,9 +113,9 @@ getShowDetailsR showId = do
 
     tz <- getUserTimeZone
 
-    showSeasons :: [Entity Season] <- runDB $ selectList [SeasonShow ==. showId] [Asc SeasonNumber]
-    let showSeasonKeys = map (\s -> entityKey s) showSeasons
-    showEpisodes :: [Entity Episode] <- runDB $ selectList [EpisodeSeason <-. showSeasonKeys] []
+    showEpisodes <- runDB $ getShowEpisodes showId
+    showSeasons <- runDB $ getShowSeasons showId
+
     let episodesBySeasonMap = groupEpisodesBySeason showEpisodes
     let episodesBySeason = getEpisodesBySeason episodesBySeasonMap
 
