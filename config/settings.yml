@@ -9,6 +9,9 @@ static-dir: "_env:STATIC_DIR:static"
 ip-from-header: "_env:IP_FROM_HEADER:false"
 update-interval: 3600
 update-count: 1
+google-auth-client-id: "test"
+google-auth-client-secret: "test"
+
 
 database:
   user: episodes

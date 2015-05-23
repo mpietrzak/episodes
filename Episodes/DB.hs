@@ -17,6 +17,7 @@ module Episodes.DB (
     getPopularShows,
     getPopularEpisodes,
     getProfile,
+    getRecentlyPopularEpisodes,
     getShowData,
     getShowEpisodes,
     getShowSeasons,
@@ -308,6 +309,38 @@ getPopularShowsEpisodesByMonth :: (MonadIO m)
                                -> UTCTime
                                -> SqlPersistT m [(Entity Show, Entity Season, Entity Episode)]
 getPopularShowsEpisodesByMonth cnt t1 t2 = rawSql selectPopularShowsEpisodesByMonthSql [toPersistValue t1, toPersistValue t2, toPersistValue cnt]
+
+
+getRecentlyPopularEpisodes :: (MonadIO m, Functor m)
+                           => Int
+                           -> Int
+                           -> SqlPersistT m [(Entity Show, Entity Season, Entity Episode)]
+getRecentlyPopularEpisodes sampleSize cnt = rawSql _sql _params
+    where
+        _sql = [st|
+                select ??, ??, ??
+                from
+                    (
+                        select id, count(*) as c
+                        from
+                            (
+                                select episode_status.episode as id
+                                from episode_status
+                                where episode_status.status = 'seen'
+                                order by modified desc
+                                limit ?
+                            ) as recent_episode_status
+                        group by id
+                    ) as recent_episode
+                    join episode on (episode.id = recent_episode.id)
+                    join season on (season.id = episode.season)
+                    join show on (show.id = season.show)
+                order by
+                    recent_episode.c desc,
+                    episode.id desc
+                limit ?
+            |]
+        _params = [toPersistValue sampleSize, toPersistValue cnt]
 
 
 getUserShowsEpisodesByMonth :: (MonadIO m)

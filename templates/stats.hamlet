@@ -4,8 +4,8 @@
 
 <div class="row">
 
-    <div class="col-md-6">
-        <h3>Popular shows</h3>
+    <div class="col-md-4">
+        <h3>Popular shows
         <table class="table table-striped">
             <tbody>
                 $forall Entity k s <- popularShows
@@ -15,8 +15,8 @@
                         <td>
                             #{showSubscriptionCount s}
 
-    <div class="col-md-6">
-        <h3>Popular episodes</h3>
+    <div class="col-md-4">
+        <h3>Popular episodes
         <table class="table table-striped">
             <tbody>
                 $forall (episodeEntity, seasonEntity, showEntity) <- popularEpisodes
@@ -25,8 +25,23 @@
                             <a href="@{ShowDetailsR (entityKey showEntity)}">
                                 #{showTitle (entityVal showEntity)}
                         <td>
-                            #{seasonNumber (entityVal seasonEntity)}-#{episodeNumber (entityVal episodeEntity)}
+                            #{formatEpisodeCode (seasonNumber $ entityVal seasonEntity) (episodeNumber $ entityVal episodeEntity)}
+                            -
                             #{episodeTitle (entityVal episodeEntity)}
                         <td>
                             #{episodeViewCount (entityVal episodeEntity)}
 
+
+    <div class="col-md-4">
+        <h3>Recently popular episodes
+        <table class="table table-striped">
+            <tbody>
+                $forall (showEntity, seasonEntity, episodeEntity) <- recentlyPopularEpisodes
+                    <tr>
+                        <td>
+                            <a href="@{ShowDetailsR (entityKey showEntity)}">
+                                #{showTitle (entityVal showEntity)}
+                        <td>
+                            #{formatEpisodeCode (seasonNumber $ entityVal seasonEntity) (episodeNumber $ entityVal episodeEntity)}
+                            -
+                            #{episodeTitle (entityVal episodeEntity)}
