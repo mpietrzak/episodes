@@ -680,6 +680,7 @@ getShowEpisodes showKey = rawSql _sql _params
                         join episode on (episode.season = season.id)
                     where
                         show.id = ?
+                    order by season.number, episode.number
             |]
         _params = [toPersistValue showKey]
 
@@ -691,8 +692,9 @@ getShowSeasons showKey = rawSql _sql _params
     where
         _sql = [st|
                     select ??
-                    from show join season on (season.show = show.id)
-                    where show.id = ?
+                    from season
+                    where season.show = ?
+                    order by season.number
             |]
         _params = [toPersistValue showKey]
 
