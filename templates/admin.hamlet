@@ -2,3 +2,24 @@
 <h2>Admin
 
 
+<table class="table table-striped table-condensed">
+    <tbody>
+        $forall (eShow, eSeason, eEpisode, eAcc, eEpStatus) <- episode_statuses
+            <tr>
+                <td>
+                    <small>
+                        #{formatTime $ episodeStatusModified $ entityVal eEpStatus}
+                <td>
+                    #{showTitle $ entityVal eShow}
+                <td>
+                    #{formatEpisodeCode (seasonNumber $ entityVal eSeason) (episodeNumber $ entityVal eEpisode)}
+                    -
+                    #{episodeTitle $ entityVal eEpisode}
+                <td>
+                    #{episodeStatusStatus $ entityVal eEpStatus}
+                <td>
+                    $maybe _nickname <- accountNickname $ entityVal eAcc
+                        #{_nickname}
+                <td>
+                    $maybe _email <- accountEmail $ entityVal eAcc
+                        #{_email}

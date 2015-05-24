@@ -17,6 +17,9 @@
 /profile                          ProfileR                   GET POST
 /subscribeShow/#ShowId            SubscribeShowR             GET
 /unsubscribeShow/#ShowId          UnsubscribeShowR           GET
+/about                            AboutR                     GET
+
+/admin                            AdminR                     GET
 
 /api/set-episode-status           SetEpisodeStatusR          POST
 /api/set-show-subscription-status SetShowSubscriptionStatusR POST

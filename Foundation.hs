@@ -71,15 +71,24 @@ instance Yesod App where
         "config/client_session_key.aes"
 
     defaultLayout widget = do
-        -- master <- getYesod
+        app <- getYesod
         mmsg <- getMessage
         ma <- maybeAuth
+        let googleAnalyticsCode = appAnalytics $ appSettings app
 
-        -- We break up the default layout into two components:
-        -- default-layout is the contents of the body tag, and
-        -- default-layout-wrapper is the entire page. Since the final
-        -- value passed to hamletToRepHtml cannot be a widget, this allows
-        -- you to use normal widget features in default-layout.
+        currentRoute <- getCurrentRoute
+        let forceText = id :: Text -> Text
+        let onCurrentRoute _r _t _f = if currentRoute == Just _r then _t else _f
+        let navbarItemClass _r = forceText $ onCurrentRoute _r "active" ""
+        let navbarItems = [
+                    ("Calendar" :: Text, CalendarR),
+                    ("Last Episodes", LastEpisodesR),
+                    ("Shows", ShowsR),
+                    ("Add Show", AddShowR),
+                    ("Stats", StatsR),
+                    ("ICal", ICalPageR),
+                    ("Export", ExportMainR)
+                ]
 
         pc <- widgetToPageContent $ do
             $(combineStylesheets 'StaticR

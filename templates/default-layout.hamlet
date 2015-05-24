@@ -14,30 +14,21 @@
 
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
             <ul class="nav navbar-nav">
-                <li><a href="@{CalendarR}">Calendar</a></li>
-                <li><a href="@{LastEpisodesR}">Last Episodes</a></li>
-                <li><a href="@{ShowsR}">Shows</a></li>
-                <li><a href="@{AddShowR}">Add Show</a></li>
-                <li><a href="@{StatsR}">Stats</a></li>
-                <li><a href="@{ICalPageR}">ICal</a></li>
-                <li><a href="@{ExportMainR}">Export</a></li>
-            <!--
-            <form class="navbar-form navbar-left" role="search">
-                <div class="form-group">
-                    <input type="text" class="form-control" placeholder="Search">
-                <button type="submit" class="btn btn-default">Submit
-            -->
+
+                $forall (navbarTitle, navbarRoute) <- navbarItems
+                    <li class=#{navbarItemClass navbarRoute}><a href="@{navbarRoute}">#{navbarTitle}</a></li>
+
             <ul class="nav navbar-nav navbar-right">
                 $maybe a <- ma
-                    <li>
+                    <li class=#{navbarItemClass (AuthR LogoutR)}>
                         <a href="@{AuthR LogoutR}">Logout
-                    <li>
+                    <li class=#{navbarItemClass ProfileR}>
                         <a href="@{ProfileR}">Profile
                 $nothing
-                    <li>
+                    <li class=#{navbarItemClass (AuthR LoginR)}>
                         <a href="@{AuthR LoginR}">Login / Sign Up
-                <li>
-                    <a href="#">About
+                <li class=#{navbarItemClass AboutR}>
+                    <a href="@{AboutR}">About
 
 <div class="container-fluid" id="main">
     $maybe msg <- mmsg
@@ -47,3 +38,14 @@
 
 $maybe acc <- ma
     <input id="auth-id" type="hidden" value="#{toPathPiece $ entityKey acc}"/>
+
+
+<script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', #{googleAnalyticsCode}, 'auto');
+    ga('send', 'pageview');
+

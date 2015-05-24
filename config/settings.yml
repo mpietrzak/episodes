@@ -4,7 +4,7 @@ approot: "http://localhost:3000"
 copyright: Maciej Pietrzak
 update-interval: 36000
 update-count: 2
-#analytics: UA-YOURCODE
+analytics: UA-91471-32
 static-dir: "_env:STATIC_DIR:static"
 ip-from-header: "_env:IP_FROM_HEADER:false"
 update-interval: 3600

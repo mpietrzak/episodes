@@ -36,6 +36,8 @@ import Yesod.PureScript
 import qualified Data.Map as M
 
 import Foundation
+import Handler.About (getAboutR)
+import Handler.Admin (getAdminR)
 import Handler.Calendar
 import Handler.Shows
 import Handler.Users

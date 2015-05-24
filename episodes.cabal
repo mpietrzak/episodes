@@ -22,6 +22,8 @@ library
                      Model
                      Settings
                      Settings.StaticFiles
+                     Handler.About
+                     Handler.Admin
                      Handler.API
                      Handler.Export
                      Handler.Calendar

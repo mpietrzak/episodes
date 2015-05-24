@@ -13,11 +13,12 @@ module Episodes.DB (
     getAccountByEmail,
     getEpisodesForICal,
     getEpisodeStatusesByShowAndUser,
-    getPopularShowsEpisodesByMonth,
-    getPopularShows,
     getPopularEpisodes,
+    getPopularShows,
+    getPopularShowsEpisodesByMonth,
     getProfile,
     getRecentlyPopularEpisodes,
+    getRecentEpisodeStatuses,
     getShowData,
     getShowEpisodes,
     getShowSeasons,
@@ -341,6 +342,26 @@ getRecentlyPopularEpisodes sampleSize cnt = rawSql _sql _params
                 limit ?
             |]
         _params = [toPersistValue sampleSize, toPersistValue cnt]
+
+
+getRecentEpisodeStatuses :: MonadIO m
+                         => Int
+                         -> SqlPersistT m [(Entity Show, Entity Season, Entity Episode, Entity Account, Entity EpisodeStatus)]
+getRecentEpisodeStatuses cnt = rawSql _sql _params
+    where
+        _sql = [st|
+                select ??, ??, ??, ??, ??
+                from
+                    episode_status
+                    join account on (account.id = episode_status.account)
+                    join episode on (episode.id = episode_status.episode)
+                    join season on (season.id = episode.season)
+                    join show on (show.id = season.show)
+                order by
+                    episode_status.modified desc
+                limit ?
+            |]
+        _params = [toPersistValue cnt]
 
 
 getUserShowsEpisodesByMonth :: (MonadIO m)
