@@ -14,8 +14,8 @@
     "tests"
   ],
   "dependencies": {
-    "purescript-globals": "*",
-    "purescript-jquery": "*",
-    "purescript-strings": "0.4.5"
+    "purescript-globals": "0.2.0",
+    "purescript-jquery": "0.5.0",
+    "purescript-strings": "0.5.4"
   }
 }
