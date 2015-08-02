@@ -1,5 +1,5 @@
 {-# LANGUAGE TupleSections, OverloadedStrings, ScopedTypeVariables #-}
-
+{-# LANGUAGE TemplateHaskell #-}
 
 module Handler.Shows where
 
@@ -15,7 +15,7 @@ import           Data.Time.Zones (utcTZ)
 import           Yesod
 import           Yesod.Auth
 import           Yesod.Form.Bootstrap3
-import           Yesod.PureScript (addPureScriptWidget)
+-- import           Yesod.PureScript (addPureScriptWidget)
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.Text as T
@@ -33,7 +33,8 @@ import           Episodes.DB (getEpisodeStatusesByShowAndUser,
                               setSubscriptionStatus,
                               updateShowSubscriptionCount)
 import           Model
-import           Settings (widgetFile, yesodPureScriptOptions)
+import           Settings (widgetFile)
+import           Settings.StaticFiles (js_Episodes_js)
 import qualified TVRage as TVR
 
 
@@ -84,8 +85,8 @@ getShowsR = do
             return $ S.fromList $ map (\s -> subscriptionShow $ entityVal s) subscriptions
     defaultLayout $ do
         setTitle "Shows"
-        -- addScript $ PureScriptR $ YPS.getPureScriptRoute ["ShowSubscriptions"]
-        $(addPureScriptWidget yesodPureScriptOptions "ShowSubscriptions")
+        addScript $ StaticR js_Episodes_js
+        toWidget [julius|PS["Episodes.ShowSubscriptions"].main()|]
         $(widgetFile "shows")
 
 
@@ -132,7 +133,7 @@ getShowDetailsR showId = do
     defaultLayout $ do
         setTitle "Show Details"
         -- addScript $ PureScriptR $ YPS.getPureScriptRoute ["ShowDetails"]
-        $(addPureScriptWidget yesodPureScriptOptions "ShowDetails")
+        -- $(addPureScriptWidget yesodPureScriptOptions "ShowDetails")
         $(widgetFile "show")
 
 
@@ -265,7 +266,6 @@ getLastEpisodesR = do
             Nothing -> return []
     defaultLayout $ do
         setTitle "Last Episodes"
-        -- $(addPureScriptWidget yesodPureScriptOptions "ShowSubscriptions")
         $(widgetFile "last-episodes")
 
 

@@ -1,18 +1,25 @@
+{-# LANGUAGE CPP #-}
+
 module Settings.StaticFiles where
 
-import Settings     (appStaticDir, compileTimeAppSettings)
-import Yesod.Static (staticFiles)
 
--- This generates easy references to files in the static directory at compile time,
--- giving you compile-time verification that referenced files exist.
--- Warning: any files added to your static directory during run-time can't be
--- accessed this way. You'll have to use their FilePath or URL to access them.
---
--- For example, to refer to @static/js/script.js@ via an identifier, you'd use:
---
---     js_script_js
---
--- If the identifier is not available, you may use:
---
---     StaticFile ["js", "script.js"] []
-staticFiles (appStaticDir compileTimeAppSettings)
+import Prelude
+import Yesod.EmbeddedStatic
+import Yesod.PureScript.EmbeddedGenerator
+
+
+
+#ifdef DEVELOPMENT
+#define DEV_BOOL True
+#else
+#define DEV_BOOL False
+#endif
+
+
+mkEmbeddedStatic DEV_BOOL "myStatic"
+    [ purescript "js/Episodes.js" defaultPsGeneratorOptions { psProductionMinimizer = return
+                                                            , psSourceDirectory = "purs" }
+    , embedDirAt "css" "static/css"
+    , embedDirAt "js" "static/js"
+    , embedDirAt "img" "static/img"
+    ]

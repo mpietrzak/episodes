@@ -102,7 +102,7 @@ library
                  , scientific
                  , shakespeare                   >= 2.0.2.2
                  , template-haskell
-                 , time                          >= 1.4 && <1.5
+                 , time                          >= 1.4
                  , time-locale-compat
                  , text                          >= 0.11
                  , text-format
@@ -121,11 +121,11 @@ library
                  , yesod-auth                    >= 1.4.5
                  , yesod-static                  >= 1.5
                  , yesod-form                    >= 1.4.4.1
-                 , yesod-purescript              >= 0.0.5
+                 , yesod-purescript              >= 0.0.6
 
 
                  -- bah
-                 , primitive >= 0.5 && <0.6
+                 -- , primitive >= 0.5 && <0.6
 
 
 executable         episodes

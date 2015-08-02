@@ -22,7 +22,7 @@ import Yesod.Default.Config2       (applyEnvValue, configSettingsYml)
 import Yesod.Default.Util          (WidgetFileSettings, widgetFileNoReload,
                                     widgetFileReload)
 
-import Yesod.PureScript (YesodPureScriptOptions(ypsoErrorDivId, ypsoSourceDirectories, ypsoSourceIgnores))
+-- import Yesod.PureScript (YesodPureScriptOptions(ypsoErrorDivId, ypsoSourceDirectories, ypsoSourceIgnores))
 
 
 development :: Bool
@@ -34,12 +34,12 @@ development =
 #endif
 
 
--- Yesod PureScript Options
-yesodPureScriptOptions :: YesodPureScriptOptions
-yesodPureScriptOptions = def { ypsoSourceDirectories = ["purs", "bower_components"]
-                             , ypsoErrorDivId = Just "main"
-                             , ypsoSourceIgnores = [ "examples"
-                                                   , "quickcheck-test-src" ] }
+-- -- Yesod PureScript Options
+-- yesodPureScriptOptions :: YesodPureScriptOptions
+-- yesodPureScriptOptions = def { ypsoSourceDirectories = ["purs", "bower_components"]
+--                              , ypsoErrorDivId = Just "main"
+--                              , ypsoSourceIgnores = [ "examples"
+--                                                    , "quickcheck-test-src" ] }
 
 
 -- | Runtime settings to configure this application. These settings can be

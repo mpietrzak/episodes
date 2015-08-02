@@ -32,7 +32,7 @@ import Yesod.Auth
 import Yesod.Core.Types (loggerSet)
 import Yesod.Default.Config2
 import Yesod.Default.Handlers
-import Yesod.PureScript
+-- import Yesod.PureScript
 import qualified Data.Map as M
 
 import Foundation
@@ -50,6 +50,7 @@ import Handler.Export (
 import Handler.Stats (getStatsR)
 import Model
 import Settings
+import Settings.StaticFiles
 
 import Episodes.Time (NamedTimeZone(..), loadCommonTimezones)
 import Episodes.Update (updateTVRageShows)
@@ -67,11 +68,14 @@ makeFoundation appSettings = do
     -- subsite.
     appHttpManager <- newManager
     appLogger <- newStdoutLoggerSet defaultBufSize >>= makeYesodLogger
-    appStatic <-
-        (if appMutableStatic appSettings then staticDevel else static)
-        (appStaticDir appSettings)
 
-    appPureScriptSite <- createYesodPureScriptSite yesodPureScriptOptions
+    -- appStatic <-
+    --     (if appMutableStatic appSettings then staticDevel else static)
+    --     (appStaticDir appSettings)
+
+    let appStatic = myStatic
+
+    -- appPureScriptSite <- createYesodPureScriptSite yesodPureScriptOptions
 
     appCommonTimeZones <- loadCommonTimezones
     let appCommonTimeZoneMap = M.fromList $ map (\ntz -> (ntzName ntz, ntzTZ ntz)) appCommonTimeZones

@@ -18,8 +18,9 @@ import Yesod.Auth.BrowserId
 import Yesod.Auth.GoogleEmail2
 import Yesod.Core.Types (Logger)
 import Yesod.Default.Util (addStaticContentExternal)
-import Yesod.PureScript
+-- import Yesod.PureScript
 import Yesod.Static
+import Yesod.EmbeddedStatic
 import Data.Time.Zones (TZ)
 import qualified Data.Map as M
 import qualified Data.Text as T
@@ -33,6 +34,7 @@ import Settings (
     appStaticDir,
     combineScripts,
     combineStylesheets,
+    development,
     widgetFile,
     AppSettings (..))
 import Settings.StaticFiles
@@ -44,13 +46,13 @@ import Settings.StaticFiles
 -- access to the data present here.
 data App = App
     { appSettings :: AppSettings
-    , appStatic :: Static
+    , appStatic :: EmbeddedStatic
     , appConnPool :: ConnectionPool
     , appHttpManager :: Manager
     , appLogger :: Logger
     , appCommonTimeZones :: [NamedTimeZone]
     , appCommonTimeZoneMap :: M.Map Text TZ
-    , appPureScriptSite :: PureScriptSite
+    -- , appPureScriptSite :: PureScriptSite
     }
 
 instance HasHttpManager App where
@@ -91,12 +93,16 @@ instance Yesod App where
                 ]
 
         pc <- widgetToPageContent $ do
-            $(combineStylesheets 'StaticR
-                [ css_bootstrap_min_css
-                , css_episodes_css ])
-            $(combineScripts 'StaticR
-               [ js_jquery_2_1_1_js
-               , js_bootstrap_min_js ])
+            addScript $ StaticR js_jquery_2_1_1_js
+            addScript $ StaticR js_bootstrap_min_js
+            addStylesheet $ StaticR css_bootstrap_min_css
+            addStylesheet $ StaticR css_episodes_css
+            -- $(combineStylesheets 'EmbeddedStaticR
+            --     [ css_bootstrap_min_css
+            --     , css_episodes_css ])
+            -- $(combineScripts 'EmbeddedStaticR
+            --    [ js_jquery_2_1_1_js
+            --    , js_bootstrap_min_js ])
             $(widgetFile "default-layout")
         withUrlRenderer $(hamletFile "templates/default-layout-wrapper.hamlet")
 
@@ -110,24 +116,28 @@ instance Yesod App where
     -- Default to Authorized for now.
     isAuthorized _ _ = return Authorized
 
-    -- This function creates static content files in the static folder
-    -- and names them based on a hash of their content. This allows
-    -- expiration dates to be set far in the future without worry of
-    -- users receiving stale content.
-    addStaticContent ext mime content = do
-        master <- getYesod
-        let staticDir = appStaticDir $ appSettings master
-        addStaticContentExternal
-            minifym
-            genFileName
-            staticDir
-            (StaticR . flip StaticRoute [])
-            ext
-            mime
-            content
-      where
-        -- Generate a unique filename based on the content itself
-        genFileName lbs = "autogen-" ++ base64md5 lbs
+    -- -- This function creates static content files in the static folder
+    -- -- and names them based on a hash of their content. This allows
+    -- -- expiration dates to be set far in the future without worry of
+    -- -- users receiving stale content.
+    -- addStaticContent ext mime content = do
+    --     master <- getYesod
+    --     let staticDir = appStaticDir $ appSettings master
+    --     addStaticContentExternal
+    --         minifym
+    --         genFileName
+    --         staticDir
+    --         (StaticR . flip StaticRoute [])
+    --         ext
+    --         mime
+    --         content
+    --   where
+    --     -- Generate a unique filename based on the content itself
+    --     genFileName lbs = "autogen-" ++ base64md5 lbs
+
+    addStaticContent _ext _mime _content = embedStaticContent appStatic StaticR mini _ext _mime _content
+        where mini = if development then Right else minifym
+
 
     -- What messages should be logged. The following includes all messages when
     -- in development, and warnings and errors in production.
@@ -185,7 +195,7 @@ instance YesodAuth App where
 instance YesodAuthPersist App
 
 
-instance YesodPureScript App
+-- instance YesodPureScript App
 
 
 -- This instance is required to use forms. You can modify renderMessage to

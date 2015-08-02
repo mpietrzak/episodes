@@ -1,4 +1,5 @@
 {-# LANGUAGE TupleSections, OverloadedStrings, ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 
 module Handler.Calendar where
@@ -17,15 +18,18 @@ import           Formatting.Time (datetime)
 import           Prelude hiding (Show)
 import           Yesod (
     Html,
+    addScript,
     defaultLayout,
+    julius,
     logDebug,
     lookupGetParam,
     notFound,
     runDB,
     setTitle,
-    toPathPiece)
+    toPathPiece,
+    toWidget)
 import           Yesod.Auth (maybeAuthId)
-import           Yesod.PureScript (yesodPureScript)
+-- import           Yesod.PureScript (yesodPureScript)
 import qualified Data.Map as M
 import qualified Data.Text.Read as TR
 import qualified Data.Time.Calendar as C
@@ -40,7 +44,8 @@ import Episodes.DB (getPopularShowsEpisodesByMonth, getUserShowsEpisodesByMonth)
 import Episodes.Format (formatMonth)
 
 import Model
-import Settings (development, widgetFile, yesodPureScriptOptions)
+import Settings (widgetFile)
+import Settings.StaticFiles (js_Episodes_js)
 
 
 -- Episode data in calendar.
@@ -68,7 +73,7 @@ data Month = Month { monthWeeks :: [Week] }
 
 
 groupEpisodesByDay :: [CalendarEpisode] -> M.Map C.Day [CalendarEpisode]
-groupEpisodesByDay episodes = foldr _add M.empty episodes
+groupEpisodesByDay= foldr _add M.empty
     where
         _add episode m = M.insert day newDayEpisodes m
             where
@@ -140,12 +145,12 @@ showSeasonEpisodeToCalendarEpisode tz (showEntity, seasonEntity, episodeEntity, 
                               , calendarEpisodeTime = TZ.utcToLocalTimeTZ tz (episodeAirDateTime _episode)
                               , calendarEpisodeId = entityKey episodeEntity
                               , calendarEpisodeShowId = entityKey showEntity
-                              , calendarEpisodeTVRageId = (fmap fromIntegral) (showTvRageId _show) }
+                              , calendarEpisodeTVRageId = fmap fromIntegral (showTvRageId _show) }
         _episode = entityVal episodeEntity
         _show = entityVal showEntity
         _season = entityVal seasonEntity
         _isSeen _mestatus = case _mestatus of
-            Just (Entity _ _status) -> (episodeStatusStatus _status == "seen")
+            Just (Entity _ _status) -> episodeStatusStatus _status == "seen"
             _ -> False
 
 
@@ -178,7 +183,7 @@ getCalendarR = do
 
 
 getCalendarMonthR :: Int -> Int -> Handler Html
-getCalendarMonthR year month = do
+getCalendarMonthR year month =
     if year >= 1900 && year <= 2100 then do
         ma <- maybeAuthId
         now <- liftIO C.getCurrentTime
@@ -239,7 +244,10 @@ getCalendarMonthR year month = do
             setTitle "Episodes"
             -- addScript $ PureScriptR $ getPureScriptRoute ["Calendar"]
             -- $(addPureScriptWidget yesodPureScriptOptions "Calendar")
-            $(yesodPureScript development 'PureScriptR yesodPureScriptOptions "Calendar")
+            -- $(yesodPureScript development 'PureScriptR yesodPureScriptOptions "Calendar")
+            -- addStylesheet $ StaticR js_Calendar_js
+            addScript $ StaticR js_Episodes_js
+            toWidget [julius|PS["Episodes.Calendar"].main()|]
             $(widgetFile "calendar")
     else
         notFound
