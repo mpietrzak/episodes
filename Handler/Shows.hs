@@ -132,8 +132,8 @@ getShowDetailsR showId = do
 
     defaultLayout $ do
         setTitle "Show Details"
-        -- addScript $ PureScriptR $ YPS.getPureScriptRoute ["ShowDetails"]
-        -- $(addPureScriptWidget yesodPureScriptOptions "ShowDetails")
+        addScript $ StaticR js_Episodes_js
+        toWidget [julius|PS["Episodes.Show"].main()|]
         $(widgetFile "show")
 
 
