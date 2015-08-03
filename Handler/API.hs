@@ -2,12 +2,16 @@
 
 module Handler.API (
     postSetEpisodeStatusR,
+    postSetSeasonCollapseR,
     postSetShowSubscriptionStatusR
 ) where
 
 
 import Prelude
 import Yesod
+import Control.Monad (mzero)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Int (Int64)
 import Data.Text (Text)
 import Data.Time (getCurrentTime)
 import Database.Persist.Sql
@@ -18,6 +22,22 @@ import qualified Yesod.Auth as YA
 import Foundation
 import Model
 import qualified Episodes.DB as DB
+
+
+data SeasonCollapseRequest = SeasonCollapseRequest { scRequestSeason :: Int64
+                                                   , scRequestCollapse :: Bool }
+
+data SeasonCollapseResponse = SeasonCollapseResponse { scResponseStatus :: Text }
+
+
+instance FromJSON SeasonCollapseRequest where
+    parseJSON (Object v) = SeasonCollapseRequest <$> v .: "season"
+                                                 <*> v .: "collapse"
+    parseJSON _ = mzero
+
+
+instance ToJSON SeasonCollapseResponse where
+    toJSON (SeasonCollapseResponse status) = object [ "status" .= status ]
 
 
 postSetEpisodeStatusR :: Handler TypedContent
@@ -67,4 +87,13 @@ postSetShowSubscriptionStatusR = do
                 _ -> sendResponseStatus HT.status500 ("Invalid JSON request" :: Text)
         _ -> sendResponseStatus HT.status500 ("Expected JSON request" :: Text)
 
+
+postSetSeasonCollapseR :: Handler Value
+postSetSeasonCollapseR = do
+    accId <- YA.requireAuthId
+    scReq <- requireJsonBody
+    let collapse = scRequestCollapse scReq
+    let season = scRequestSeason scReq
+    runDB $ DB.setSeasonCollapse collapse accId (toSqlKey season)
+    returnJson $ SeasonCollapseResponse "ok"
 

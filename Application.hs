@@ -41,7 +41,10 @@ import Handler.Admin (getAdminR)
 import Handler.Calendar
 import Handler.Shows
 import Handler.Users
-import Handler.API (postSetEpisodeStatusR, postSetShowSubscriptionStatusR)
+import Handler.API (
+    postSetEpisodeStatusR,
+    postSetSeasonCollapseR,
+    postSetShowSubscriptionStatusR)
 import Handler.Export (
     getExportFileR,
     getExportMainR,

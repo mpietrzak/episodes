@@ -19,6 +19,7 @@ module Episodes.DB (
     getProfile,
     getRecentlyPopularEpisodes,
     getRecentEpisodeStatuses,
+    getShowSeasonCollapse,
     getShowData,
     getShowEpisodes,
     getShowSeasons,
@@ -26,6 +27,7 @@ module Episodes.DB (
     getUserShowsEpisodesByMonth,
     getUserShowsEpisodesForExport,
     getUserShowsEpisodesLastSeen,
+    setSeasonCollapse,
     setSubscriptionStatus,
     updateEpisode,
     updateEpisodeStatus,
@@ -48,6 +50,7 @@ import Prelude hiding (Show)
 import Text.Shakespeare.Text (st)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Base64 as BSB64
+import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import qualified Debug.Trace as DT
@@ -525,6 +528,15 @@ updateShowSubscriptionLastNextEpisode subscriptionId = rawExecute updateShowSubs
         params = [toPersistValue subscriptionId]
 
 
+setSeasonCollapse :: MonadIO m => Bool -> AccountId -> SeasonId -> SqlPersistT m ()
+setSeasonCollapse collapsed accountId seasonId = upsert val update >> return ()
+    where
+        val = SeasonCollapse { seasonCollapseAccount = accountId
+                             , seasonCollapseSeason = seasonId
+                             , seasonCollapseCollapsed = collapsed }
+        update = [ SeasonCollapseCollapsed =. collapsed ]
+
+
 setSubscriptionStatus :: MonadIO m
                       => UTCTime
                       -> AccountId
@@ -667,6 +679,27 @@ checkPassword username password = do
                             return (dbPassHashBS == allegedPassHashB64WithSalt)
                         _ -> return False
                 _ -> return False
+
+
+getShowSeasonCollapse :: MonadIO m => AccountId -> ShowId -> SqlPersistT m (SeasonId -> Bool)
+getShowSeasonCollapse accId showId = do
+        sc <- rawSql selectShowSeasonCollapse params
+        let m = M.fromList $ map (\(ss, sc) -> (unSingle ss, unSingle sc)) sc
+        let l = \k -> M.findWithDefault False k m
+        return l
+    where
+        selectShowSeasonCollapse = [st|
+            select season.id, season_collapse.collapsed
+            from
+                show
+                join season on (season.show = show.id)
+                join season_collapse on (season_collapse.season = season.id)
+            where
+                show.id = ?
+                and season_collapse.account = ?
+        |]
+        params = [ toPersistValue showId
+                 , toPersistValue accId ]
 
 
 getProfile :: MonadIO m

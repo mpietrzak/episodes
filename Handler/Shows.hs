@@ -7,14 +7,18 @@ module Handler.Shows where
 import           Prelude hiding (show, Show)
 import           Control.Applicative
 import           Control.Concurrent.Async (concurrently)
+import           Data.Bool (bool)
 import           Data.Function (on)
 import           Data.List (sortBy)
 import           Data.Text (Text)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Time.Zones (utcTZ)
+import           Database.Persist.Sql (fromSqlKey, toSqlKey)
+import           Formatting ((%), sformat, shown)
 import           Yesod
 import           Yesod.Auth
 import           Yesod.Form.Bootstrap3
+
 -- import           Yesod.PureScript (addPureScriptWidget)
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -23,12 +27,14 @@ import qualified Data.Text.Read as T
 
 import           Foundation
 import           Episodes.Common (choose,
+                                  forceLazyText,
                                   forceText, formatEpisodeCode, formatInTimeZone, formatTime,
                                   getUserEpisodeLinks, getUserTimeZone)
 import           Episodes.DB (getEpisodeStatusesByShowAndUser,
                               getPopularShows,
                               getShowEpisodes,
                               getShowSeasons,
+                              getShowSeasonCollapse,
                               getUserShowsEpisodesLastSeen,
                               setSubscriptionStatus,
                               updateShowSubscriptionCount)
@@ -129,6 +135,12 @@ getShowDetailsR showId = do
     let formatInUserTimeZone = formatInTimeZone tz
 
     episodeLinks <- getUserEpisodeLinks mai
+
+    seasonCollapse <- case mai of
+        Just i -> runDB $ getShowSeasonCollapse i showId
+        _ -> return $ const False
+
+    $(logDebug) $ sformat ("getShowDetails: seasonCollapse 654:\n" % shown) (seasonCollapse (toSqlKey 654))
 
     defaultLayout $ do
         setTitle "Show Details"

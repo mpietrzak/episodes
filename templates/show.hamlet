@@ -10,15 +10,25 @@
 
         $forall seasonEntity <- showSeasons
             $with season <- entityVal seasonEntity
-                <tr>
-                    <td colspan="6" class="show-season">
+                <tr class="season">
+                    <td colspan="6" class="show-season" data-season-number="#{seasonNumber season}" data-season-id="#{fromSqlKey $ entityKey seasonEntity}">
                         Season #{seasonNumber season}
 
-                $forall Entity episodeKey episode <- episodesBySeason (entityKey seasonEntity)
-                    $with episodeIdText <- toPathPiece $ episodeKey
-                        <tr class="episode" id="episode-#{episodeIdText}">
+                        <div style="position: relative; float: right; font-family: monospace; width: 5ex; height: 3ex; padding: 0">
+                            $with d <- forceLazyText $ bool "none" "block" (seasonCollapse (entityKey seasonEntity))
+                                <div class="expand-season" style="display: #{d}; position: absolute; right: 0px; padding: 0">
+                                    <div class="expand-season-hover" style="padding: 0; line-height: 1">
+                                        <a href="#" style="text-decoration: none; border: 0" class="expand-season">[+]
+                            $with d <- forceLazyText $ bool "block" "none" (seasonCollapse (entityKey seasonEntity))
+                                <div class="collapse-season" style="display: #{d}; position: absolute; right: 0px; padding: 0">
+                                    <div class="collapse-season-hover" style="visibility: hidden; padding: 0; line-height: 1">
+                                        <a href="#" style="text-decoration: none; border: 0" class="collapse-season">[-]
+
+                $with d <- forceLazyText $ bool "table-row" "none" (seasonCollapse (entityKey seasonEntity))
+                    $forall Entity episodeKey episode <- episodesBySeason (entityKey seasonEntity)
+                        <tr class="episode episode-season-#{seasonNumber season}" id="episode-#{fromSqlKey $ episodeKey}" style="display: #{d}">
                             <td>
-                                <input type="hidden" name="episode-id" class="episode-id" value="#{episodeIdText}">
+                                <input type="hidden" name="episode-id" class="episode-id" value="#{fromSqlKey $ episodeKey}">
                                 $case mai
                                     $of Nothing
                                         <a href="@{AuthR LoginR}">

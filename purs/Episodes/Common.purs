@@ -36,6 +36,8 @@ type JQueryXmlHttpRequestFailHandler = forall eff. JQueryXmlHttpRequest -> Strin
 
 
 foreign import ajax :: forall eff x. x -> Eff eff JQueryXmlHttpRequest
+foreign import first :: forall eff. J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
+foreign import getAttr :: forall eff. String -> J.JQuery -> Eff (dom :: DOM | eff) String
 foreign import getJQueryEventPageX :: forall eff. J.JQueryEvent -> Eff eff Int
 foreign import getJQueryEventPageY :: forall eff. J.JQueryEvent -> Eff eff Int
 foreign import getValueText :: forall eff. J.JQuery -> Eff (dom :: DOM | eff) String
@@ -46,7 +48,10 @@ foreign import jsonStringify :: forall eff x. x -> Eff eff String
 foreign import jQueryFadeIn :: forall eff. Int -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
 foreign import jQueryFadeOut :: forall eff. Int -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
 foreign import jQueryFadeOut' :: forall eff eff' a. Int -> Eff eff' a -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
+foreign import last :: forall eff. J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
+foreign import nextUntil :: forall eff. String -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery 
 foreign import on :: forall eff eff'. String -> (J.JQueryEvent -> J.JQuery -> Eff eff' Unit) -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
+foreign import prevAll :: forall eff. String -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
 foreign import redirect :: forall eff. String -> Eff eff Unit
 foreign import size  :: J.JQuery -> Int
 foreign import split :: Regex -> String -> Array String

@@ -9,6 +9,20 @@ exports.ajax = function(settings) {
     };
 };
 
+exports.first = function(jq) {
+    return function() {
+        return jq.first();
+    }
+};
+
+exports.getAttr = function(name) {
+    return function(jq) {
+        return function() {
+            return jq.attr(name);
+        }
+    }
+};
+
 exports.getJQueryEventPageX = function(e) {
     return function() {
         return e.pageX;
@@ -97,6 +111,20 @@ exports.jQueryFadeOut$prime = function(duration) {
     };
 };
 
+exports.last = function(jq) {
+    return function() {
+        return jq.last()
+    };
+};
+
+exports.nextUntil = function(sel) {
+    return function(jq) {
+        return function() {
+            return jq.nextUntil(sel);
+        };
+    };
+};
+
 exports.on = function(evt) {
     return function(act) {
         return function(ob) {
@@ -105,6 +133,14 @@ exports.on = function(evt) {
                     act(e)(jQuery(this))();
                 });
             };
+        };
+    };
+};
+
+exports.prevAll = function(sel) {
+    return function(jq) {
+        return function() {
+            return jq.prevAll(sel);
         };
     };
 };

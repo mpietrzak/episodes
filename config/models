@@ -29,6 +29,12 @@ Season
     modified UTCTime
     UniqueShowSeasonNumber show number
 
+SeasonCollapse
+    account AccountId
+    season SeasonId
+    collapsed Bool
+    UniqueSeasonCollapseSeasonAccount account season
+
 Episode
     title Text
     number Int

@@ -17,7 +17,7 @@ import Yesod.PureScript.EmbeddedGenerator
 
 
 mkEmbeddedStatic DEV_BOOL "myStatic"
-    [ purescript "js/Episodes.js" defaultPsGeneratorOptions { psProductionMinimizer = return
+    [ purescript "js/Episodes.js" defaultPsGeneratorOptions { psProductionMinimizer = uglifyJs
                                                             , psSourceDirectory = "purs" }
     , embedDirAt "css" "static/css"
     , embedDirAt "js" "static/js"
