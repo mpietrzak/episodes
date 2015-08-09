@@ -121,7 +121,7 @@ library
                  , yesod-auth                    >= 1.4.5
                  , yesod-static                  >= 1.5
                  , yesod-form                    >= 1.4.4.1
-                 , yesod-purescript              >= 0.0.6
+                 -- , yesod-purescript              >= 0.0.6
 
 
 executable         episodes

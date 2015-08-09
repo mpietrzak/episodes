@@ -5,7 +5,7 @@ module Settings.StaticFiles where
 
 import Prelude
 import Yesod.EmbeddedStatic
-import Yesod.PureScript.EmbeddedGenerator
+-- import Yesod.PureScript.EmbeddedGenerator
 import Formatting ((%), hprint, shown)
 import System.IO (stderr)
 
