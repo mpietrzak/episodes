@@ -1,5 +1,5 @@
 
-module Episodes.Internal.SeasonExpandCollapse (
+module Episodes.SeasonExpandCollapse (
     main
 ) where
 
@@ -98,13 +98,16 @@ onExpandCollapseClick _which event link = do
 main :: forall eff. Eff (dom :: DOM, console :: CONSOLE | eff) Unit
 main = do
     J.ready $ do
+        log "SeasonExpandCollapse.main/ready start"
         trs <- J.select "tr.season, tr.episode"
+        log $ "SeasonExpandCollapse: have " ++ show (C.size trs) ++ " trs"
         J.on "mouseenter" onSeasonMouseEnter trs
         J.on "mouseleave" onSeasonMouseLeave trs
         expandLinks <- J.select "tr.season td a.expand-season"
         collapseLinks <- J.select "tr.season td a.collapse-season"
         J.on "click" (onExpandCollapseClick true) expandLinks
         J.on "click" (onExpandCollapseClick false) collapseLinks
+        log "SeasonExpandCollapse.main/ready done"
     return unit
 
 

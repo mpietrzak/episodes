@@ -247,7 +247,6 @@ getCalendarMonthR year month =
             -- $(yesodPureScript development 'PureScriptR yesodPureScriptOptions "Calendar")
             -- addStylesheet $ StaticR js_Calendar_js
             addScript $ StaticR js_Episodes_js
-            toWidget [julius|PS["Episodes.Calendar"].main()|]
             $(widgetFile "calendar")
     else
         notFound

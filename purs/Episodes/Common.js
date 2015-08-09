@@ -91,7 +91,7 @@ exports.jQueryFadeOut = function(duration) {
     };
 };
 
-exports.jQueryFadeOut$prime = function(duration) {
+exports["jQueryFadeOut'"] = function(duration) {
     return function(act) {
         return function (ob) {
             return function() {

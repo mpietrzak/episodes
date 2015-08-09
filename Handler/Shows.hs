@@ -92,7 +92,7 @@ getShowsR = do
     defaultLayout $ do
         setTitle "Shows"
         addScript $ StaticR js_Episodes_js
-        toWidget [julius|PS["Episodes.ShowSubscriptions"].main()|]
+        -- toWidget [julius|PS["Episodes.ShowSubscriptions"].main()|]
         $(widgetFile "shows")
 
 
@@ -145,7 +145,7 @@ getShowDetailsR showId = do
     defaultLayout $ do
         setTitle "Show Details"
         addScript $ StaticR js_Episodes_js
-        toWidget [julius|PS["Episodes.Show"].main()|]
+        -- toWidget [julius|PS["Episodes.Show"].main()|]
         $(widgetFile "show")
 
 

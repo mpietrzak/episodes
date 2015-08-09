@@ -6,10 +6,6 @@ $doctype 5
         <title>#{pageTitle pc}
         <meta name="viewport" content="width=device-width,initial-scale=1">
         <link rel="icon" href="@{StaticR img_favicon_png}">
-
         ^{pageHead pc}
-
     <body>
-
         ^{pageBody pc}
-

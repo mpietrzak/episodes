@@ -14,6 +14,8 @@ config/client_session_key.aes
 dist*
 episodes.sublime-project
 episodes.sublime-workspace
+node_modules
+output
 static/combined/
 static/faygen-*.js
 static/tmp/
