@@ -93,7 +93,7 @@ instance Yesod App where
                 ]
 
         pc <- widgetToPageContent $ do
-            addScript $ StaticR js_jquery_2_1_1_js
+            addScript $ StaticR js_jquery_2_1_4_min_js
             addScript $ StaticR js_bootstrap_min_js
             addStylesheet $ StaticR css_bootstrap_min_css
             addStylesheet $ StaticR css_episodes_css
