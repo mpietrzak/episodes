@@ -49,7 +49,7 @@ foreign import jQueryFadeIn :: forall eff. Int -> J.JQuery -> Eff (dom :: DOM | 
 foreign import jQueryFadeOut :: forall eff. Int -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
 foreign import jQueryFadeOut' :: forall eff eff' a. Int -> Eff eff' a -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
 foreign import last :: forall eff. J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
-foreign import nextUntil :: forall eff. String -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery 
+foreign import nextUntil :: forall eff. String -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
 foreign import on :: forall eff eff'. String -> (J.JQueryEvent -> J.JQuery -> Eff eff' Unit) -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
 foreign import prevAll :: forall eff. String -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
 foreign import redirect :: forall eff. String -> Eff eff Unit

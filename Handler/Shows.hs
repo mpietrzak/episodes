@@ -40,7 +40,7 @@ import           Episodes.DB (getEpisodeStatusesByShowAndUser,
                               updateShowSubscriptionCount)
 import           Model
 import           Settings (widgetFile)
-import           Settings.StaticFiles (js_Episodes_js)
+import           Settings.StaticFiles (js_episodes_js)
 import qualified TVRage as TVR
 
 
@@ -91,7 +91,7 @@ getShowsR = do
             return $ S.fromList $ map (\s -> subscriptionShow $ entityVal s) subscriptions
     defaultLayout $ do
         setTitle "Shows"
-        addScript $ StaticR js_Episodes_js
+        addScript $ StaticR js_episodes_js
         -- toWidget [julius|PS["Episodes.ShowSubscriptions"].main()|]
         $(widgetFile "shows")
 
@@ -144,8 +144,8 @@ getShowDetailsR showId = do
 
     defaultLayout $ do
         setTitle "Show Details"
-        addScript $ StaticR js_Episodes_js
-        -- toWidget [julius|PS["Episodes.Show"].main()|]
+        addScript $ StaticR js_episodes_js
+        toWidget [julius|PS["Episodes"].main()|]
         $(widgetFile "show")
 
 

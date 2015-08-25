@@ -16,6 +16,7 @@ episodes.sublime-project
 episodes.sublime-workspace
 node_modules
 output
+psc-output
 static/combined/
 static/faygen-*.js
 static/tmp/

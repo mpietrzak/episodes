@@ -14,6 +14,7 @@ import Data.Maybe
 import DOM
 import qualified Control.Monad.Eff.JQuery as J
 import qualified Data.String as S
+import qualified Data.BigInt as BI
 
 import Episodes.Common
 
@@ -86,7 +87,8 @@ bindButtonActions = do
         0 -> do
             log "no sub buttons found"
         c -> do
-            log $ "found " ++ show c ++ " sub buttons"
+            let bi = BI.fromInt c
+            log $ "found " ++ show bi ++ " sub buttons"
     on "click" (onSubscriptionButtonClick true) subButtons
     on "click" (onSubscriptionButtonClick false) unsubButtons
     log "ShowSubscriptions: bindButtonActions: done"

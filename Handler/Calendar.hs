@@ -45,7 +45,7 @@ import Episodes.Format (formatMonth)
 
 import Model
 import Settings (widgetFile)
-import Settings.StaticFiles (js_Episodes_js)
+import Settings.StaticFiles (js_episodes_js)
 
 
 -- Episode data in calendar.
@@ -246,7 +246,7 @@ getCalendarMonthR year month =
             -- $(addPureScriptWidget yesodPureScriptOptions "Calendar")
             -- $(yesodPureScript development 'PureScriptR yesodPureScriptOptions "Calendar")
             -- addStylesheet $ StaticR js_Calendar_js
-            addScript $ StaticR js_Episodes_js
+            addScript $ StaticR js_episodes_js
             $(widgetFile "calendar")
     else
         notFound

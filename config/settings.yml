@@ -1,6 +1,6 @@
 host: "*4" # any IPv4 host
-port: 3000
-approot: "http://localhost:3000"
+port: 13080
+approot: "http://localhost:13080"
 copyright: Maciej Pietrzak
 update-interval: 36000
 update-count: 2
