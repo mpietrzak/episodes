@@ -36,24 +36,53 @@ import Yesod.Default.Handlers
 import qualified Data.Map as M
 
 import Foundation
-import Handler.About (getAboutR)
-import Handler.Admin (getAdminR)
-import Handler.Calendar
-import Handler.Shows
-import Handler.Users
-import Handler.API (
+import Episodes.Handler.About (getAboutR)
+import Episodes.Handler.Admin (getAdminR)
+import Episodes.Handler.Calendar
+import Episodes.Handler.Shows
+import Episodes.Handler.ShowChanges (
+    getShowChangesAddEpisodesR,
+    getShowChangesAddSeasonsR,
+    getShowChangesDeleteEpisodeR,
+    getShowChangesDeleteSeasonR,
+    getShowChangesEditEpisodeR,
+    getShowChangesEditSeasonR,
+    getShowSubmitChangesR,
+    postShowChangesAddEpisodesR,
+    postShowChangesAddSeasonsR,
+    postShowChangesDeleteEpisodeR,
+    postShowChangesDeleteSeasonR,
+    postShowChangesEditEpisodeR,
+    postShowChangesEditSeasonR
+    )
+import Episodes.Handler.ShowEdit (
+    getShowEditAddEpisodesR,
+    getShowEditAddSeasonsR,
+    getShowEditDeleteEpisodeR,
+    getShowEditDeleteSeasonR,
+    getEditEpisodeR,
+    getShowEditEditSeasonR,
+    getShowEditR,
+    postShowEditAddEpisodesR,
+    postShowEditAddSeasonsR,
+    postShowEditDeleteEpisodeR,
+    postShowEditDeleteSeasonR,
+    postEditEpisodeR,
+    postShowEditEditSeasonR )
+import Episodes.Handler.Users
+import Episodes.Handler.API (
     postSetEpisodeStatusR,
     postSetSeasonCollapseR,
     postSetShowSubscriptionStatusR)
-import Handler.Export (
+import Episodes.Handler.Export (
     getExportFileR,
     getExportMainR,
     getICalR,
     getICalPageR)
-import Handler.Stats (getStatsR)
+import Episodes.Handler.Stats (getStatsR)
+import Episodes.StaticFiles (episodesStatic)
 import Model
 import Settings
-import Settings.StaticFiles
 
 import Episodes.Time (NamedTimeZone(..), loadCommonTimezones)
 import Episodes.Update (updateTVRageShows)
@@ -76,7 +105,7 @@ makeFoundation appSettings = do
     --     (if appMutableStatic appSettings then staticDevel else static)
     --     (appStaticDir appSettings)
 
-    let appStatic = myStatic
+    let appStatic = episodesStatic
 
     -- appPureScriptSite <- createYesodPureScriptSite yesodPureScriptOptions
 
@@ -101,9 +130,9 @@ makeFoundation appSettings = do
     runLoggingT (runSqlPool (runMigration migrateAll) pool) logFunc
 
     -- Start scheduler
-    let updateInterval = appUpdateInterval appSettings
-    let updateCount = appUpdateCount appSettings
-    _ <- forkIO $ scheduler updateInterval updateCount (appDatabaseConf appSettings) pool
+    -- let updateInterval = appUpdateInterval appSettings
+    -- let updateCount = appUpdateCount appSettings
+    -- _ <- forkIO $ scheduler updateInterval updateCount (appDatabaseConf appSettings) pool
 
     -- Return the foundation
     return $ mkFoundation pool

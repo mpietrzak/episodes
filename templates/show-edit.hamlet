@@ -1,0 +1,30 @@
+
+<h2>Show Edit: #{showTitle show}
+
+<p>
+    <a href="@{ShowEditAddSeasonsR showId}">Add Seasons
+
+<ul>
+    $forall (Entity seasonId season) <- seasonEntities
+        <li>
+            Season #{seasonNumber season}
+            [
+            <small>
+                <a href="@{ShowEditAddEpisodesR showId (seasonNumber season)}">add episodes</a>,
+                <a href="@{ShowEditEditSeasonR showId (seasonNumber season)}">edit</a>,
+                <a href="@{ShowEditDeleteSeasonR showId (seasonNumber season)}">delete</a>
+            ]<br/>
+            <ul>
+                $forall (Entity episodeId episode) <- (M.findWithDefault [] seasonId seasonEpisodesMap)
+                    <li>
+                        Ep. #{episodeNumber episode}: "#{episodeTitle episode}"
+                        <small>
+                            $maybe airTime <- episodeAirDateTime episode
+                                    (#{formatTime airTime})
+                            $nothing
+                                    (no air time)
+                        [
+                        <small>
+                            <a href="@{EditEpisodeR showId (seasonNumber season) (episodeNumber episode)}">edit</a>,
+                            <a href="@{ShowEditDeleteEpisodeR showId (seasonNumber season) (episodeNumber episode)}">delete</a>
+                        ]

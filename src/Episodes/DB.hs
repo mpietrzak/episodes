@@ -4,13 +4,18 @@
 
 
 module Episodes.DB (
+    addPrivateShow,
+    addShowEpisodes,
+    addShowSeasons,
     checkPassword,
     createAccount,
     createEpisode,
     createSeason,
     deleteEmptySeasons,
     deleteEpisodeByEpisodeCode,
+    deleteShowSeason,
     getAccountByEmail,
+    getEpisodeByShowAndCode,
     getEpisodesForICal,
     getEpisodeStatusesByShowAndUser,
     getPopularEpisodes,
@@ -19,6 +24,8 @@ module Episodes.DB (
     getProfile,
     getRecentlyPopularEpisodes,
     getRecentEpisodeStatuses,
+    getSeasonByShowAndSeasonNumber,
+    getShowById,
     getShowSeasonCollapse,
     getShowData,
     getShowEpisodes,
@@ -30,24 +37,30 @@ module Episodes.DB (
     setSeasonCollapse,
     setSubscriptionStatus,
     updateEpisode,
+    updateEpisode2,
     updateEpisodeStatus,
     updateEpisodeViewCount,
+    updateSeason,
     updateShowLastUpdate,
     updateShowNextUpdate,
     updateShowSubscriptionCount
 ) where
 
 
-import Control.Applicative ((<$>))
+-- import Control.Applicative ((<$>))
+import Control.Monad (forM_)
 import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Monad.Logger (MonadLogger(..))
 import Crypto.PBKDF.ByteString (sha1PBKDF2)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Time (UTCTime)
 import Database.Persist
 import Database.Persist.Sql
+import Formatting ((%), sformat, int)
 import Prelude hiding (Show)
 import Text.Shakespeare.Text (st)
+import Yesod (logDebug)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Base64 as BSB64
 import qualified Data.Map.Strict as M
@@ -58,9 +71,9 @@ import qualified Debug.Trace as DT
 import Model
 
 -- import Formatting (sformat, string)
--- import Control.Monad.Logger (MonadLogger(..))
+
 -- import Control.Monad.Trans.Resource (MonadResource(..))
--- import Yesod (logDebug)
+
 -- import qualified Data.Conduit as C
 -- import qualified Data.Conduit.List as CL
 
@@ -226,10 +239,14 @@ deleteEpisodeByEpisodeCodeSql = [st|
             join show on (show.id = season.show)
         where
             show.id = ?
-            and season.id = ?
-            and episode.id = ?
+            and season.number = ?
+            and episode.number = ?
     )
 |]
+
+
+deleteShowSeason :: MonadIO m => ShowId -> Int -> SqlPersistT m ()
+deleteShowSeason _showId _seasonNumber = deleteBy $ UniqueShowSeasonNumber _showId _seasonNumber
 
 
 insertEpisodeSql :: Text
@@ -284,6 +301,65 @@ selectUserShowsEpisodesForExport = [st|
         show.title,
         show.id
 |]
+
+
+addPrivateShow :: MonadIO m => UTCTime -> AccountId -> Text -> SqlPersistT m (Either Text ShowId)
+addPrivateShow now accountId title = Right <$> insert _show
+    where
+        _show = Show { showTitle = title,
+                       showTvRageId = Nothing,
+                       showSubscriptionCount = 0,
+                       showNextUpdate = Nothing,
+                       showLastUpdate = Nothing,
+                       showPublic = False,
+                       showSubmitted = False,
+                       showLocal = Just True,
+                       showAddedBy = Just $ accountId,
+                       showModified = now,
+                       showCreated = now }
+
+
+addShowEpisodes :: MonadIO m => UTCTime -> ShowId -> Int -> Int -> SqlPersistT m ()
+addShowEpisodes _now _showId _seasonNumber _episodeCount = do
+    mseason <- getBy $ UniqueShowSeasonNumber _showId _seasonNumber
+    case mseason of
+        Just (Entity seasonId season) -> do
+            update _showId [ShowModified =. _now]
+            nextEpisodeNumber <- do
+                _rows <- rawSql "select max(number) from episode where season = ?" [toPersistValue seasonId]
+                return $ case _rows of
+                    [sv] -> case unSingle sv of
+                        Just c -> c + 1
+                        Nothing -> 1
+                    _ -> 1
+            forM_ [0.._episodeCount] $ \i -> insert_ $ Episode { episodeTitle = sformat
+                                                                                    ("Season " % int % " Episode " % int)
+                                                                                    _seasonNumber
+                                                                                    (nextEpisodeNumber + i),
+                                                                 episodeSeason = seasonId,
+                                                                 episodeNumber = nextEpisodeNumber + i,
+                                                                 episodeAirDateTime = Nothing,
+                                                                 episodeViewCount = 0,
+                                                                 episodeCreated = _now,
+                                                                 episodeModified = _now }
+        Nothing -> return ()
+
+
+addShowSeasons :: MonadIO m => UTCTime -> ShowId -> Int -> SqlPersistT m ()
+addShowSeasons now showId _count = do
+    update showId [ShowModified =. now]
+    nextSeasonNumber <- do
+        rows <- rawSql "select max(number) from season where show = ?" [toPersistValue showId]
+        return $ case rows of
+            [sv] -> case unSingle sv of
+                Just _i -> _i + 1
+                Nothing -> 1
+            _ -> 1
+    forM_ [0.._count] $ \i -> insert_ $ Season { seasonNumber = nextSeasonNumber + i,
+                                                 seasonShow = showId,
+                                                 seasonCreated = now,
+                                                 seasonModified = now }
+
 
 
 getAccountByEmail :: MonadIO m => Text -> SqlPersistT m (Maybe (Entity Account))
@@ -365,6 +441,10 @@ getRecentEpisodeStatuses cnt = rawSql _sql _params
                 limit ?
             |]
         _params = [toPersistValue cnt]
+
+
+getSeasonByShowAndSeasonNumber :: MonadIO m => ShowId -> Int -> SqlPersistT m (Maybe (Entity Season))
+getSeasonByShowAndSeasonNumber _showId _seasonNumber = getBy $ UniqueShowSeasonNumber _showId _seasonNumber
 
 
 getUserShowsEpisodesByMonth :: (MonadIO m)
@@ -529,12 +609,12 @@ updateShowSubscriptionLastNextEpisode subscriptionId = rawExecute updateShowSubs
 
 
 setSeasonCollapse :: MonadIO m => Bool -> AccountId -> SeasonId -> SqlPersistT m ()
-setSeasonCollapse collapsed accountId seasonId = upsert val update >> return ()
+setSeasonCollapse collapsed accountId seasonId = upsert _val _update >> return ()
     where
-        val = SeasonCollapse { seasonCollapseAccount = accountId
-                             , seasonCollapseSeason = seasonId
-                             , seasonCollapseCollapsed = collapsed }
-        update = [ SeasonCollapseCollapsed =. collapsed ]
+        _val = SeasonCollapse { seasonCollapseAccount = accountId
+                              , seasonCollapseSeason = seasonId
+                              , seasonCollapseCollapsed = collapsed }
+        _update = [ SeasonCollapseCollapsed =. collapsed ]
 
 
 setSubscriptionStatus :: MonadIO m
@@ -565,6 +645,15 @@ getEpisodeStatusesByShowAndUser :: MonadIO m => ShowId -> AccountId -> SqlPersis
 getEpisodeStatusesByShowAndUser showId userId = rawSql selectEpisodeStatusesByShowAndUser [toPersistValue showId, toPersistValue userId]
 
 
+getEpisodeByShowAndCode :: MonadIO m => ShowId -> (Int, Int) -> SqlPersistT m (Maybe (Entity Episode))
+getEpisodeByShowAndCode _showId (_seasonNumber, _episodeNumber) = do
+    _mseason <- getBy $ UniqueShowSeasonNumber _showId _seasonNumber
+    case _mseason of
+        Just (Entity _seasonId _) -> do
+            getBy $ UniqueSeasonEpisodeNumber _seasonId _episodeNumber
+        Nothing -> return Nothing
+
+
 getEpisodesForICal :: MonadIO m => Text -> SqlPersistT m [(Entity Show, Entity Season, Entity Episode)]
 getEpisodesForICal _cookie = rawSql selectEpisodesForICal [toPersistValue _cookie]
 
@@ -578,8 +667,34 @@ updateEpisode :: MonadIO m
 updateEpisode _episodeId _episodeTitle _episodeAirDateTime _episodeModified = update _episodeId _updates
     where
         _updates = [EpisodeTitle =. _episodeTitle,
-                    EpisodeAirDateTime =. _episodeAirDateTime,
+                    EpisodeAirDateTime =. Just _episodeAirDateTime,
                     EpisodeModified =. _episodeModified ]
+
+
+updateEpisode2 :: MonadIO m
+               => UTCTime
+               -> (ShowId, Int, Int)
+               -> Text
+               -> Int
+               -> UTCTime
+               -> SqlPersistT m ()
+updateEpisode2 _now (_showId, _seasonNumber, _episodeNumber) _title _number _airTime = do
+    _mshow <- get _showId
+    case _mshow of
+        Just _show -> do
+            _mseason <- getBy $ UniqueShowSeasonNumber _showId _seasonNumber
+            case _mseason of
+                Just (Entity _seasonId _season) -> do
+                    _mepisode <- getBy $ UniqueSeasonEpisodeNumber _seasonId _episodeNumber
+                    case _mepisode of
+                        Just (Entity _episodeId _) -> do
+                            update _episodeId [ EpisodeTitle =. _title
+                                              , EpisodeNumber =. _number
+                                              , EpisodeAirDateTime =. Just _airTime
+                                              , EpisodeModified =. _now ]
+                        Nothing -> return ()
+                Nothing -> return ()
+        Nothing -> return ()
 
 
 -- Update episode status.
@@ -683,8 +798,8 @@ checkPassword username password = do
 
 getShowSeasonCollapse :: MonadIO m => AccountId -> ShowId -> SqlPersistT m (SeasonId -> Bool)
 getShowSeasonCollapse accId showId = do
-        sc <- rawSql selectShowSeasonCollapse params
-        let m = M.fromList $ map (\(ss, sc) -> (unSingle ss, unSingle sc)) sc
+        _sc <- rawSql selectShowSeasonCollapse params
+        let m = M.fromList $ map (\(_seasonId, _isCollapsed) -> (unSingle _seasonId, unSingle _isCollapsed)) _sc
         let l = \k -> M.findWithDefault False k m
         return l
     where
@@ -714,6 +829,10 @@ getProfile accId = do
 
 getShowsToUpdate :: MonadIO m => Int -> SqlPersistT m [Entity Show]
 getShowsToUpdate _cnt = rawSql selectShowsToUpdate [toPersistValue _cnt]
+
+
+getShowById :: MonadIO m => ShowId -> SqlPersistT m (Maybe Show)
+getShowById = get
 
 
 getShowData :: MonadIO m
@@ -757,24 +876,25 @@ updateShowLastUpdate :: MonadIO m
                      => ShowId
                      -> UTCTime
                      -> SqlPersistT m ()
-updateShowLastUpdate showKey time = update showKey [ShowLastUpdate =. time]
+updateShowLastUpdate showKey time = update showKey [ShowLastUpdate =. Just time]
 
 
 updateShowNextUpdate :: MonadIO m
                      => ShowId
                      -> UTCTime
                      -> SqlPersistT m ()
-updateShowNextUpdate showKey time = update showKey [ShowNextUpdate =. time]
+updateShowNextUpdate showKey time = update showKey [ShowNextUpdate =. Just time]
 
 
 -- | Delete episode and data that references given episode.
 -- episodeCode is a tuple of Integrals which are converted to Ints in impl - I'd prefer to expose
 -- generic interface. If we're outside of range, then we'll fail.
-deleteEpisodeByEpisodeCode :: (MonadIO m, Integral a, Integral b)
+deleteEpisodeByEpisodeCode :: (MonadIO m, MonadLogger m, Integral a, Integral b)
                            => ShowId
                            -> (a, b)
                            -> SqlPersistT m ()
 deleteEpisodeByEpisodeCode showId episodeCode = do
+    $(logDebug) "Deleting episode…"
     let sc = fst episodeCode
     let ec = snd episodeCode
     let isc = fromIntegral sc :: Int
@@ -826,4 +946,13 @@ createEpisode _showId _seasonNumber _episodeNumber _title _airDateTime _now = ra
                 toPersistValue _now,
                 toPersistValue _now
             ]
+
+
+updateSeason :: MonadIO m => UTCTime -> ShowId -> Int -> Int -> SqlPersistT m ()
+updateSeason _now _showId _seasonNumber _newSeasonNumber = do
+    update _showId [ShowModified =. _now]
+    ms <- getBy $ UniqueShowSeasonNumber _showId _seasonNumber
+    case ms of
+        Just (Entity _seasonId _) -> update _seasonId [SeasonModified =. _now, SeasonNumber =. _newSeasonNumber]
+        Nothing -> return ()
 

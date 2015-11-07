@@ -1,0 +1,7 @@
+
+<h2>#{showTitle _show}: Delete Season: #{_seasonNumber}
+
+<div class="container">
+    <p>Are you sure you want to delete season #{_seasonNumber}?
+    <form .form-horizontal role="form" method="post" action="@{ShowChangesDeleteSeasonR _showId _seasonNumber}" enctype="#{deleteSeasonFormEnctype}">
+        ^{deleteSeasonFormWidget}

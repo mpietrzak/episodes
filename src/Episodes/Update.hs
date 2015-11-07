@@ -11,6 +11,7 @@ import Prelude hiding (Show)
 import Control.Concurrent (forkIO)
 import Control.Monad (forM_)
 import Control.Monad.IO.Class
+import Control.Monad.Logger (MonadLogger)
 import Data.Text (Text)
 import Data.Time (UTCTime, addUTCTime, getCurrentTime)
 import Database.Persist
@@ -44,7 +45,7 @@ _log _lp = liftIO $ TIO.putStrLn (toText _lp)
 
 
 -- | Job that updates TVRage shows, executed from time to time (eg once per day).
-updateTVRageShows :: (MonadIO m)
+updateTVRageShows :: (MonadIO m, MonadLogger m)
                   => Int
                   -> SqlPersistT m ()
 updateTVRageShows _cnt = do
@@ -100,7 +101,7 @@ updateTVRageShows _cnt = do
 --                               -> TVR.FullShowInfo
 --                               -> UTCTime
 --                               -> [m ()]
-combineLocalAndRemoteShowData :: MonadIO m
+combineLocalAndRemoteShowData :: (MonadIO m, MonadLogger m)
                               => Entity Show
                               -> [(Entity Show, Entity Season, Entity Episode)]
                               -> TVR.FullShowInfo
@@ -178,7 +179,7 @@ combineLocalAndRemoteShowData _showEntity _local _remote _now = actions
                                 _isneq (_show, _season, _episode) _remoteEpisode = _titlesNeq || _airDateNeq
                                     where
                                         _titlesNeq = traceValue ("are titles not equal: " ++ show _localTitle ++ ", " ++ show _remoteTitle) $ _localTitle /= _remoteTitle
-                                        _airDateNeq = _localAirDate /= _remoteAirDate
+                                        _airDateNeq = _localAirDate /= Just _remoteAirDate
                                         _localTitle = episodeTitle _episode
                                         _remoteTitle = TVR.episodeTitle _remoteEpisode
                                         _localAirDate = episodeAirDateTime _episode

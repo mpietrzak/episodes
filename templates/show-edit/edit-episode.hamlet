@@ -1,0 +1,7 @@
+
+
+<h2>#{showTitle _show}: Edit Episode
+
+<div class="container">
+    <form .form-horizontal role="form" method="post" action="@{EditEpisodeR _showId _seasonNumber _episodeNumber}" enctype="#{formEnctype}">
+        ^{formWidget}

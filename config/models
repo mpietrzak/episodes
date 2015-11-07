@@ -13,13 +13,17 @@ Account
     deriving Typeable
 
 Show
-    title Text
-    tvRageId Int Maybe
-    subscriptionCount Int DEFAULT=0
-    nextUpdate UTCTime
-    lastUpdate UTCTime
-    created UTCTime
-    modified UTCTime
+    title              Text
+    tvRageId           Int        Maybe
+    subscriptionCount  Int        DEFAULT=0
+    nextUpdate         UTCTime    Maybe
+    lastUpdate         UTCTime    Maybe
+    public             Bool       DEFAULT=False
+    submitted          Bool       DEFAULT=False
+    addedBy            AccountId  Maybe
+    local              Bool       Maybe
+    created            UTCTime
+    modified           UTCTime
     UniqueShowTVRageId tvRageId !force
 
 Season
@@ -39,7 +43,7 @@ Episode
     title Text
     number Int
     season SeasonId
-    airDateTime UTCTime
+    airDateTime UTCTime Maybe
     viewCount Int DEFAULT=0
     created UTCTime
     modified UTCTime
@@ -71,4 +75,49 @@ Profile
     modified UTCTime
     UniqueProfileAccount account
     UniqueProfileCookie cookie !force
+
+ShowChange
+    show ShowId
+    author AccountId
+    created UTCTime
+    modified UTCTime
+
+ShowChangeAddSeasons
+    change ShowChangeId
+    count Int
+    created UTCTime
+    modified UTCTime
+
+ShowChangeEditSeason
+    change ShowChangeId
+    number Int
+    created UTCTime
+    modified UTCTime
+
+ShowChangeDeleteSeason
+    change ShowChangeId
+    season SeasonId
+    created UTCTime
+    modified UTCTime
+
+ShowChangeAddEpisodes
+    change ShowChangeId
+    season SeasonId
+    count Int
+    created UTCTime
+    modified UTCTime
+
+ShowChangeDeleteEpisode
+    change ShowChangeId
+    episode EpisodeId
+    created UTCTime
+    modified UTCTime
+
+ShowChangeEditEpisode
+    change ShowChangeId
+    episode EpisodeId
+    title Text Maybe
+    number Int Maybe
+    created UTCTime
+    modified UTCTime
 

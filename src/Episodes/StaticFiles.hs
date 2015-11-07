@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP #-}
 
-module Settings.StaticFiles where
+module Episodes.StaticFiles where
 
 
 import Prelude
@@ -18,7 +18,7 @@ import System.IO (stderr)
 #endif
 
 
-mkEmbeddedStatic DEV_BOOL "myStatic"
+mkEmbeddedStatic DEV_BOOL "episodesStatic"
     [
     -- purescript "js/Episodes.js" defaultPsGeneratorOptions {
     --                                                         -- psProductionMinimizer = uglifyJs

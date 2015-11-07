@@ -1,20 +1,19 @@
 {-# LANGUAGE TupleSections, OverloadedStrings, ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Handler.Shows where
+module Episodes.Handler.Shows where
 
 
 import           Prelude hiding (show, Show)
-import           Control.Applicative
-import           Control.Concurrent.Async (concurrently)
 import           Data.Bool (bool)
 import           Data.Function (on)
 import           Data.List (sortBy)
+import           Data.Monoid ((<>))
 import           Data.Text (Text)
-import           Data.Time.Clock (UTCTime, getCurrentTime)
-import           Data.Time.Zones (utcTZ)
-import           Database.Persist.Sql (fromSqlKey, toSqlKey)
-import           Formatting ((%), sformat, shown)
+import           Data.Time.Clock (UTCTime, addUTCTime, getCurrentTime)
+-- import           Data.Time.Zones (utcTZ)
+import           Database.Persist.Sql (fromSqlKey)
+import           Text.Blaze (text)
 import           Yesod
 import           Yesod.Auth
 import           Yesod.Form.Bootstrap3
@@ -30,7 +29,8 @@ import           Episodes.Common (choose,
                                   forceLazyText,
                                   forceText, formatEpisodeCode, formatInTimeZone, formatTime,
                                   getUserEpisodeLinks, getUserTimeZone)
-import           Episodes.DB (getEpisodeStatusesByShowAndUser,
+import           Episodes.DB (addPrivateShow,
+                              getEpisodeStatusesByShowAndUser,
                               getPopularShows,
                               getShowEpisodes,
                               getShowSeasons,
@@ -38,9 +38,11 @@ import           Episodes.DB (getEpisodeStatusesByShowAndUser,
                               getUserShowsEpisodesLastSeen,
                               setSubscriptionStatus,
                               updateShowSubscriptionCount)
+
+import           Episodes.StaticFiles (js_episodes_js)
 import           Model
 import           Settings (widgetFile)
-import           Settings.StaticFiles (js_episodes_js)
+import qualified Episodes.Permissions as P
 import qualified TVRage as TVR
 
 
@@ -53,13 +55,16 @@ data AddTVRageShow = AddTVRageShow
     { addTVRageShowTvRageId :: Integer }
 
 
+data AddShowFormData = AddShowFormData { asShowTitle :: Text }
+
+
 bootstrapFormLayout :: BootstrapFormLayout
 bootstrapFormLayout = BootstrapHorizontalForm labelOffset labelSize inputOffset inputSize
     where
         labelOffset = ColSm 0
-        labelSize = ColSm 2
+        labelSize = ColSm 1
         inputOffset = ColSm 0
-        inputSize = ColSm 6
+        inputSize = ColSm 7
 
 
 textFieldSettings :: Text -> Text -> FieldSettings site
@@ -76,6 +81,10 @@ searchShowForm = renderBootstrap3 bootstrapFormLayout $ SearchShow
 addTVRageShowForm :: Html -> MForm Handler (FormResult AddTVRageShow, Widget)
 addTVRageShowForm  = renderBootstrap3 bootstrapFormLayout $ AddTVRageShow
     <$> areq intField "TV Rage Id" Nothing
+
+
+addShowForm :: Html -> MForm Handler (FormResult AddShowFormData, Widget)
+addShowForm = renderBootstrap3 bootstrapFormLayout $ AddShowFormData <$> areq textField (textFieldSettings "Title" "Enter Show Title") Nothing
 
 
 getShowsR :: Handler Html
@@ -114,8 +123,9 @@ groupEpisodesBySeason episodeList = sortEpisodes $ foldr _add M.empty episodeLis
 
 getShowDetailsR :: ShowId -> Handler Html
 getShowDetailsR showId = do
-    app <- getYesod
+    now <- liftIO $ getCurrentTime
     mai <- maybeAuthId
+    ma <- maybeAuth
     show <- runDB $ get404 showId
 
     tz <- getUserTimeZone
@@ -140,10 +150,17 @@ getShowDetailsR showId = do
         Just i -> runDB $ getShowSeasonCollapse i showId
         _ -> return $ const False
 
-    $(logDebug) $ sformat ("getShowDetails: seasonCollapse 654:\n" % shown) (seasonCollapse (toSqlKey 654))
+    -- this is only for link
+    let minAccEditAgeSec = 60 * 60 * 24 * 60
+    let canEdit = case ma of
+            Just (Entity _aid _) -> P.canEditShow _aid show
+            Nothing -> False
+    let canSubmitChanges = case ma of
+            Just (Entity _ _a) -> (not canEdit) && accountCreated _a < addUTCTime (-minAccEditAgeSec) now
+            Nothing -> False
 
     defaultLayout $ do
-        setTitle "Show Details"
+        setTitle $ text $ "Episodes: " <> showTitle show
         addScript $ StaticR js_episodes_js
         toWidget [julius|PS["Episodes"].main()|]
         $(widgetFile "show")
@@ -156,22 +173,40 @@ searchShows = TVR.searchShows
 getAddShowR :: Handler Html
 getAddShowR = do
     _ <- requireAuthId
-    (formWidget, formEnctype) <- generateFormPost searchShowForm
+    (formWidget, formEnctype) <- generateFormPost addShowForm
     defaultLayout $ do
         $(widgetFile "add-show-form")
 
 
+-- postAddShowR :: Handler Html
+-- postAddShowR = do
+--     ((formResult, formWidget), formEnctype) <- runFormPost searchShowForm
+--     case formResult of
+--         FormSuccess searchShow -> do
+--             let query = searchShowText searchShow :: Text
+--             showSearchResult <- liftIO $ searchShows query
+--             let shows_ = map (\s -> (TVR.showTitle s, TVR.showTVRageId s)) showSearchResult
+--             defaultLayout $ do
+--                 setTitle "Add Show"
+--                 $(widgetFile "add-show-list")
+--         _ -> do
+--             defaultLayout $ do
+--                 setTitle "Add Show"
+--                 $(widgetFile "add-show-form")
+
+
 postAddShowR :: Handler Html
 postAddShowR = do
-    ((formResult, formWidget), formEnctype) <- runFormPost searchShowForm
+    accountId <- requireAuthId
+    ((formResult, formWidget), formEnctype) <- runFormPost addShowForm
     case formResult of
-        FormSuccess searchShow -> do
-            let query = searchShowText searchShow :: Text
-            showSearchResult <- liftIO $ searchShows query
-            let shows_ = map (\s -> (TVR.showTitle s, TVR.showTVRageId s)) showSearchResult
-            defaultLayout $ do
-                setTitle "Add Show"
-                $(widgetFile "add-show-list")
+        FormSuccess addShowFormData -> do
+            let _title = asShowTitle addShowFormData
+            now <- liftIO $ getCurrentTime
+            e <- runDB $ addPrivateShow now accountId _title
+            case e of
+                Right showId -> redirect $ ShowDetailsR showId
+                _ -> error "failed to add show"
         _ -> do
             defaultLayout $ do
                 setTitle "Add Show"
@@ -197,23 +232,27 @@ extractEpisodesForInsert now fullShowInfo seasonIds =
         convertEpisode seasonId tvrEpisode = Episode { episodeSeason = seasonId
                                                      , episodeNumber = fromInteger $ TVR.episodeNumber tvrEpisode
                                                      , episodeTitle = TVR.episodeTitle tvrEpisode
-                                                     , episodeAirDateTime = TVR.episodeAirDateTime tvrEpisode
+                                                     , episodeAirDateTime = Just $ TVR.episodeAirDateTime tvrEpisode
                                                      , episodeViewCount = 0
                                                      , episodeModified = now
                                                      , episodeCreated = now }
 
 
 -- Insert show to DB.
-insertShow :: TVR.FullShowInfo -> Handler (Key Show)
-insertShow fullShowInfo = do
+insertTVRageShow :: TVR.FullShowInfo -> Handler (Key Show)
+insertTVRageShow fullShowInfo = do
     now <- liftIO getCurrentTime
     let _show = Show { showTitle = TVR.fullShowInfoTitle fullShowInfo
                      , showTvRageId = Just $ fromInteger $ TVR.fullShowInfoTVRageId fullShowInfo
                      , showSubscriptionCount = 0
+                     , showSubmitted = True     -- TV Rage shows are submitted by default
+                     , showPublic = True        -- TV Rage shows are public by default
+                     , showLocal = Just False   -- TV Rage shows are synchronised, not managed locally
+                     , showAddedBy = Nothing    -- TV Rage shows are not owned
                      , showCreated = now
                      , showModified = now
-                     , showLastUpdate = now
-                     , showNextUpdate = now }
+                     , showLastUpdate = Just $ now
+                     , showNextUpdate = Just $ now }
     _showId <- runDB $ insert _show
     let _seasons = map (tvrSeasonToSeason now _showId) (TVR.fullShowInfoSeasons fullShowInfo)
     seasonIds <- runDB $ mapM insert _seasons
@@ -238,7 +277,7 @@ postAddTVRShowR = do
             maybeShowInfo <- liftIO $ TVR.getFullShowInfo $ toInteger tvRageId
             case maybeShowInfo of
                 Just showInfo -> do
-                    id_ <- insertShow showInfo
+                    id_ <- insertTVRageShow showInfo
                     redirect $ ShowDetailsR id_
                 Nothing -> redirect ShowsR
         _ -> do

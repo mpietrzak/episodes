@@ -1,0 +1,7 @@
+
+<h2>#{showTitle _show}: Edit Season: #{_seasonNumber}
+
+<div class="container">
+    <form .form-horizontal role="form" method="post" action="@{ShowChangesEditSeasonR _showId _seasonNumber}" enctype="#{editSeasonFormEnctype}">
+        ^{editSeasonFormWidget}
+

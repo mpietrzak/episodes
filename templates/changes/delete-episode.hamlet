@@ -1,0 +1,7 @@
+
+<h2>#{showTitle _show}: Delete Episode: #{episodeTitle _episode}
+
+<div class="container">
+    <p>Are you sure you want to delete episode #{_episodeNumber} from season #{_seasonNumber}?
+    <form .form-horizontal role="form" method="post" action="@{ShowChangesDeleteEpisodeR _showId _seasonNumber _episodeNumber}" enctype="#{deleteEpisodeFormEnctype}">
+        ^{deleteEpisodeFormWidget}

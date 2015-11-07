@@ -1,5 +1,5 @@
 
-module Handler.Admin (
+module Episodes.Handler.Admin (
     getAdminR
 ) where
 

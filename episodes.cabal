@@ -16,36 +16,40 @@ Flag build-tvrage-cli
 
 library
     default-language: Haskell2010
-    hs-source-dirs: .
+    hs-source-dirs: src
     exposed-modules: Application
-                     Foundation
-                     Model
-                     Settings
-                     Settings.StaticFiles
-                     Handler.About
-                     Handler.Admin
-                     Handler.API
-                     Handler.Export
-                     Handler.Calendar
-                     Handler.Shows
-                     Handler.Users
-                     Handler.Stats
-                     TVRage
                      Episodes.Auth
-                     Episodes.DB
                      Episodes.Cache
                      Episodes.Common
+                     Episodes.DB
+                     Episodes.DB.ShowChanges
                      Episodes.Format
+                     Episodes.Handler.About
+                     Episodes.Handler.Admin
+                     Episodes.Handler.API
+                     Episodes.Handler.Calendar
+                     Episodes.Handler.Export
+                     Episodes.Handler.ShowChanges
+                     Episodes.Handler.ShowEdit
+                     Episodes.Handler.Shows
+                     Episodes.Handler.Stats
+                     Episodes.Handler.Users
+                     Episodes.Permissions
+                     Episodes.StaticFiles
                      Episodes.Time
                      Episodes.Trace
                      Episodes.Update
+                     Foundation
+                     Model
+                     Settings
+                     TVRage
 
 
     if flag(dev) || flag(library-only)
         cpp-options:   -DDEVELOPMENT
         ghc-options:   -Wall -fwarn-tabs -O0
     else
-        ghc-options:   -Wall -fwarn-tabs -O2
+        ghc-options:   -Wall -fwarn-tabs -O2 -threaded -rtsopts -with-rtsopts=-N
 
     default-extensions: TemplateHaskell
                         QuasiQuotes
@@ -61,17 +65,18 @@ library
                         RankNTypes
                         DeriveDataTypeable
 
-    build-depends: aeson                         >= 0.6
+    build-depends: aeson                         >= 0.9
                  , attoparsec
                  , async                         >= 2
                  , base                          >= 4 && < 5
                  , base64-bytestring             >= 1.0
                  , blaze-html                    >= 0.8
+                 , blaze-markup                  >= 0.7.0.2
                  , bytestring                    >= 0.9
                  , cassava                       >= 0.4.2
                  , classy-prelude
                  -- , classy-prelude-conduit
-                 , classy-prelude-yesod
+                 , classy-prelude-yesod          >= 0.12.4
                  , conduit                       >= 1.0
                  , containers                    >= 0.5
                  , data-default
@@ -93,14 +98,14 @@ library
                  , options
                  , parsec
                  , pbkdf                         >= 1.1
-                 , persistent                    >= 2.1.1.4
-                 , persistent-postgresql         >= 2.1.2.2
+                 , persistent                    >= 2.2.1
+                 , persistent-postgresql         >= 2.2.1
                  , persistent-template
                  , process                       >= 1.1.0.2
-                 , purescript                    >= 0.6.9.3
+                 -- , purescript                    >= 0.7.4.1
                  , resourcet
                  , scientific
-                 , shakespeare                   >= 2.0.2.2
+                 , shakespeare                   >= 2.0.6
                  , template-haskell
                  , time                          >= 1.4
                  , time-locale-compat
@@ -114,12 +119,13 @@ library
                  , wai-extra                     >= 2.1
                  , wai-logger                    >= 2.2
                  , warp                          >= 3
+                 , x509-validation               <1.6.3
                  , xml-conduit
-                 , yaml                          >= 0.8
+                 , yaml                          >= 0.8.15
                  , yesod                         >= 1.4.1.4
                  , yesod-core                    >= 1.4.9
                  , yesod-auth                    >= 1.4.5
-                 , yesod-static                  >= 1.5
+                 , yesod-static                  >= 1.5.0.3
                  , yesod-form                    >= 1.4.4.1
                  -- , yesod-purescript              >= 0.0.6
 

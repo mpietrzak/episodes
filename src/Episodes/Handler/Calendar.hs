@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 
-module Handler.Calendar where
+module Episodes.Handler.Calendar where
 
 
 import           Control.Applicative
@@ -11,23 +11,21 @@ import           Control.Monad.Trans.Class (lift)
 import           Data.Bool (bool)
 import           Data.Function (on)
 import           Data.List (groupBy)
+import           Data.Maybe (mapMaybe)
 import           Data.Text (Text)
 import           Database.Persist (Entity(Entity), entityKey, entityVal)
 import           Formatting ((%), int, sformat, shown)
 import           Formatting.Time (datetime)
 import           Prelude hiding (Show)
-import           Yesod (
-    Html,
-    addScript,
-    defaultLayout,
-    julius,
-    logDebug,
-    lookupGetParam,
-    notFound,
-    runDB,
-    setTitle,
-    toPathPiece,
-    toWidget)
+import           Yesod ( Html,
+                         addScript,
+                         defaultLayout,
+                         logDebug,
+                         lookupGetParam,
+                         notFound,
+                         runDB,
+                         setTitle,
+                         toPathPiece )
 import           Yesod.Auth (maybeAuthId)
 -- import           Yesod.PureScript (yesodPureScript)
 import qualified Data.Map as M
@@ -42,10 +40,10 @@ import Foundation
 import Episodes.Common (forceLazyText, formatEpisodeCode, getUserEpisodeLinks, getUserTimeZone)
 import Episodes.DB (getPopularShowsEpisodesByMonth, getUserShowsEpisodesByMonth)
 import Episodes.Format (formatMonth)
-
+import Episodes.StaticFiles (js_episodes_js)
 import Model
 import Settings (widgetFile)
-import Settings.StaticFiles (js_episodes_js)
+
 
 
 -- Episode data in calendar.
@@ -134,24 +132,27 @@ createCalendar year month episodes = calMonth
 
 
 -- Convert data returned from DB to helper CalendarEpisode.
-showSeasonEpisodeToCalendarEpisode :: TZ.TZ -> (Entity Show, Entity Season, Entity Episode, Maybe (Entity EpisodeStatus)) -> CalendarEpisode
-showSeasonEpisodeToCalendarEpisode tz (showEntity, seasonEntity, episodeEntity, maybeEpisodeStatus) = _ce
+showSeasonEpisodeToCalendarEpisode :: TZ.TZ -> (Entity Show, Entity Season, Entity Episode, Maybe (Entity EpisodeStatus)) -> Maybe CalendarEpisode
+showSeasonEpisodeToCalendarEpisode tz (showEntity, seasonEntity, episodeEntity, maybeEpisodeStatus) =
+    case episodeAirDateTime _episode of
+        Just _episodeAirDateTime -> Just CalendarEpisode { calendarEpisodeTitle = episodeTitle _episode
+                                                         , calendarEpisodeShowTitle = showTitle _show
+                                                         , calendarEpisodeSeasonNumber = seasonNumber _season
+                                                         , calendarEpisodeNumber = episodeNumber _episode
+                                                         , calendarEpisodeSeen = _isSeen maybeEpisodeStatus
+                                                         , calendarEpisodeTime = TZ.utcToLocalTimeTZ tz _episodeAirDateTime
+                                                         , calendarEpisodeId = entityKey episodeEntity
+                                                         , calendarEpisodeShowId = entityKey showEntity
+                                                         , calendarEpisodeTVRageId = fmap fromIntegral (showTvRageId _show) }
+                where
+                    _show = entityVal showEntity
+                    _season = entityVal seasonEntity
+                    _isSeen _mestatus = case _mestatus of
+                        Just (Entity _ _status) -> episodeStatusStatus _status == "seen"
+                        _ -> False
+        Nothing -> Nothing
     where
-        _ce = CalendarEpisode { calendarEpisodeTitle = episodeTitle _episode
-                              , calendarEpisodeShowTitle = showTitle _show
-                              , calendarEpisodeSeasonNumber = seasonNumber _season
-                              , calendarEpisodeNumber = episodeNumber _episode
-                              , calendarEpisodeSeen = _isSeen maybeEpisodeStatus
-                              , calendarEpisodeTime = TZ.utcToLocalTimeTZ tz (episodeAirDateTime _episode)
-                              , calendarEpisodeId = entityKey episodeEntity
-                              , calendarEpisodeShowId = entityKey showEntity
-                              , calendarEpisodeTVRageId = fmap fromIntegral (showTvRageId _show) }
-        _episode = entityVal episodeEntity
-        _show = entityVal showEntity
-        _season = entityVal seasonEntity
-        _isSeen _mestatus = case _mestatus of
-            Just (Entity _ _status) -> episodeStatusStatus _status == "seen"
-            _ -> False
+           _episode = entityVal episodeEntity
 
 
 getHomeR :: Handler Html
@@ -221,7 +222,7 @@ getCalendarMonthR year month =
                             (length sses)
                             utc1
                             utc2
-                    return $ map (showSeasonEpisodeToCalendarEpisode timeZone) sses
+                    return $ mapMaybe (showSeasonEpisodeToCalendarEpisode timeZone) sses
                 Nothing -> do
                     sse <- runDB $ getPopularShowsEpisodesByMonth 32 utc1 utc2
                     let sses = map (\(_show, _season, _episode) -> (_show, _season, _episode, Nothing)) sse
@@ -231,7 +232,7 @@ getCalendarMonthR year month =
                             (length sses)
                             utc1
                             utc2
-                    return $ map (showSeasonEpisodeToCalendarEpisode timeZone) sses
+                    return $ mapMaybe (showSeasonEpisodeToCalendarEpisode timeZone) sses
 
         let calendar = createCalendar (toInteger year) month calendarEpisodes
 

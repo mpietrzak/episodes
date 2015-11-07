@@ -1,0 +1,7 @@
+
+<h2>#{showTitle _show}: Add Seasons
+
+<div class="container">
+    <form .form-horizontal role="form" method="post" action="@{ShowChangesAddSeasonsR _showId}" enctype="#{addSeasonsFormEnctype}">
+        ^{addSeasonsFormWidget}
+

@@ -1,10 +1,10 @@
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -fno-warn-orphans -fno-warn-unused-binds #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Foundation where
 
 
-import Control.Applicative ((<$>))
+-- import Control.Applicative ((<$>))
 import Data.Text (Text)
 import Data.Time (getCurrentTime)
 import Database.Persist.Sql (SqlBackend, ConnectionPool, runSqlPool)
@@ -17,9 +17,9 @@ import Yesod.Auth
 import Yesod.Auth.BrowserId
 import Yesod.Auth.GoogleEmail2
 import Yesod.Core.Types (Logger)
-import Yesod.Default.Util (addStaticContentExternal)
+-- import Yesod.Default.Util (addStaticContentExternal)
 -- import Yesod.PureScript
-import Yesod.Static
+-- import Yesod.Static
 import Yesod.EmbeddedStatic
 import Data.Time.Zones (TZ)
 import qualified Data.Map as M
@@ -27,17 +27,17 @@ import qualified Data.Text as T
 
 import Episodes.Auth (authEpisodes)
 import Episodes.DB (getAccountByEmail, checkPassword, createAccount)
+import Episodes.StaticFiles
 import Episodes.Time (NamedTimeZone)
 import Model
 import Settings (
     appShouldLogAll,
-    appStaticDir,
-    combineScripts,
-    combineStylesheets,
+    -- appStaticDir,
+    -- combineScripts,
+    -- combineStylesheets,
     development,
     widgetFile,
     AppSettings (..))
-import Settings.StaticFiles
 
 
 -- | The site argument for your application. This can be a good place to
@@ -135,7 +135,7 @@ instance Yesod App where
     --     -- Generate a unique filename based on the content itself
     --     genFileName lbs = "autogen-" ++ base64md5 lbs
 
-    addStaticContent _ext _mime _content = embedStaticContent appStatic StaticR mini _ext _mime _content
+    addStaticContent = embedStaticContent appStatic StaticR mini
         where mini = if development then Right else minifym
 
 
@@ -171,9 +171,9 @@ instance YesodAuth App where
 
     getAuthId creds = runDB $ do
         let ident = credsIdent creds
-        let getter = case T.any ((==) '@') ident of
-                True -> getAccountByEmail -- getBy . UniqueAccountEmail . Just
-                False -> getBy . UniqueAccountNickname . Just
+        let getter = if T.any ('@' ==) ident
+                then getAccountByEmail -- getBy . UniqueAccountEmail . Just
+                else getBy . UniqueAccountNickname . Just
         _mAccEntity <- getter ident
         case _mAccEntity of
             Just (Entity _id _) -> return $ Just _id
@@ -186,8 +186,8 @@ instance YesodAuth App where
                        , authGoogleEmail _id _secret
                        , authEpisodes checkPassword ]
         where
-            _id = appGoogleAuthClientId $ appSettings $ _app
-            _secret = appGoogleAuthClientSecret $ appSettings $ _app
+            _id = appGoogleAuthClientId $ appSettings _app
+            _secret = appGoogleAuthClientSecret $ appSettings _app
 
     authHttpManager = getHttpManager
 

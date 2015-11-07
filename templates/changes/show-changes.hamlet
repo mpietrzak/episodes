@@ -1,0 +1,35 @@
+
+<h2>Submit Changes: #{showTitle _show}
+
+<h3>Current change
+
+<ol>
+    $forall addSeasonsChange <- addSeasonsChanges
+        <li>add #{showChangeAddSeasonsCount addSeasonsChange} seasons
+
+<p>[<small><a href="@{ShowChangesAddSeasonsR _showId}">add seasons</a></small>]</p>
+
+<ul>
+    $forall (Entity seasonId season) <- seasonEntities
+        <li>
+            Season #{seasonNumber season}
+            [
+            <small>
+                <a href="@{ShowChangesAddEpisodesR _showId (seasonNumber season)}">add episodes</a>,
+                <a href="@{ShowChangesEditSeasonR _showId (seasonNumber season)}">edit</a>,
+                <a href="@{ShowChangesDeleteSeasonR _showId (seasonNumber season)}">delete</a>
+            ]<br/>
+            <ul>
+                $forall (Entity episodeId episode) <- (M.findWithDefault [] seasonId seasonEpisodesMap)
+                    <li>
+                        Ep. #{episodeNumber episode}: "#{episodeTitle episode}"
+                        <small>
+                            $maybe airTime <- episodeAirDateTime episode
+                                    (#{formatTime airTime})
+                            $nothing
+                                    (no air time)
+                        [
+                        <small>
+                            <a href="@{ShowChangesEditEpisodeR _showId (seasonNumber season) (episodeNumber episode)}">edit</a>,
+                            <a href="@{ShowChangesDeleteEpisodeR _showId (seasonNumber season) (episodeNumber episode)}">delete</a>
+                        ]

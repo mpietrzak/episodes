@@ -1,10 +1,10 @@
 {-# LANGUAGE TupleSections, OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
-module Handler.Users where
+
+module Episodes.Handler.Users where
 
 
 import           Prelude
-import           Control.Applicative
 import           Control.Monad.IO.Class
 import           Data.Text (Text)
 import           Data.Time (getCurrentTime)

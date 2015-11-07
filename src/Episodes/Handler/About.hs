@@ -1,18 +1,18 @@
+{-# LANGUAGE OverloadedStrings #-}
 
-module Handler.About (
+module Episodes.Handler.About (
     getAboutR
 ) where
 
 
 import Prelude hiding (Show, show)
-import Yesod (Html, defaultLayout, setTitle, runDB)
+import Yesod (Html, defaultLayout, setTitle)
 
 import Foundation
 import Settings (widgetFile)
 
 
 getAboutR :: Handler Html
-getAboutR = do
-    defaultLayout $ do
+getAboutR = defaultLayout $ do
         setTitle "About"
         $(widgetFile "about")

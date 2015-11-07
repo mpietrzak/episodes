@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Handler.API (
+module Episodes.Handler.API (
     postSetEpisodeStatusR,
     postSetSeasonCollapseR,
     postSetShowSubscriptionStatusR
@@ -10,7 +10,7 @@ module Handler.API (
 import Prelude
 import Yesod
 import Control.Monad (mzero)
-import Data.Aeson (FromJSON, ToJSON)
+-- import Data.Aeson (FromJSON, ToJSON)
 import Data.Int (Int64)
 import Data.Text (Text)
 import Data.Time (getCurrentTime)

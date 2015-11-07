@@ -1,6 +1,6 @@
 
 
-module Handler.Stats (
+module Episodes.Handler.Stats (
     getStatsR
 ) where
 
