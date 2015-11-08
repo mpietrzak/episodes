@@ -41,19 +41,16 @@ import Episodes.Handler.Admin (getAdminR)
 import Episodes.Handler.Calendar
 import Episodes.Handler.Shows
 import Episodes.Handler.ShowChanges (
-    getShowChangesAddEpisodesR,
-    getShowChangesAddSeasonsR,
     getShowChangesDeleteEpisodeR,
     getShowChangesDeleteSeasonR,
     getShowChangesEditEpisodeR,
-    getShowChangesEditSeasonR,
-    getShowSubmitChangesR,
-    postShowChangesAddEpisodesR,
-    postShowChangesAddSeasonsR,
+    getShowChangesR,
+    getShowChangesReviewR,
+    postShowChangesAddEpisodeR,
     postShowChangesDeleteEpisodeR,
     postShowChangesDeleteSeasonR,
     postShowChangesEditEpisodeR,
-    postShowChangesEditSeasonR
+    postShowChangesR
     )
 import Episodes.Handler.ShowEdit (
     getShowEditAddEpisodesR,

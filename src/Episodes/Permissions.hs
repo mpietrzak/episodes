@@ -1,5 +1,6 @@
 
 module Episodes.Permissions (
+    canAcceptChanges,
     canEditShow,
     canSubmitShowChanges
 ) where
@@ -12,6 +13,7 @@ import Model (
     Account,
     AccountId,
     Show,
+    accountAdmin,
     showAddedBy,
     showLocal,
     showPublic,
@@ -27,3 +29,7 @@ canSubmitShowChanges _accountId _account _show =
     not (canEditShow _accountId _show)
     -- && fromMaybe False (showLocal _show)
     && showPublic _show
+
+
+canAcceptChanges :: Account -> Bool
+canAcceptChanges = accountAdmin

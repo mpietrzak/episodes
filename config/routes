@@ -19,13 +19,12 @@
 /show/#ShowId/season/#Int/add-episodes ShowEditAddEpisodesR                 GET POST
 /show/#ShowId/season/#Int/episode/#Int/edit EditEpisodeR                    GET POST
 /show/#ShowId/season/#Int/episode/#Int/delete ShowEditDeleteEpisodeR        GET POST
-/show/#ShowId/changes              ShowSubmitChangesR                       GET
-/show/#ShowId/changes/add-seasons  ShowChangesAddSeasonsR                   GET POST
-/show/#ShowId/changes/season/#Int/add-episodes ShowChangesAddEpisodesR      GET POST
-/show/#ShowId/changes/season/#Int/edit    ShowChangesEditSeasonR            GET POST
+/show/#ShowId/changes              ShowChangesR                             GET POST
+/show/#ShowId/changes/add-episode  ShowChangesAddEpisodeR                   POST
 /show/#ShowId/changes/season/#Int/delete  ShowChangesDeleteSeasonR          GET POST
 /show/#ShowId/changes/season/#Int/episode/#Int/edit ShowChangesEditEpisodeR GET POST
 /show/#ShowId/changes/season/#Int/episode/#Int/delete ShowChangesDeleteEpisodeR GET POST
+/review-changes                    ShowChangesReviewR                       GET
 /stats                             StatsR                                   GET
 /profile                           ProfileR                                 GET POST
 /subscribeShow/#ShowId             SubscribeShowR                           GET

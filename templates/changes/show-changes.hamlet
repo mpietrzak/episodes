@@ -3,33 +3,51 @@
 
 <h3>Current change
 
-<ol>
-    $forall addSeasonsChange <- addSeasonsChanges
-        <li>add #{showChangeAddSeasonsCount addSeasonsChange} seasons
+<p>
+    Change created: #{formatTime $ showChangeCreated _showChange}<br>
+    Change modified: #{formatTime $ showChangeModified _showChange}
 
-<p>[<small><a href="@{ShowChangesAddSeasonsR _showId}">add seasons</a></small>]</p>
+<p>
+    <form role="form" method="post" action="@{ShowChangesR _showId}" enctype="#{submitChangeFormEnctype}">
+        <!-- submit is just a link visually, but we use form to get CSRF and similar stuff for free -->
+        <!-- e.g. normal link might get cached or preloaded by broken software (e.g. broken proxy) - form post probably will not -->
+        ^{submitChangeFormWidget}
+        <button class="btn btn-default btn-small">Submit this change for review
 
-<ul>
-    $forall (Entity seasonId season) <- seasonEntities
-        <li>
-            Season #{seasonNumber season}
-            [
-            <small>
-                <a href="@{ShowChangesAddEpisodesR _showId (seasonNumber season)}">add episodes</a>,
-                <a href="@{ShowChangesEditSeasonR _showId (seasonNumber season)}">edit</a>,
-                <a href="@{ShowChangesDeleteSeasonR _showId (seasonNumber season)}">delete</a>
-            ]<br/>
-            <ul>
-                $forall (Entity episodeId episode) <- (M.findWithDefault [] seasonId seasonEpisodesMap)
-                    <li>
-                        Ep. #{episodeNumber episode}: "#{episodeTitle episode}"
-                        <small>
-                            $maybe airTime <- episodeAirDateTime episode
-                                    (#{formatTime airTime})
-                            $nothing
-                                    (no air time)
-                        [
-                        <small>
-                            <a href="@{ShowChangesEditEpisodeR _showId (seasonNumber season) (episodeNumber episode)}">edit</a>,
-                            <a href="@{ShowChangesDeleteEpisodeR _showId (seasonNumber season) (episodeNumber episode)}">delete</a>
-                        ]
+<div>
+    <ol>
+        $forall editEpisodeChange <- editEpisodeChanges
+            <li>
+                edit episode
+                #{showChangeEditEpisodeSeasonNumber editEpisodeChange} /
+                #{showChangeEditEpisodeEpisodeNumber editEpisodeChange}:
+                title: #{showChangeEditEpisodeTitle editEpisodeChange}
+
+
+<div style="clear: both">
+    <form class="form-horizontal" role="form" method="post" action="@{ShowChangesAddEpisodeR _showId}" enctype="#{addEpisodeFormEnctype}">
+        ^{addEpisodeFormWidget}
+
+<div style="clear: both">
+    <ul>
+        $forall (Entity seasonId season) <- seasonEntities
+            <li>
+                Season #{seasonNumber season}
+                [
+                <small>
+                    <a href="@{ShowChangesDeleteSeasonR _showId (seasonNumber season)}">delete</a>
+                ]<br/>
+                <ul>
+                    $forall (Entity episodeId episode) <- (M.findWithDefault [] seasonId seasonEpisodesMap)
+                        <li>
+                            Ep. #{episodeNumber episode}: "#{episodeTitle episode}"
+                            <small>
+                                $maybe airTime <- episodeAirDateTime episode
+                                        (#{formatTime airTime})
+                                $nothing
+                                        (no air time)
+                            [
+                            <small>
+                                <a href="@{ShowChangesEditEpisodeR _showId (seasonNumber season) (episodeNumber episode)}">edit</a>,
+                                <a href="@{ShowChangesDeleteEpisodeR _showId (seasonNumber season) (episodeNumber episode)}">delete</a>
+                            ]

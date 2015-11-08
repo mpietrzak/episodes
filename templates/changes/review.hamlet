@@ -1,0 +1,37 @@
+
+<h2>Review Changes
+
+<table class="table table-condensed table-striped">
+    <tr>
+        <th>Created
+        <th>Modified
+        <th>Nickname
+        <th>Email
+        <th>Account Views
+        <th>Changes
+        <th>Actions
+    $forall (changeEnt, accountEnt, delSeasonEnts, delEpisodeEnts, editEpisodeEnts) <- changesData
+        $with (_c, _a) <- (entityVal changeEnt, entityVal accountEnt)
+            <tr>
+                <td>#{formatTime $ showChangeCreated _c}
+                <td>#{formatTime $ showChangeModified _c}
+                <td>
+                    $maybe _n <- accountNickname _a
+                        #{_n}
+                <td>
+                    $maybe _e <- accountEmail _a
+                        #{_e}
+                <td>#{accountViews _a}
+                <td>
+                    <ul>
+                        $forall (Entity _ delSeason) <- delSeasonEnts
+                            <li>Delete season #{showChangeDeleteSeasonSeasonNumber delSeason}
+                        $forall (Entity _ delEp) <- delEpisodeEnts
+                            <li>Delete episode #{showChangeDeleteEpisodeSeasonNumber delEp} #{showChangeDeleteEpisodeEpisodeNumber delEp}
+                        $forall (Entity _ editEp) <- editEpisodeEnts
+                            <li>
+                                Edit episode #{showChangeEditEpisodeSeasonNumber editEp} #{showChangeEditEpisodeEpisodeNumber editEp}:
+                                title: #{showChangeEditEpisodeTitle editEp}
+                <td>
+                    <button class="btn btn-xs">Accept
+                    <button class="btn btn-xs">Reject

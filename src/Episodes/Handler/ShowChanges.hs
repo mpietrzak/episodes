@@ -2,19 +2,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Episodes.Handler.ShowChanges (
-    getShowChangesAddEpisodesR,
-    getShowChangesAddSeasonsR,
     getShowChangesDeleteEpisodeR,
     getShowChangesDeleteSeasonR,
     getShowChangesEditEpisodeR,
-    getShowChangesEditSeasonR,
-    getShowSubmitChangesR,
-    postShowChangesAddEpisodesR,
-    postShowChangesAddSeasonsR,
+    getShowChangesR,
+    getShowChangesReviewR,
+    postShowChangesAddEpisodeR,
     postShowChangesDeleteEpisodeR,
     postShowChangesDeleteSeasonR,
     postShowChangesEditEpisodeR,
-    postShowChangesEditSeasonR
+    postShowChangesR
 ) where
 
 import Prelude hiding (Show, show)
@@ -44,7 +41,7 @@ import Yesod (
     setSession,
     setTitle )
 import  Yesod.Auth (
-    -- requireAuthId,
+    requireAuthId,
     requireAuthPair )
 import Yesod.Form (
     FormResult (FormSuccess),
@@ -53,6 +50,7 @@ import Yesod.Form (
     areq,
     intField,
     generateFormPost,
+    renderDivs,
     runFormPost,
     textField )
 import Yesod.Form.Bootstrap3 (
@@ -65,13 +63,15 @@ import Yesod.Form.Bootstrap3 (
 import Episodes.Common (formatTime)
 import Foundation
 import Model (
-    Account,
+    Account ( accountNickname
+            , accountEmail
+            , accountViews ),
     AccountId,
     Episode,
     Season,
     SeasonId,
     Show,
-    ShowChangeAddSeasons ( showChangeAddSeasonsCount ),
+    ShowChange,
     ShowChangeId,
     ShowId,
     episodeAirDateTime,
@@ -79,6 +79,14 @@ import Model (
     episodeSeason,
     episodeTitle,
     seasonNumber,
+    showChangeCreated,
+    showChangeDeleteSeasonSeasonNumber,
+    showChangeDeleteEpisodeSeasonNumber,
+    showChangeDeleteEpisodeEpisodeNumber,
+    showChangeEditEpisodeSeasonNumber,
+    showChangeEditEpisodeEpisodeNumber,
+    showChangeEditEpisodeTitle,
+    showChangeModified,
     showTitle)
 import Settings (widgetFile)
 import qualified Episodes.DB as DB
@@ -86,18 +94,16 @@ import qualified Episodes.DB.ShowChanges as DBC
 import qualified Episodes.Permissions as P
 
 
-data AddSeasonsFormData = AddSeasonsFormData { asCount :: Int }
-
-data AddEpisodesFormData = AddEpisodesFormData { aeCount :: Int }
-
 data DeleteEpisodeFormData = DeleteEpisodeFormData
 
 data DeleteSeasonFormData = DeleteSeasonFormData
 
-data EditEpisodeFormData = EditEpisodeFormData { eeTitle :: Maybe Text
-                                               , eeNumber :: Maybe Int }
+data EditEpisodeFormData = EditEpisodeFormData { eeTitle :: Text
+                                               , eeSeasonNumber :: Int
+                                               , eeEpisodeNumber :: Int }
 
-data EditSeasonFormData = EditSeasonFormData { esNumber :: Int }
+
+data SubmitChangeFormData = SubmitChangeFormData
 
 
 bootstrapFormLayout :: BootstrapFormLayout
@@ -107,18 +113,6 @@ bootstrapFormLayout = BootstrapHorizontalForm labelOffset labelSize inputOffset 
         labelSize = ColSm 2
         inputOffset = ColSm 0
         inputSize = ColSm 7
-
-
-addSeasonsForm :: Html -> MForm Handler (FormResult AddSeasonsFormData, Widget)
-addSeasonsForm = renderBootstrap3 bootstrapFormLayout $ AddSeasonsFormData
-    <$> areq intField "How many?" Nothing
-    <* bootstrapSubmit (BootstrapSubmit ("Add" :: Text) "btn btn-default" [])
-
-
-addEpisodesForm :: Html -> MForm Handler (FormResult AddEpisodesFormData, Widget)
-addEpisodesForm = renderBootstrap3 bootstrapFormLayout $ AddEpisodesFormData
-    <$> areq intField "How many?" Nothing
-    <* bootstrapSubmit (BootstrapSubmit ("Add" :: Text) "btn btn-default" [])
 
 
 deleteEpisodeForm :: Html -> MForm Handler (FormResult DeleteEpisodeFormData, Widget)
@@ -131,17 +125,16 @@ deleteSeasonForm = renderBootstrap3 bootstrapFormLayout $ pure DeleteSeasonFormD
     <* bootstrapSubmit (BootstrapSubmit ("Delete" :: Text) "btn btn-default" [])
 
 
-editEpisodeForm :: Html -> MForm Handler (FormResult EditEpisodeFormData, Widget)
-editEpisodeForm = renderBootstrap3 bootstrapFormLayout $ EditEpisodeFormData
-    <$> aopt textField "Title" Nothing
-    <*> aopt intField "Number" Nothing
+editEpisodeForm :: Maybe Episode -> Html -> MForm Handler (FormResult EditEpisodeFormData, Widget)
+editEpisodeForm _mep = renderBootstrap3 bootstrapFormLayout $ EditEpisodeFormData
+    <$> areq textField "Title" Nothing
+    <*> areq intField "Season Number" Nothing
+    <*> areq intField "Episde Number" Nothing
     <* bootstrapSubmit (BootstrapSubmit ("Save" :: Text) "btn btn-default" [])
 
 
-editSeasonForm :: Html -> MForm Handler (FormResult EditSeasonFormData, Widget)
-editSeasonForm = renderBootstrap3 bootstrapFormLayout $ EditSeasonFormData
-    <$> areq intField "Season Number" Nothing
-    <* bootstrapSubmit (BootstrapSubmit ("Save" :: Text) "btn btn-default" [])
+submitChangeForm :: Html -> MForm Handler (FormResult SubmitChangeFormData, Widget)
+submitChangeForm = renderDivs $ pure SubmitChangeFormData
 
 
 checkCanSubmitChanges :: ShowId -> Handler (AccountId, Account, Show)
@@ -185,83 +178,70 @@ get404Episode _showId _seasonNumber _episodeNumber = do
         _ -> notFound
 
 
-getShowChangeId :: AccountId -> ShowId -> Handler ShowChangeId
-getShowChangeId _accountId _showId = do
-    mChangeIdText <- lookupSession "change-id"
-    _mSessChangeId <- case mChangeIdText of
-        Just changeIdText ->
-            case decimal changeIdText of
-                Right (_changeId, _) -> return $ Just $ toSqlKey _changeId
-                _ -> return Nothing
-        _ -> return Nothing
-    _changeId <- case _mSessChangeId of
-        Just _i -> return _i
+getShowChange :: AccountId -> ShowId -> Handler (Entity ShowChange)
+getShowChange _accountId _showId = do
+    _mc <- runDB $ DBC.getCurrentShowChange _accountId _showId
+    case _mc of
+        Just _c -> return _c
         Nothing -> do
             _now <- liftIO getCurrentTime
-            runDB $ DBC.createShowChange _now _accountId _showId
-    setSession "change-id" (sformat int (fromSqlKey _changeId))
-    return _changeId
+            runDB $ DBC.addShowChange _now _accountId _showId
 
 
-getShowSubmitChangesR :: ShowId -> Handler Html
-getShowSubmitChangesR _showId = do
+getShowChangesR :: ShowId -> Handler Html
+getShowChangesR _showId = do
     (_accId, _, _show) <- checkCanSubmitChanges _showId
-    _changeId <- getShowChangeId _accId _showId
-    addSeasonsChangesEntities <- runDB $ DBC.getAddSeasonChanges _changeId
-    let addSeasonsChanges = map entityVal addSeasonsChangesEntities
+    _changeEntity <- getShowChange _accId _showId
+    let _showChangeId = entityKey _changeEntity
+    let _showChange = entityVal _changeEntity
+    editEpisodeChangeEntities <- runDB $ DBC.getEditEpisodeChanges _showChangeId
+    let editEpisodeChanges = map entityVal editEpisodeChangeEntities
     (seasonEntities, episodeEntities, seasonEpisodesMap) <- getShowData _showId
+    (submitChangeFormWidget, submitChangeFormEnctype) <- generateFormPost submitChangeForm
+    (addEpisodeFormWidget, addEpisodeFormEnctype) <- generateFormPost $ editEpisodeForm Nothing
     defaultLayout $ do
         setTitle $ text $ "Episodes: Submit Show Changes: " <> showTitle _show
         $(widgetFile "changes/show-changes")
 
 
-getShowChangesAddSeasonsR :: ShowId -> Handler Html
-getShowChangesAddSeasonsR _showId = do
-    (_, _, _show) <- checkCanSubmitChanges _showId
-    (addSeasonsFormWidget, addSeasonsFormEnctype) <- generateFormPost addSeasonsForm
+getShowChangesReviewR :: Handler Html
+getShowChangesReviewR = do
+    _accountId <- requireAuthId
+    changesData <- runDB $ DBC.getShowChangesForAccept _accountId 1024
     defaultLayout $ do
-        setTitle $ text $ "Episodes: Submit Show Changes: " <> showTitle _show <> ": Add Seasons"
-        $(widgetFile "changes/add-seasons")
+        setTitle $ text "Episodes: Review Changes"
+        $(widgetFile "changes/review")
 
 
-postShowChangesAddSeasonsR :: ShowId -> Handler Html
-postShowChangesAddSeasonsR _showId = do
-        (_accId, _, _show) <- checkCanSubmitChanges _showId
-        (seasonEntities, episodeEntities, seasonEpisodesMap) <- getShowData _showId
-        ((addSeasonsFormResult, addSeasonsFormWidget), addSeasonsFormEnctype) <- runFormPost addSeasonsForm
-        case addSeasonsFormResult of
-            FormSuccess _f -> do
-                _now <- liftIO getCurrentTime
-                _showChangeId <- getShowChangeId _accId _showId
-                runDB $ DBC.addShowChangeAddSeasons _now _showChangeId (asCount _f)
-                redirect $ ShowSubmitChangesR _showId
-            _ -> defaultLayout $ do
-                setTitle $ text $ "Episodes: Submit Show Changes: " <> showTitle _show
-                $(widgetFile "changes/add-seasons")
-
-
-getShowChangesEditSeasonR :: ShowId -> Int -> Handler Html
-getShowChangesEditSeasonR _showId _seasonNumber = do
-    (_, _, _show) <- checkCanSubmitChanges _showId
-    (editSeasonFormWidget, editSeasonFormEnctype) <- generateFormPost editSeasonForm
-    defaultLayout $ do
-        setTitle $ text $ "Episodes: Submit Show Changes: " <> showTitle _show <> ": Edit Season"
-        $(widgetFile "changes/edit-season")
-
-
-postShowChangesEditSeasonR :: ShowId -> Int -> Handler Html
-postShowChangesEditSeasonR _showId _seasonNumber = do
+postShowChangesR :: ShowId -> Handler Html
+postShowChangesR _showId = do
     (_accId, _, _show) <- checkCanSubmitChanges _showId
-    ((editSeasonFormResult, editSeasonFormWidget), editSeasonFormEnctype) <- runFormPost editSeasonForm
-    case editSeasonFormResult of
+    (Entity _changeId _change) <- getShowChange _accId _showId
+    ((submitChangeFormResult, submitChangeFormWidget), submitChangeFormEnctype) <- runFormPost submitChangeForm
+    case submitChangeFormResult of
         FormSuccess _f -> do
             _now <- liftIO getCurrentTime
-            _showChangeId <- getShowChangeId _accId _showId
-            runDB $ DBC.addShowChangeEditSeason _now _showChangeId (esNumber _f)
-            redirect $ ShowSubmitChangesR _showId
+            runDB $ DBC.submitShowChange _now _changeId
+        _ -> return ()
+    redirect $ ShowChangesR _showId
+
+
+postShowChangesAddEpisodeR :: ShowId -> Handler Html
+postShowChangesAddEpisodeR _showId = do
+    (_accId, _, _show) <- checkCanSubmitChanges _showId
+    Entity _changeId _change <- getShowChange _accId _showId
+    ((addEpisodeFormResult, addEpisodeFormWidget), addEpisodeFormEnctype) <- runFormPost $ editEpisodeForm Nothing
+    case addEpisodeFormResult of
+        FormSuccess _f -> do
+            _now <- liftIO getCurrentTime
+            let _seasonNumber = eeSeasonNumber _f
+            let _episodeNumber = eeEpisodeNumber _f
+            let _title = eeTitle _f
+            runDB $ DBC.addShowChangeEditEpisode _now _changeId _seasonNumber _episodeNumber _title
+            redirect $ ShowChangesR _showId
         _ -> defaultLayout $ do
-            setTitle $ text $ "Episodes: Submit Show Changes: " <> showTitle _show <> ": Edit Season"
-            $(widgetFile "changes/edit-season")
+                setTitle $ text $ "Episodes: Submit Show Changes: " <> showTitle _show <> ": Add Episode"
+                $(widgetFile "changes/add-episode")
 
 
 getShowChangesDeleteSeasonR :: ShowId -> Int -> Handler Html
@@ -281,32 +261,12 @@ postShowChangesDeleteSeasonR _showId _seasonNumber = do
     case deleteSeasonFormResult of
         FormSuccess _ -> do
             _now <- liftIO getCurrentTime
-            _showChangeId <- getShowChangeId _accId _showId
-            runDB $ DBC.addShowChangeDeleteSeason _now _showChangeId _seasonId
-            redirect $ ShowSubmitChangesR _showId
+            (Entity _showChangeId _) <- getShowChange _accId _showId
+            runDB $ DBC.addShowChangeDeleteSeason _now _showChangeId _seasonNumber
+            redirect $ ShowChangesR _showId
         _ -> defaultLayout $ do
             setTitle $ text $ "Episodes: Submit Show Changes: " <> showTitle _show <> ": Delete Season"
             $(widgetFile "changes/delete-season")
-
-
-getShowChangesAddEpisodesR :: ShowId -> Int -> Handler Html
-getShowChangesAddEpisodesR _showId _seasonNumber = do
-    (_, _, _show) <- checkCanSubmitChanges _showId
-    (seasonEntities, episodeEntities, seasonEpisodesMap) <- getShowData _showId
-    (addEpisodesFormWidget, addEpisodesFormEnctype) <- generateFormPost addEpisodesForm
-    defaultLayout $ do
-        setTitle $ text $ "Episodes: Submit Show Changes: " <> showTitle _show
-        $(widgetFile "changes/add-episodes")
-
-
-postShowChangesAddEpisodesR :: ShowId -> Int -> Handler Html
-postShowChangesAddEpisodesR _showId _seasonNumber = do
-    (_, _, _show) <- checkCanSubmitChanges _showId
-    (seasonEntities, episodeEntities, seasonEpisodesMap) <- getShowData _showId
-    ((addEpisodesFormResult, addEpisodesFormWidget), addEpisodesFormEnctype) <- runFormPost addEpisodesForm
-    defaultLayout $ do
-        setTitle $ text $ "Episodes: Submit Show Changes: " <> showTitle _show
-        $(widgetFile "changes/add-episodes")
 
 
 getShowChangesDeleteEpisodeR :: ShowId -> Int -> Int -> Handler Html
@@ -330,9 +290,9 @@ postShowChangesDeleteEpisodeR _showId _seasonNumber _episodeNumber = do
     case deleteEpisodeFormResult of
         FormSuccess _ -> do
             _t <- liftIO getCurrentTime
-            _showChangeId <- getShowChangeId _accountId _showId
-            runDB $ DBC.addShowChangeDeleteEpisode _t _showChangeId _episodeId
-            redirect $ ShowSubmitChangesR _showId
+            (Entity _showChangeId _) <- getShowChange _accountId _showId
+            runDB $ DBC.addShowChangeDeleteEpisode _t _showChangeId _seasonNumber _episodeNumber
+            redirect $ ShowChangesR _showId
         _ -> defaultLayout $ do
             setTitle $ text $ "Episodes: Submit Show Changes: Delete Episode: " <> episodeTitle _episode
             $(widgetFile "changes/delete-episode")
@@ -346,7 +306,7 @@ getShowChangesEditEpisodeR _showId _seasonNumber _episodeNumber = do
     _episodeEntity <- get404Episode _showId _seasonNumber _episodeNumber
     let _season = entityVal _seasonEntity
     let _episode = entityVal _episodeEntity
-    (editEpisodeFormWidget, editEpisodeFormEnctype) <- generateFormPost editEpisodeForm
+    (editEpisodeFormWidget, editEpisodeFormEnctype) <- generateFormPost $ editEpisodeForm (Just _episode)
     defaultLayout $ do
         setTitle $ text $ "Episodes: Submit Show Changes: " <> showTitle _show <> ": Edit Episode: " <> episodeTitle _episode
         $(widgetFile "changes/edit-episode")
@@ -355,7 +315,7 @@ getShowChangesEditEpisodeR _showId _seasonNumber _episodeNumber = do
 postShowChangesEditEpisodeR :: ShowId -> Int -> Int -> Handler Html
 postShowChangesEditEpisodeR _showId _seasonNumber _episodeNumber = do
     (_accId, _, _show) <- checkCanSubmitChanges _showId
-    ((editEpisodeFormResult, editEpisodeFormWidget), editEpisodeFormEnctype) <- runFormPost editEpisodeForm
+    ((editEpisodeFormResult, editEpisodeFormWidget), editEpisodeFormEnctype) <- runFormPost $ editEpisodeForm Nothing
     _episodeEntity <- get404Episode _showId _seasonNumber _episodeNumber
     _season <- entityVal <$> get404Season _showId _seasonNumber
     let _episode = entityVal _episodeEntity
@@ -363,14 +323,14 @@ postShowChangesEditEpisodeR _showId _seasonNumber _episodeNumber = do
     case editEpisodeFormResult of
         FormSuccess editEpisodeFormData -> do
             _now <- liftIO getCurrentTime
-            _showChangeId <- getShowChangeId _accId _showId
+            (Entity _showChangeId _) <- getShowChange _accId _showId
             runDB $ DBC.addShowChangeEditEpisode
                 _now
                 _showChangeId
-                _episodeId
+                (eeSeasonNumber editEpisodeFormData)
+                _episodeNumber
                 (eeTitle editEpisodeFormData)
-                (eeNumber editEpisodeFormData)
-            redirect $ ShowSubmitChangesR _showId
+            redirect $ ShowChangesR _showId
         _ -> defaultLayout $ do
             setTitle $ text $ "Episodes: Submit Show Changes: " <> showTitle _show <> ": Edit Episode: " <> episodeTitle _episode
             $(widgetFile "changes/edit-episode")

@@ -52,7 +52,6 @@ library
         ghc-options:   -Wall -fwarn-tabs -O2 -threaded -rtsopts -with-rtsopts=-N
 
     default-extensions: TemplateHaskell
-                        QuasiQuotes
                         OverloadedStrings
                         NoImplicitPrelude
                         MultiParamTypeClasses
@@ -75,7 +74,6 @@ library
                  , bytestring                    >= 0.9
                  , cassava                       >= 0.4.2
                  , classy-prelude
-                 -- , classy-prelude-conduit
                  , classy-prelude-yesod          >= 0.12.4
                  , conduit                       >= 1.0
                  , containers                    >= 0.5
@@ -102,7 +100,6 @@ library
                  , persistent-postgresql         >= 2.2.1
                  , persistent-template
                  , process                       >= 1.1.0.2
-                 -- , purescript                    >= 0.7.4.1
                  , resourcet
                  , scientific
                  , shakespeare                   >= 2.0.6
@@ -127,7 +124,6 @@ library
                  , yesod-auth                    >= 1.4.5
                  , yesod-static                  >= 1.5.0.3
                  , yesod-form                    >= 1.4.4.1
-                 -- , yesod-purescript              >= 0.0.6
 
 
 executable         episodes

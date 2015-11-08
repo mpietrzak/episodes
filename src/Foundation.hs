@@ -27,6 +27,7 @@ import qualified Data.Text as T
 
 import Episodes.Auth (authEpisodes)
 import Episodes.DB (getAccountByEmail, checkPassword, createAccount)
+import Episodes.Permissions (canAcceptChanges)
 import Episodes.StaticFiles
 import Episodes.Time (NamedTimeZone)
 import Model

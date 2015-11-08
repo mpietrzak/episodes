@@ -1,4 +1,5 @@
 {-# LANGUAGE TupleSections, OverloadedStrings, ScopedTypeVariables #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Episodes.Handler.Shows where

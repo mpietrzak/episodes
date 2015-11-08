@@ -6,7 +6,7 @@ $if canEdit
         <a href="@{ShowEditR showId}">Edit
 $elseif canSubmitChanges
     <small>
-        <a href="@{ShowSubmitChangesR showId}">Submit Changes
+        <a href="@{ShowChangesR showId}">Submit Changes
 
 <table class="show-details">
     <tbody>
