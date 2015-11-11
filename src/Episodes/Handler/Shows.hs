@@ -90,7 +90,7 @@ addShowForm = renderBootstrap3 bootstrapFormLayout $ AddShowFormData <$> areq te
 
 getShowsR :: Handler Html
 getShowsR = do
-    showEntities <- runDB $ selectList [] [Asc ShowTitle]
+    showEntities <- runDB $ selectList [ShowPublic ==. True] [Asc ShowTitle] -- TODO via API
     mAuthId <- maybeAuthId
     subscribedShowKeys <- case mAuthId of
         Nothing -> do
@@ -141,7 +141,7 @@ getShowDetailsR showId = do
         Just authId -> runDB $ getEpisodeStatusesByShowAndUser showId authId
         Nothing -> return []
     let episodeStatusByEpisodeId = M.fromList $ map (\e -> (episodeStatusEpisode (entityVal e), episodeStatusStatus (entityVal e))) episodeStatusEntities
-    let getEpisodeStatusByEpisodeId = \eid -> M.findWithDefault "unseen" eid episodeStatusByEpisodeId
+    let getEpisodeStatusByEpisodeId = flip (M.findWithDefault "unseen") episodeStatusByEpisodeId
 
     let formatInUserTimeZone = formatInTimeZone tz
 
@@ -157,7 +157,7 @@ getShowDetailsR showId = do
             Just (Entity _aid _) -> P.canEditShow _aid show
             Nothing -> False
     let canSubmitChanges = case ma of
-            Just (Entity _ _a) -> (not canEdit) && accountCreated _a < addUTCTime (-minAccEditAgeSec) now
+            Just (Entity _ _a) -> accountAdmin _a  -- not canEdit && accountCreated _a < addUTCTime (-minAccEditAgeSec) now
             Nothing -> False
 
     defaultLayout $ do

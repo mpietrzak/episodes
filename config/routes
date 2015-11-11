@@ -25,6 +25,8 @@
 /show/#ShowId/changes/season/#Int/episode/#Int/edit ShowChangesEditEpisodeR GET POST
 /show/#ShowId/changes/season/#Int/episode/#Int/delete ShowChangesDeleteEpisodeR GET POST
 /review-changes                    ShowChangesReviewR                       GET
+/review-changes/#ShowChangeId/accept ShowChangesAcceptR                     GET
+/review-changes/#ShowChangeId/reject ShowChangesRejectR                     GET
 /stats                             StatsR                                   GET
 /profile                           ProfileR                                 GET POST
 /subscribeShow/#ShowId             SubscribeShowR                           GET

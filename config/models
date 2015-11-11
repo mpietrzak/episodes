@@ -80,6 +80,8 @@ ShowChange
     show ShowId
     author AccountId
     submitted Bool
+    accepted Bool
+    rejected Bool
     created UTCTime
     modified UTCTime
 
@@ -101,7 +103,7 @@ ShowChangeEditEpisode
     seasonNumber Int
     episodeNumber Int
     title Text
-    -- airDateTime UTCTime
+    airDateTime UTCTime
     created UTCTime
     modified UTCTime
 

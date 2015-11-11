@@ -1,13 +1,6 @@
 
 <h2>#{showTitle show}
 
-$if canEdit
-    <p>
-        <a href="@{ShowEditR showId}">Edit
-$elseif canSubmitChanges
-    <small>
-        <a href="@{ShowChangesR showId}">Submit Changes
-
 <table class="show-details">
     <tbody>
         <tr>
@@ -61,6 +54,12 @@ $elseif canSubmitChanges
                                     #{formatInUserTimeZone _episodeAirDateTime}
 
 
+<p>
+    <small>
+        $if canEdit
+            <a href="@{ShowEditR showId}">Edit
+        $elseif canSubmitChanges
+            <a href="@{ShowChangesR showId}">Submit Changes
 
 
 <p style="font-size: 75%; margin-top: 4em">

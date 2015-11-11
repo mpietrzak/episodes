@@ -315,7 +315,7 @@ addPrivateShow now accountId title = Right <$> insert _show
                        showPublic = False,
                        showSubmitted = False,
                        showLocal = Just True,
-                       showAddedBy = Just $ accountId,
+                       showAddedBy = Just accountId,
                        showModified = now,
                        showCreated = now }
 
@@ -356,10 +356,10 @@ addShowSeasons now showId _count = do
                 Just _i -> _i + 1
                 Nothing -> 1
             _ -> 1
-    forM_ [0.._count] $ \i -> insert_ $ Season { seasonNumber = nextSeasonNumber + i,
-                                                 seasonShow = showId,
-                                                 seasonCreated = now,
-                                                 seasonModified = now }
+    forM_ [0.._count] $ \i -> insert_ Season { seasonNumber = nextSeasonNumber + i,
+                                               seasonShow = showId,
+                                               seasonCreated = now,
+                                               seasonModified = now }
 
 
 
@@ -375,7 +375,7 @@ getAccountByEmail _email = rawSql _sql _params >>= \_rows -> return (_maybeFirst
 getPopularShows :: MonadIO m
                 => Int
                 -> SqlPersistT m [Entity Show]
-getPopularShows _count = selectList [] [Desc ShowSubscriptionCount, LimitTo _count]
+getPopularShows _count = selectList [ShowPublic ==. False] [Desc ShowSubscriptionCount, LimitTo _count]
 
 
 getPopularEpisodes :: MonadIO m

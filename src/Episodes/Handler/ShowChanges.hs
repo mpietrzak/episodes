@@ -1,11 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module Episodes.Handler.ShowChanges (
+    getShowChangesAcceptR,
     getShowChangesDeleteEpisodeR,
     getShowChangesDeleteSeasonR,
     getShowChangesEditEpisodeR,
     getShowChangesR,
+    getShowChangesRejectR,
     getShowChangesReviewR,
     postShowChangesAddEpisodeR,
     postShowChangesDeleteEpisodeR,
@@ -22,24 +25,29 @@ import Data.List (groupBy, sortOn)
 import Data.Monoid ((<>))
 import Data.Text (Text)
 import Data.Text.Read (decimal)
-import Data.Time (getCurrentTime)
+import Data.Time (UTCTime, getCurrentTime)
 import Formatting (sformat, int)
 import qualified Data.Map.Strict as M
+import qualified Data.Time.Format as DTF
 
 import Database.Persist (Entity(Entity), entityKey, entityVal)
 import Database.Persist.Sql (fromSqlKey, toSqlKey)
 import Text.Blaze (text)
 import Yesod (
+    HandlerSite,
     Html,
+    RenderMessage,
     defaultLayout,
     get404,
+    hamlet,
     logDebug,
     lookupSession,
     notFound,
     redirect,
     runDB,
     setSession,
-    setTitle )
+    setTitle,
+    toWidget )
 import  Yesod.Auth (
     requireAuthId,
     requireAuthPair )
@@ -50,6 +58,7 @@ import Yesod.Form (
     areq,
     intField,
     generateFormPost,
+    parseHelperGen,
     renderDivs,
     runFormPost,
     textField )
@@ -59,11 +68,14 @@ import Yesod.Form.Bootstrap3 (
     BootstrapSubmit (BootstrapSubmit),
     bootstrapSubmit,
     renderBootstrap3 )
+import Yesod.Form.Types (Field(..), Enctype(UrlEncoded))
+import qualified Data.Text as T
 
 import Episodes.Common (formatTime)
 import Foundation
 import Model (
-    Account ( accountNickname
+    Account ( accountAdmin
+            , accountNickname
             , accountEmail
             , accountViews ),
     AccountId,
@@ -100,7 +112,8 @@ data DeleteSeasonFormData = DeleteSeasonFormData
 
 data EditEpisodeFormData = EditEpisodeFormData { eeTitle :: Text
                                                , eeSeasonNumber :: Int
-                                               , eeEpisodeNumber :: Int }
+                                               , eeEpisodeNumber :: Int
+                                               , eeAirDateTime :: UTCTime }
 
 
 data SubmitChangeFormData = SubmitChangeFormData
@@ -113,6 +126,23 @@ bootstrapFormLayout = BootstrapHorizontalForm labelOffset labelSize inputOffset 
         labelSize = ColSm 2
         inputOffset = ColSm 0
         inputSize = ColSm 7
+
+
+utcTimeField :: (Monad m, RenderMessage (HandlerSite m) Text) => Field m UTCTime
+utcTimeField = Field {
+            fieldParse = parseHelperGen $ \s ->
+                case DTF.parseTimeM True DTF.defaultTimeLocale timeFormat (T.unpack s) of
+                    Just _t -> Right _t
+                    Nothing -> Left ("Invalid date/time" :: Text),
+            fieldView = \theId name attrs val isReq -> toWidget
+                [hamlet|<input id="#{theId}" name="#{name}" *{attrs} type="text" :isReq:required="" value="#{showTime val}">|],
+            fieldEnctype = UrlEncoded
+        }
+    where
+        timeFormat = "%Y-%m-%d %H:%M:%S"
+        showTime val = case val of
+            Right _t -> formatTime _t
+            Left _ -> ""
 
 
 deleteEpisodeForm :: Html -> MForm Handler (FormResult DeleteEpisodeFormData, Widget)
@@ -130,6 +160,7 @@ editEpisodeForm _mep = renderBootstrap3 bootstrapFormLayout $ EditEpisodeFormDat
     <$> areq textField "Title" Nothing
     <*> areq intField "Season Number" Nothing
     <*> areq intField "Episde Number" Nothing
+    <*> areq utcTimeField "Air Date/Time" Nothing
     <* bootstrapSubmit (BootstrapSubmit ("Save" :: Text) "btn btn-default" [])
 
 
@@ -208,9 +239,30 @@ getShowChangesReviewR :: Handler Html
 getShowChangesReviewR = do
     _accountId <- requireAuthId
     changesData <- runDB $ DBC.getShowChangesForAccept _accountId 1024
+    let isEmpty _ds _de _ee = case (_ds, _de, _ee) of
+            ([], [], []) -> True
+            _ -> False
     defaultLayout $ do
         setTitle $ text "Episodes: Review Changes"
         $(widgetFile "changes/review")
+
+
+getShowChangesAcceptR :: ShowChangeId -> Handler Html
+getShowChangesAcceptR _showChangeId = do
+    (_accId, _acc) <- requireAuthPair
+    unless (accountAdmin _acc) notFound
+    _now <- liftIO getCurrentTime
+    runDB $ DBC.acceptShowChange _now _showChangeId
+    redirect ShowChangesReviewR
+
+
+getShowChangesRejectR :: ShowChangeId -> Handler Html
+getShowChangesRejectR _showChangeId = do
+    (_accId, _acc) <- requireAuthPair
+    unless (accountAdmin _acc) notFound
+    _now <- liftIO getCurrentTime
+    runDB $ DBC.rejectShowChange _now _showChangeId
+    redirect ShowChangesReviewR
 
 
 postShowChangesR :: ShowId -> Handler Html
@@ -237,7 +289,8 @@ postShowChangesAddEpisodeR _showId = do
             let _seasonNumber = eeSeasonNumber _f
             let _episodeNumber = eeEpisodeNumber _f
             let _title = eeTitle _f
-            runDB $ DBC.addShowChangeEditEpisode _now _changeId _seasonNumber _episodeNumber _title
+            let _airdt = eeAirDateTime _f
+            runDB $ DBC.addShowChangeEditEpisode _now _changeId _seasonNumber _episodeNumber _title _airdt
             redirect $ ShowChangesR _showId
         _ -> defaultLayout $ do
                 setTitle $ text $ "Episodes: Submit Show Changes: " <> showTitle _show <> ": Add Episode"
@@ -330,6 +383,7 @@ postShowChangesEditEpisodeR _showId _seasonNumber _episodeNumber = do
                 (eeSeasonNumber editEpisodeFormData)
                 _episodeNumber
                 (eeTitle editEpisodeFormData)
+                (eeAirDateTime editEpisodeFormData)
             redirect $ ShowChangesR _showId
         _ -> defaultLayout $ do
             setTitle $ text $ "Episodes: Submit Show Changes: " <> showTitle _show <> ": Edit Episode: " <> episodeTitle _episode

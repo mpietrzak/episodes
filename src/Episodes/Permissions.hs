@@ -26,9 +26,10 @@ canEditShow accountId show = not (showPublic show) && not (showSubmitted show) &
 
 canSubmitShowChanges :: AccountId -> Account -> Show -> Bool
 canSubmitShowChanges _accountId _account _show =
-    not (canEditShow _accountId _show)
+    accountAdmin _account
+    && not (canEditShow _accountId _show)
     -- && fromMaybe False (showLocal _show)
-    && showPublic _show
+    -- && showPublic _show
 
 
 canAcceptChanges :: Account -> Bool
