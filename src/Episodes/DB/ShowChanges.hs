@@ -211,7 +211,7 @@ acceptShowChange _now _showChangeId = do
                 Nothing -> return ()
                 Just _show -> do
                     update _showId [ M.ShowModified =. _now
-                                   , M.ShowLocal =. Just True ]
+                                   , M.ShowLocal =. True ]
                     update _showChangeId [ M.ShowChangeAccepted =. True
                                          , M.ShowChangeModified =. _now ]
                     -- 1. edit episodes

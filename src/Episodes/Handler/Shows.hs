@@ -248,12 +248,12 @@ insertTVRageShow fullShowInfo = do
                      , showSubscriptionCount = 0
                      , showSubmitted = True     -- TV Rage shows are submitted by default
                      , showPublic = True        -- TV Rage shows are public by default
-                     , showLocal = Just False   -- TV Rage shows are synchronised, not managed locally
+                     , showLocal = False        -- TV Rage shows are synchronised, not managed locally
                      , showAddedBy = Nothing    -- TV Rage shows are not owned
                      , showCreated = now
                      , showModified = now
-                     , showLastUpdate = Just $ now
-                     , showNextUpdate = Just $ now }
+                     , showLastUpdate = Just now
+                     , showNextUpdate = Just now }
     _showId <- runDB $ insert _show
     let _seasons = map (tvrSeasonToSeason now _showId) (TVR.fullShowInfoSeasons fullShowInfo)
     seasonIds <- runDB $ mapM insert _seasons

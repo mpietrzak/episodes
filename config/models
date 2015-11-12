@@ -21,7 +21,7 @@ Show
     public             Bool       DEFAULT=False
     submitted          Bool       DEFAULT=False
     addedBy            AccountId  Maybe
-    local              Bool       Maybe
+    local              Bool
     created            UTCTime
     modified           UTCTime
     UniqueShowTVRageId tvRageId !force
