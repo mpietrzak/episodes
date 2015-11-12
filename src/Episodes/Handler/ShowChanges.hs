@@ -155,14 +155,18 @@ deleteSeasonForm = renderBootstrap3 bootstrapFormLayout $ pure DeleteSeasonFormD
     <* bootstrapSubmit (BootstrapSubmit ("Delete" :: Text) "btn btn-default" [])
 
 
-editEpisodeForm :: Maybe Episode -> Html -> MForm Handler (FormResult EditEpisodeFormData, Widget)
-editEpisodeForm _mep = renderBootstrap3 bootstrapFormLayout $ EditEpisodeFormData
-    <$> areq textField "Title" Nothing
-    <*> areq intField "Season Number" Nothing
-    <*> areq intField "Episde Number" Nothing
-    <*> areq utcTimeField "Air Date/Time" Nothing
-    <* bootstrapSubmit (BootstrapSubmit ("Save" :: Text) "btn btn-default" [])
-
+editEpisodeForm :: Maybe (Season, Episode) -> Html -> MForm Handler (FormResult EditEpisodeFormData, Widget)
+editEpisodeForm _mse = renderBootstrap3 bootstrapFormLayout $ EditEpisodeFormData
+        <$> areq textField "Title" _mtitle
+        <*> areq intField "Season Number" _mseason
+        <*> areq intField "Episde Number" _mepisode
+        <*> areq utcTimeField "Air Date/Time" _mairts
+        <* bootstrapSubmit (BootstrapSubmit ("Save" :: Text) "btn btn-default" [])
+    where
+        _mtitle = (episodeTitle . snd) <$> _mse
+        _mseason = (seasonNumber . fst) <$> _mse
+        _mepisode = (episodeNumber . snd) <$> _mse
+        _mairts = maybe Nothing (episodeAirDateTime . snd) _mse
 
 submitChangeForm :: Html -> MForm Handler (FormResult SubmitChangeFormData, Widget)
 submitChangeForm = renderDivs $ pure SubmitChangeFormData
@@ -247,22 +251,23 @@ getShowChangesReviewR = do
         $(widgetFile "changes/review")
 
 
-getShowChangesAcceptR :: ShowChangeId -> Handler Html
-getShowChangesAcceptR _showChangeId = do
-    (_accId, _acc) <- requireAuthPair
+getShowChangesAcceptReject :: Bool -> ShowChangeId -> Handler Html
+getShowChangesAcceptReject _accept _showChangeId = do
+    (_, _acc) <- requireAuthPair
     unless (accountAdmin _acc) notFound
     _now <- liftIO getCurrentTime
-    runDB $ DBC.acceptShowChange _now _showChangeId
+    runDB $ if _accept
+        then DBC.acceptShowChange _now _showChangeId
+        else DBC.rejectShowChange _now _showChangeId
     redirect ShowChangesReviewR
+
+
+getShowChangesAcceptR :: ShowChangeId -> Handler Html
+getShowChangesAcceptR = getShowChangesAcceptReject True
 
 
 getShowChangesRejectR :: ShowChangeId -> Handler Html
-getShowChangesRejectR _showChangeId = do
-    (_accId, _acc) <- requireAuthPair
-    unless (accountAdmin _acc) notFound
-    _now <- liftIO getCurrentTime
-    runDB $ DBC.rejectShowChange _now _showChangeId
-    redirect ShowChangesReviewR
+getShowChangesRejectR = getShowChangesAcceptReject False
 
 
 postShowChangesR :: ShowId -> Handler Html
@@ -359,7 +364,7 @@ getShowChangesEditEpisodeR _showId _seasonNumber _episodeNumber = do
     _episodeEntity <- get404Episode _showId _seasonNumber _episodeNumber
     let _season = entityVal _seasonEntity
     let _episode = entityVal _episodeEntity
-    (editEpisodeFormWidget, editEpisodeFormEnctype) <- generateFormPost $ editEpisodeForm (Just _episode)
+    (editEpisodeFormWidget, editEpisodeFormEnctype) <- generateFormPost $ editEpisodeForm (Just (_season, _episode))
     defaultLayout $ do
         setTitle $ text $ "Episodes: Submit Show Changes: " <> showTitle _show <> ": Edit Episode: " <> episodeTitle _episode
         $(widgetFile "changes/edit-episode")
