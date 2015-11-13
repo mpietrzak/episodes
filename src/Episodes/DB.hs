@@ -375,7 +375,7 @@ getAccountByEmail _email = rawSql _sql _params >>= \_rows -> return (_maybeFirst
 getPopularShows :: MonadIO m
                 => Int
                 -> SqlPersistT m [Entity Show]
-getPopularShows _count = selectList [ShowPublic ==. False] [Desc ShowSubscriptionCount, LimitTo _count]
+getPopularShows _count = selectList [ShowPublic ==. True] [Desc ShowSubscriptionCount, LimitTo _count]
 
 
 getPopularEpisodes :: MonadIO m
