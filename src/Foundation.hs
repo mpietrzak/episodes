@@ -1,15 +1,20 @@
 {-# OPTIONS_GHC -fno-warn-orphans -fno-warn-unused-binds #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Foundation where
 
 
 -- import Control.Applicative ((<$>))
+import Control.Monad (forM_)
 import Data.Text (Text)
 import Data.Time (getCurrentTime)
+import Data.Time.Zones (TZ)
 import Database.Persist.Sql (SqlBackend, ConnectionPool, runSqlPool)
 import Network.HTTP.Client.Conduit (Manager, HasHttpManager (getHttpManager))
 import Prelude
+import Text.Blaze (text)
 import Text.Hamlet (hamletFile)
 import Text.Jasmine (minifym)
 import Yesod
@@ -21,7 +26,7 @@ import Yesod.Core.Types (Logger)
 -- import Yesod.PureScript
 -- import Yesod.Static
 import Yesod.EmbeddedStatic
-import Data.Time.Zones (TZ)
+
 import qualified Data.Map as M
 import qualified Data.Text as T
 
@@ -191,6 +196,21 @@ instance YesodAuth App where
             _secret = appGoogleAuthClientSecret $ appSettings _app
 
     authHttpManager = getHttpManager
+
+    loginHandler = do
+        tp <- getRouteToParent
+        lift $ authLayout $ do
+            setTitle $ text "Episodes: Login"
+            master <- getYesod
+            -- mapM_ (flip apLogin tp) (authPlugins master)
+            let _plugins = map (flip apLogin tp) $ authPlugins master
+            let pluginPersona = _plugins !! 0
+            let pluginGoogle = _plugins !! 1
+            let pluginEpisodes = _plugins !! 2
+            $(widgetFile "auth")
+            -- forM_ plugins $ \plug -> do
+            --     let _login = apLogin plug
+            --     _login tp
 
 
 instance YesodAuthPersist App
