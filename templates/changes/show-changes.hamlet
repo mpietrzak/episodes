@@ -1,32 +1,69 @@
 
 <h2>Submit Changes: #{showTitle _show}
 
-<h3>Current change
+<small>
+    <ul>
+        <li>Note 1: Show changes support is still a little bit experimental, stay tuned for improvements.
+        <li>
+            Note 2: All times are always UTC timezone in format "2015-01-21 23:12:13".
+            If you're in US, you'd have to "add" a few hours to air time.
+            E.g. if show episode airs on noon in US, then in UTC time zone it's already afternoon.
+            Use sites like <a href="http://time.is/">time.is</a> or <a href="http://worldclock.com/">worldclock.com</a>
+            to calculate exact times.
 
-<p>
-    Change created: #{formatTime $ showChangeCreated _showChange}<br>
-    Change modified: #{formatTime $ showChangeModified _showChange}
+$if not isCurrentChangeEmpty
+    <hr>
 
-<p>
-    <form role="form" method="post" action="@{ShowChangesR _showId}" enctype="#{submitChangeFormEnctype}">
-        <!-- submit is just a link visually, but we use form to get CSRF and similar stuff for free -->
-        <!-- e.g. normal link might get cached or preloaded by broken software (e.g. broken proxy) - form post probably will not -->
-        ^{submitChangeFormWidget}
-        <button class="btn btn-default btn-small">Submit this change for review
+    <h4>Current change
 
-<div>
-    <ol>
-        $forall editEpisodeChange <- editEpisodeChanges
-            <li>
-                edit episode
-                #{showChangeEditEpisodeSeasonNumber editEpisodeChange} /
-                #{showChangeEditEpisodeEpisodeNumber editEpisodeChange}:
-                title: #{showChangeEditEpisodeTitle editEpisodeChange}
+    <p>
+        <small>
+            This change was not yet submitted for review.
 
+    <p>
+        <small>
+            Change created: #{formatTime $ showChangeCreated _showChange}<br>
+            Change modified: #{formatTime $ showChangeModified _showChange}
+
+
+    <p>
+        Contents of this change:
+
+    <div>
+        <ol>
+            $forall editEpisodeChange <- editEpisodeChanges
+                <li>
+                    edit episode
+                    #{formatEpisodeCode (showChangeEditEpisodeSeasonNumber editEpisodeChange) (showChangeEditEpisodeEpisodeNumber editEpisodeChange)}:
+                    title: <q>#{showChangeEditEpisodeTitle editEpisodeChange}</q>,
+                    air date time: <em>#{formatTime $ showChangeEditEpisodeAirDateTime editEpisodeChange}</em>
+            $forall deleteEpisodeChange <- deleteEpisodeChanges
+                <li>
+                    delete episode
+                    #{formatEpisodeCode (showChangeDeleteEpisodeSeasonNumber deleteEpisodeChange) (showChangeDeleteEpisodeEpisodeNumber deleteEpisodeChange)}
+            $forall deleteSeasonChange <- deleteSeasonChanges
+                <li>
+                    delete season
+                    #{showChangeDeleteSeasonSeasonNumber deleteSeasonChange}
+
+    <div>
+        <form role="form" method="post" action="@{ShowChangesR _showId}" enctype="#{submitChangeFormEnctype}">
+            <!-- submit is just a link visually, but we use form to get CSRF and similar stuff for free -->
+            <!-- e.g. normal link might get cached or preloaded by broken software (e.g. broken proxy) - form post probably will not -->
+            ^{submitChangeFormWidget}
+            <button class="btn btn-primary btn-xs">Submit this change for review
+
+<hr>
+
+<h4>Add Episodes
 
 <div style="clear: both">
     <form class="form-horizontal" role="form" method="post" action="@{ShowChangesAddEpisodeR _showId}" enctype="#{addEpisodeFormEnctype}">
         ^{addEpisodeFormWidget}
+
+<hr>
+
+<h4>Current Episodes
 
 <div style="clear: both">
     <ul>

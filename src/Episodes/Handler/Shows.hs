@@ -153,11 +153,19 @@ getShowDetailsR showId = do
 
     -- this is only for link
     let minAccEditAgeSec = 60 * 60 * 24 * 60
+    -- let canEdit = case ma of
+    --         Just (Entity _aid _) -> P.canEditShow _aid show
+    --         Nothing -> False
+    -- let canSubmitChanges = case ma of
+    --         Just (Entity _ _a) -> accountAdmin _a  -- not canEdit && accountCreated _a < addUTCTime (-minAccEditAgeSec) now
+    --         Nothing -> False
+
+
     let canEdit = case ma of
             Just (Entity _aid _) -> P.canEditShow _aid show
             Nothing -> False
     let canSubmitChanges = case ma of
-            Just (Entity _ _a) -> accountAdmin _a  -- not canEdit && accountCreated _a < addUTCTime (-minAccEditAgeSec) now
+            Just (Entity _aid _a) -> P.canSubmitShowChanges _aid _a show
             Nothing -> False
 
     defaultLayout $ do

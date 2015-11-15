@@ -71,7 +71,7 @@ import Yesod.Form.Bootstrap3 (
 import Yesod.Form.Types (Field(..), Enctype(UrlEncoded))
 import qualified Data.Text as T
 
-import Episodes.Common (formatTime)
+import Episodes.Common (formatEpisodeCode, formatTime)
 import Foundation
 import Model (
     Account ( accountAdmin
@@ -98,6 +98,7 @@ import Model (
     showChangeEditEpisodeSeasonNumber,
     showChangeEditEpisodeEpisodeNumber,
     showChangeEditEpisodeTitle,
+    showChangeEditEpisodeAirDateTime,
     showChangeModified,
     showTitle)
 import Settings (widgetFile)
@@ -147,12 +148,12 @@ utcTimeField = Field {
 
 deleteEpisodeForm :: Html -> MForm Handler (FormResult DeleteEpisodeFormData, Widget)
 deleteEpisodeForm = renderBootstrap3 bootstrapFormLayout $ pure DeleteEpisodeFormData
-    <* bootstrapSubmit (BootstrapSubmit ("Delete" :: Text) "btn btn-default" [])
+    <* bootstrapSubmit (BootstrapSubmit ("Delete" :: Text) "btn btn-xs btn-primary" [])
 
 
 deleteSeasonForm :: Html -> MForm Handler (FormResult DeleteSeasonFormData, Widget)
 deleteSeasonForm = renderBootstrap3 bootstrapFormLayout $ pure DeleteSeasonFormData
-    <* bootstrapSubmit (BootstrapSubmit ("Delete" :: Text) "btn btn-default" [])
+    <* bootstrapSubmit (BootstrapSubmit ("Delete" :: Text) "btn btn-xs btn-primary" [])
 
 
 editEpisodeForm :: Maybe (Season, Episode) -> Html -> MForm Handler (FormResult EditEpisodeFormData, Widget)
@@ -161,7 +162,7 @@ editEpisodeForm _mse = renderBootstrap3 bootstrapFormLayout $ EditEpisodeFormDat
         <*> areq intField "Season Number" _mseason
         <*> areq intField "Episde Number" _mepisode
         <*> areq utcTimeField "Air Date/Time" _mairts
-        <* bootstrapSubmit (BootstrapSubmit ("Save" :: Text) "btn btn-default" [])
+        <* bootstrapSubmit (BootstrapSubmit ("Save" :: Text) "btn btn-xs btn-primary" [])
     where
         _mtitle = (episodeTitle . snd) <$> _mse
         _mseason = (seasonNumber . fst) <$> _mse
@@ -230,7 +231,12 @@ getShowChangesR _showId = do
     let _showChangeId = entityKey _changeEntity
     let _showChange = entityVal _changeEntity
     editEpisodeChangeEntities <- runDB $ DBC.getEditEpisodeChanges _showChangeId
+    deleteSeasonChangeEntities <- runDB $ DBC.getDeleteSeasonChanges _showChangeId
+    deleteEpisodeChangeEntities <- runDB $ DBC.getDeleteEpisodeChanges _showChangeId
     let editEpisodeChanges = map entityVal editEpisodeChangeEntities
+    let deleteEpisodeChanges = map entityVal deleteEpisodeChangeEntities
+    let deleteSeasonChanges = map entityVal deleteSeasonChangeEntities
+    let isCurrentChangeEmpty = null editEpisodeChanges && null deleteEpisodeChanges && null deleteSeasonChanges
     (seasonEntities, episodeEntities, seasonEpisodesMap) <- getShowData _showId
     (submitChangeFormWidget, submitChangeFormEnctype) <- generateFormPost submitChangeForm
     (addEpisodeFormWidget, addEpisodeFormEnctype) <- generateFormPost $ editEpisodeForm Nothing
