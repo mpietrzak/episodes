@@ -41,5 +41,5 @@
                                     title: #{showChangeEditEpisodeTitle editEp}
                 <td>
                     <a class="btn btn-primary btn-xs" role="button" href="@{ShowChangesAcceptR (entityKey changeEnt)}">Accept
-                    <a class="btn btn-danger btn-xs" role="button" href="@{ShowChangesAcceptR (entityKey changeEnt)}">Reject
+                    <a class="btn btn-danger btn-xs" role="button" href="@{ShowChangesRejectR (entityKey changeEnt)}">Reject
 

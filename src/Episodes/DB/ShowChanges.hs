@@ -19,10 +19,11 @@ module Episodes.DB.ShowChanges (
 import Prelude hiding (Show)
 import Control.Monad (forM, forM_)
 import Control.Monad.IO.Class (MonadIO)
-import Database.Persist (SelectOpt(LimitTo), entityKey, entityVal, get, getBy, insert, insert_, insertEntity, selectFirst, update)
-import Database.Persist.Sql ((=.), (==.), Entity(Entity), SqlPersistT, rawSql, selectList)
+import Database.Persist (SelectOpt(LimitTo), entityKey, entityVal, get, getBy, insert, insert_, insertEntity, toPersistValue, selectFirst, update)
+import Database.Persist.Sql ((=.), (==.), Entity(Entity), SqlPersistT, rawExecute, rawSql, selectList)
 import Data.Function (on)
 import Data.List (groupBy, sortBy)
+import Data.Monoid ((<>))
 import Data.Time (UTCTime)
 import Data.Text (Text)
 import Formatting ((%), sformat, text)
@@ -198,6 +199,94 @@ submitShowChange _now _showChangeId = update _showChangeId [ M.ShowChangeSubmitt
                                                            , M.ShowChangeModified =. _now ]
 
 
+
+-- | Delete episodes that belong to given change.
+-- Executed by acceptShowChange.
+_acceptShowChangeDeleteEpisodes :: MonadIO m => ShowChangeId -> SqlPersistT m ()
+_acceptShowChangeDeleteEpisodes _changeId = do
+        rawExecute _subscriptionsNextEpSql _params
+        rawExecute _subscriptionsLastEpSql _params
+        rawExecute _deleteEpisodesSql _params
+    where
+        _subselectEpisodeIds = [st|
+            select
+                episode.id
+            from
+                show
+                join season on (season.show = show.id)
+                join episode on (episode.season = season.id)
+                join show_change on (show_change.show = show.id)
+                join show_change_delete_episode on (
+                    show_change_delete_episode.change = show_change.id
+                    and show_change_delete_episode.season_number = season.number
+                    and show_change_delete_episode.episode_number = episode.number)
+            where
+                show_change.id = ?
+            |]
+        _subscriptionsNextEpSql = "update subscription set next_episode = null where next_episode in (" <> _subselectEpisodeIds <> ")"
+        _subscriptionsLastEpSql = "update subscription set last_episode = null where last_episode in (" <> _subselectEpisodeIds <> ")"
+        _deleteEpisodesSql = "delete from episode where id in (" <> _subselectEpisodeIds <> ")"
+        _params = [toPersistValue _changeId]
+
+
+-- | Create missing seasons if needed by change.
+-- Return map of season number to season entity of seasons referenced by edit-episode changes (may be not all seasons).
+_acceptShowChangeUpsertSeasons :: MonadIO m
+                               => UTCTime
+                               -> ShowChangeId
+                               -> ShowId
+                               -> [Entity M.ShowChangeEditEpisode]
+                               -> SqlPersistT m (M.Map Int (Entity M.Season))
+_acceptShowChangeUpsertSeasons _now showChangeId showId editEpisodeEntities = do
+    let _epSeasonSet = Set.fromList $ map (showChangeEditEpisodeSeasonNumber . entityVal) editEpisodeEntities
+    _seasonL <- forM (Set.toList _epSeasonSet) $ \_sn -> do
+        -- sn is season number; first try to get; if not found then insert; finally return pair
+        _ms <- selectFirst [ M.SeasonShow ==. showId
+                           , M.SeasonNumber ==. _sn ] []
+        case _ms of
+            Just _se -> return (_sn, _se)
+            Nothing -> do
+                let _s = M.Season { M.seasonShow = showId
+                                  , M.seasonNumber = _sn
+                                  , M.seasonCreated = _now
+                                  , M.seasonModified = _now }
+                _i <- insert _s
+                return (_sn, Entity _i _s)
+    -- so not seasonL is list of pairs: (seasonNumber, seasonEntity) -> let's build map
+    return $ M.fromList _seasonL
+
+
+_acceptShowChangeEditEpisodes :: MonadIO m => UTCTime -> ShowChangeId -> ShowId -> SqlPersistT m ()
+_acceptShowChangeEditEpisodes _now _showChangeId _showId = do
+    _eees <- selectList [M.ShowChangeEditEpisodeChange ==. _showChangeId] []
+    _seasonsMap <- _acceptShowChangeUpsertSeasons _now _showChangeId _showId _eees
+    -- now _seasonsMap is map of seasonNumber -> seasonEntity for seasons that are refernced by episode edits
+    -- for each episode in edit-episode entity list: we update or insert episode
+    forM_ _eees $ \(Entity _eeId _ee) -> do
+        let _mSeason = M.lookup (showChangeEditEpisodeEpisodeNumber _ee) _seasonsMap
+        _mEpisode <- case _mSeason of
+                Nothing -> return Nothing -- shouldn't happen… is it ok to error here?
+                Just (Entity _seasonId _season) -> selectFirst [ M.EpisodeSeason ==. _seasonId
+                                                               , M.EpisodeNumber ==. showChangeEditEpisodeEpisodeNumber _ee ]
+                                                               []
+        case _mEpisode of
+            Just (Entity _episodeId _episode) ->
+                update _episodeId [ M.EpisodeTitle =. showChangeEditEpisodeTitle _ee
+                                  , M.EpisodeModified =. _now ]
+            Nothing -> do
+                let _n = showChangeEditEpisodeSeasonNumber _ee
+                let _mSeasonEnt = M.lookup _n _seasonsMap
+                case _mSeasonEnt of
+                    Nothing -> return () -- TODO: shouldn't happen!
+                    Just (Entity _seasonId _season) ->
+                        insert_ Episode { M.episodeTitle = showChangeEditEpisodeTitle _ee
+                                        , M.episodeNumber = showChangeEditEpisodeEpisodeNumber _ee
+                                        , M.episodeSeason = _seasonId
+                                        , M.episodeAirDateTime = Just (showChangeEditEpisodeAirDateTime _ee)
+                                        , M.episodeViewCount = 0
+                                        , M.episodeCreated = _now
+                                        , M.episodeModified = _now }
+
 -- | Accept change: modify show and mark change as accepted.
 acceptShowChange :: MonadIO m => UTCTime -> ShowChangeId -> SqlPersistT m ()
 acceptShowChange _now _showChangeId = do
@@ -214,53 +303,8 @@ acceptShowChange _now _showChangeId = do
                                    , M.ShowLocal =. True ]
                     update _showChangeId [ M.ShowChangeAccepted =. True
                                          , M.ShowChangeModified =. _now ]
-                    -- 1. edit episodes
-                    _eees <- selectList [M.ShowChangeEditEpisodeChange ==. _showChangeId] []
-                    -- 1.2 create seasons that don't yet exist, return map of season num -> season entity
-                    _seasonMap <- do
-                        let _epSeasonSet = Set.fromList $ map (showChangeEditEpisodeSeasonNumber . entityVal) _eees
-                        _seasonL <- forM (Set.toList _epSeasonSet) $ \_sn -> do
-                            -- sn is season number; first try to get; if not found - insert; return pair
-                            _ms <- selectFirst [ M.SeasonShow ==. _showId
-                                               , M.SeasonNumber ==. _sn ] []
-                            case _ms of
-                                Just _se -> return (_sn, _se)
-                                Nothing -> do
-                                    let _s = M.Season { M.seasonShow = _showId
-                                                      , M.seasonNumber = _sn
-                                                      , M.seasonCreated = _now
-                                                      , M.seasonModified = _now }
-                                    _i <- insert _s
-                                    return (_sn, Entity _i _s)
-                        -- so not seasonL is list of pairs: (seasonNumber, seasonEntity) -> let's build map
-                        return $ M.fromList _seasonL
-                    -- now _seasonsMap is map of seasonNumber -> seasonEntity for seasons that are refernced by episode edits
-                    forM_ _eees $ \(Entity _eeId _ee) -> do
-                        _mSeason <- selectFirst [ M.SeasonShow ==. _showId
-                                                , M.SeasonNumber ==. showChangeEditEpisodeSeasonNumber _ee ]
-                                                []
-                        mEpisode <- case _mSeason of
-                                Nothing -> return Nothing
-                                Just (Entity _seasonId _season) -> selectFirst [ M.EpisodeSeason ==. _seasonId
-                                                                               , M.EpisodeNumber ==. showChangeEditEpisodeEpisodeNumber _ee ]
-                                                                               []
-                        case mEpisode of
-                            Just (Entity _episodeId _episode) ->
-                                update _episodeId [ M.EpisodeTitle =. showChangeEditEpisodeTitle _ee
-                                                  , M.EpisodeModified =. _now ]
-                            Nothing -> do
-                                let _n = showChangeEditEpisodeSeasonNumber _ee
-                                let _mSeasonEnt = M.lookup _n _seasonMap
-                                case _mSeasonEnt of
-                                    Nothing -> return () -- TODO: shouldn't happen!
-                                    Just (Entity _seasonId _season) ->
-                                        insert_ Episode { M.episodeTitle = showChangeEditEpisodeTitle _ee
-                                                        , M.episodeNumber = showChangeEditEpisodeEpisodeNumber _ee
-                                                        , M.episodeSeason = _seasonId
-                                                        , M.episodeAirDateTime = Just (showChangeEditEpisodeAirDateTime _ee)
-                                                        , M.episodeViewCount = 0
-                                                        , M.episodeCreated = _now
-                                                        , M.episodeModified = _now }
+                    _acceptShowChangeEditEpisodes _now _showChangeId _showId
+                    _acceptShowChangeDeleteEpisodes _showChangeId
 
 
 rejectShowChange :: MonadIO m => UTCTime -> ShowChangeId -> SqlPersistT m ()
