@@ -80,15 +80,19 @@ addShowForm = renderBootstrap3 bootstrapFormLayout $ AddShowFormData <$> areq te
 
 getShowsR :: Handler Html
 getShowsR = do
-    showEntities <- runDB $ selectList [ShowPublic ==. True] [Asc ShowTitle] -- TODO via API
     mAuthId <- maybeAuthId
+    publicShowEntities <- runDB $ selectList [ShowPublic ==. True] [Asc ShowTitle] -- TODO via API
+    myShowEntities <- case mAuthId of
+        Just _aid -> runDB $ selectList [ShowPublic ==. False, ShowAddedBy ==. Just _aid] [Asc ShowTitle]
+        Nothing -> return []
+    let showEntities = publicShowEntities ++ myShowEntities
     subscribedShowKeys <- case mAuthId of
         Nothing -> do
             popularShows <- runDB $ getPopularShows 32
             return $ S.fromList $ map entityKey popularShows
         Just authId -> do
             subscriptions <- runDB $ selectList [SubscriptionAccount ==. authId] []
-            return $ S.fromList $ map (\s -> subscriptionShow $ entityVal s) subscriptions
+            return $ S.fromList $ map (subscriptionShow . entityVal) subscriptions
     defaultLayout $ do
         setTitle "Shows"
         addScript $ StaticR js_episodes_js
