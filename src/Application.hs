@@ -12,9 +12,7 @@ module Application (
 ) where
 
 import ClassyPrelude.Yesod
-import Control.Concurrent (forkIO)
-import Control.Concurrent.Thread.Delay (delay)
-import Control.Monad.Logger (liftLoc, runLoggingT, runStderrLoggingT)
+import Control.Monad.Logger (liftLoc, runLoggingT)
 import Database.Persist.Postgresql          (createPostgresqlPool, pgConnStr,
                                              pgPoolSize, runSqlPool)
 import Language.Haskell.TH.Syntax           (qLocation)
@@ -83,7 +81,6 @@ import Model
 import Settings
 
 import Episodes.Time (NamedTimeZone(..), loadCommonTimezones)
-import Episodes.Update (updateTVRageShows)
 
 
 -- This line actually creates our YesodDispatch instance. It is the second half
@@ -213,20 +210,4 @@ appMain = do
 
 shutdownApp :: App -> IO ()
 shutdownApp _ = return ()
-
-
--- | Code that runs jobs.
--- This thread should never stop.
--- Jobs are fired in separate threads.
--- Uses DB pool.
-scheduler :: (PersistConfig c, PersistConfigBackend c ~ ReaderT SqlBackend)
-          => Int -> Int -> c -> PersistConfigPool c -> IO ()
-scheduler _interval _count conf pool = loop
-    where
-        loop = do
-            _ <- forkIO job
-            _ <- delay $ fromIntegral $ _interval * 1000 * 1000
-            loop
-        job = do
-            runResourceT $ runStderrLoggingT $ runPool conf (updateTVRageShows _count) pool
 

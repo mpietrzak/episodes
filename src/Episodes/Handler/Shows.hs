@@ -11,7 +11,7 @@ import           Data.Function (on)
 import           Data.List (sortBy)
 import           Data.Monoid ((<>))
 import           Data.Text (Text)
-import           Data.Time.Clock (UTCTime, addUTCTime, getCurrentTime)
+import           Data.Time.Clock (getCurrentTime)
 -- import           Data.Time.Zones (utcTZ)
 import           Database.Persist.Sql (fromSqlKey)
 import           Text.Blaze (text)
@@ -44,16 +44,11 @@ import           Episodes.StaticFiles (js_episodes_js)
 import           Model
 import           Settings (widgetFile)
 import qualified Episodes.Permissions as P
-import qualified TVRage as TVR
 
 
 -- Show searching parameters.
 data SearchShow = SearchShow
     { searchShowText :: Text }
-
-
-data AddTVRageShow = AddTVRageShow
-    { addTVRageShowTvRageId :: Integer }
 
 
 data AddShowFormData = AddShowFormData { asShowTitle :: Text }
@@ -77,11 +72,6 @@ searchShowForm :: Html -> MForm Handler (FormResult SearchShow, Widget)
 searchShowForm = renderBootstrap3 bootstrapFormLayout $ SearchShow
     <$> areq textField (textFieldSettings "Title" "Enter Title") Nothing
     <* bootstrapSubmit (BootstrapSubmit (T.pack "Search") "btn btn-default" [])
-
-
-addTVRageShowForm :: Html -> MForm Handler (FormResult AddTVRageShow, Widget)
-addTVRageShowForm  = renderBootstrap3 bootstrapFormLayout $ AddTVRageShow
-    <$> areq intField "TV Rage Id" Nothing
 
 
 addShowForm :: Html -> MForm Handler (FormResult AddShowFormData, Widget)
@@ -124,7 +114,6 @@ groupEpisodesBySeason episodeList = sortEpisodes $ foldr _add M.empty episodeLis
 
 getShowDetailsR :: ShowId -> Handler Html
 getShowDetailsR showId = do
-    now <- liftIO $ getCurrentTime
     mai <- maybeAuthId
     ma <- maybeAuth
     show <- runDB $ get404 showId
@@ -151,15 +140,7 @@ getShowDetailsR showId = do
         Just i -> runDB $ getShowSeasonCollapse i showId
         _ -> return $ const False
 
-    -- this is only for link
-    let minAccEditAgeSec = 60 * 60 * 24 * 60
-    -- let canEdit = case ma of
-    --         Just (Entity _aid _) -> P.canEditShow _aid show
-    --         Nothing -> False
-    -- let canSubmitChanges = case ma of
-    --         Just (Entity _ _a) -> accountAdmin _a  -- not canEdit && accountCreated _a < addUTCTime (-minAccEditAgeSec) now
-    --         Nothing -> False
-
+    -- TODO: let minAccEditAgeSec = 60 * 60 * 24 * 60 -- this is only for link
 
     let canEdit = case ma of
             Just (Entity _aid _) -> P.canEditShow _aid show
@@ -175,33 +156,13 @@ getShowDetailsR showId = do
         $(widgetFile "show")
 
 
-searchShows :: Text -> IO [TVR.Show]
-searchShows = TVR.searchShows
-
-
 getAddShowR :: Handler Html
 getAddShowR = do
     _ <- requireAuthId
     (formWidget, formEnctype) <- generateFormPost addShowForm
     defaultLayout $ do
+        setTitle "Add Show"
         $(widgetFile "add-show-form")
-
-
--- postAddShowR :: Handler Html
--- postAddShowR = do
---     ((formResult, formWidget), formEnctype) <- runFormPost searchShowForm
---     case formResult of
---         FormSuccess searchShow -> do
---             let query = searchShowText searchShow :: Text
---             showSearchResult <- liftIO $ searchShows query
---             let shows_ = map (\s -> (TVR.showTitle s, TVR.showTVRageId s)) showSearchResult
---             defaultLayout $ do
---                 setTitle "Add Show"
---                 $(widgetFile "add-show-list")
---         _ -> do
---             defaultLayout $ do
---                 setTitle "Add Show"
---                 $(widgetFile "add-show-form")
 
 
 postAddShowR :: Handler Html
@@ -211,15 +172,14 @@ postAddShowR = do
     case formResult of
         FormSuccess addShowFormData -> do
             let _title = asShowTitle addShowFormData
-            now <- liftIO $ getCurrentTime
+            now <- liftIO getCurrentTime
             e <- runDB $ addPrivateShow now accountId _title
             case e of
                 Right showId -> redirect $ ShowDetailsR showId
                 _ -> error "failed to add show"
-        _ -> do
-            defaultLayout $ do
-                setTitle "Add Show"
-                $(widgetFile "add-show-form")
+        _ -> defaultLayout $ do
+            setTitle "Add Show"
+            $(widgetFile "add-show-form")
 
 
 -- I'm pretty sure it should be somehow fmapped…
@@ -229,69 +189,6 @@ maybeTextToMaybeInt mt = case mt of
     Just t -> case T.decimal t of
         Left _ -> Nothing
         Right (i, _) -> Just i
-
-
--- Convert list of TV Rage episodes and list of season ids to list of pairs of season id and Episode
-extractEpisodesForInsert :: UTCTime -> TVR.FullShowInfo -> [SeasonId] -> [Episode]
-extractEpisodesForInsert now fullShowInfo seasonIds =
-    concat seasonsEpisodes
-    where
-        seasonsEpisodes = zipWith extractSeasonEpisodes seasonIds (TVR.fullShowInfoSeasons fullShowInfo)
-        extractSeasonEpisodes seasonId tvrSeason = map (convertEpisode seasonId) (TVR.seasonEpisodes tvrSeason)
-        convertEpisode seasonId tvrEpisode = Episode { episodeSeason = seasonId
-                                                     , episodeNumber = fromInteger $ TVR.episodeNumber tvrEpisode
-                                                     , episodeTitle = TVR.episodeTitle tvrEpisode
-                                                     , episodeAirDateTime = Just $ TVR.episodeAirDateTime tvrEpisode
-                                                     , episodeViewCount = 0
-                                                     , episodeModified = now
-                                                     , episodeCreated = now }
-
-
--- Insert show to DB.
-insertTVRageShow :: TVR.FullShowInfo -> Handler (Key Show)
-insertTVRageShow fullShowInfo = do
-    now <- liftIO getCurrentTime
-    let _show = Show { showTitle = TVR.fullShowInfoTitle fullShowInfo
-                     , showTvRageId = Just $ fromInteger $ TVR.fullShowInfoTVRageId fullShowInfo
-                     , showSubscriptionCount = 0
-                     , showSubmitted = True     -- TV Rage shows are submitted by default
-                     , showPublic = True        -- TV Rage shows are public by default
-                     , showLocal = False        -- TV Rage shows are synchronised, not managed locally
-                     , showAddedBy = Nothing    -- TV Rage shows are not owned
-                     , showCreated = now
-                     , showModified = now
-                     , showLastUpdate = Just now
-                     , showNextUpdate = Just now }
-    _showId <- runDB $ insert _show
-    let _seasons = map (tvrSeasonToSeason now _showId) (TVR.fullShowInfoSeasons fullShowInfo)
-    seasonIds <- runDB $ mapM insert _seasons
-    let _episodes = extractEpisodesForInsert now fullShowInfo seasonIds
-    _ <- runDB $ mapM insert _episodes
-    return _showId
-    where
-        tvrSeasonToSeason now _showId ts = Season { seasonNumber = fromInteger $ TVR.seasonNumber ts
-                                                  , seasonShow = _showId
-                                                  , seasonCreated = now
-                                                  , seasonModified = now }
-
-
-postAddTVRShowR :: Handler Html
-postAddTVRShowR = do
-    maybeTVRageIdText <- lookupPostParam "tvRageId"
-    let maybeTVRageId = maybeTextToMaybeInt maybeTVRageIdText
-
-    case maybeTVRageId of
-        Just tvRageId -> do
-            -- get full show info from TV Rage
-            maybeShowInfo <- liftIO $ TVR.getFullShowInfo $ toInteger tvRageId
-            case maybeShowInfo of
-                Just showInfo -> do
-                    id_ <- insertTVRageShow showInfo
-                    redirect $ ShowDetailsR id_
-                Nothing -> redirect ShowsR
-        _ -> do
-            $(logDebug) "invalid form"
-            redirect ShowsR
 
 
 -- User clicks "subscribe" next to show title.

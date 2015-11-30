@@ -10,7 +10,6 @@
 /last                              LastEpisodesR                            GET
 /shows                             ShowsR                                   GET
 /add-show                          AddShowR                                 GET POST
-/add-tvr-show                      AddTVRShowR                              POST
 /show/#ShowId                      ShowDetailsR                             GET
 /show/#ShowId/edit                 ShowEditR                                GET
 /show/#ShowId/add-seasons          ShowEditAddSeasonsR                      GET POST
