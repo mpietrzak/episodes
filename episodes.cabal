@@ -20,6 +20,7 @@ library
                      Episodes.Common
                      Episodes.DB
                      Episodes.DB.ShowChanges
+                     Episodes.DB.Shows
                      Episodes.Format
                      Episodes.Handler.About
                      Episodes.Handler.Admin
@@ -111,7 +112,7 @@ library
                  , wai-extra                     >= 2.1
                  , wai-logger                    >= 2.2
                  , warp                          >= 3
-                 , x509-validation               <1.6.3
+                 , x509-validation
                  , xml-conduit
                  , yaml                          >= 0.8.15
                  , yesod                         >= 1.4.1.4
