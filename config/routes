@@ -37,6 +37,7 @@
 /api/set-episode-status            SetEpisodeStatusR                        POST
 /api/set-show-subscription-status  SetShowSubscriptionStatusR               POST
 /api/set-season-collapse           SetSeasonCollapseR                       POST
+/api/shows                         ApiGetShowsR                             GET
 
 /ical                              ICalPageR                                GET
 /calendar/#Text                    ICalR                                    GET

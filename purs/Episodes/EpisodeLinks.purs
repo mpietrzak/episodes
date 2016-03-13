@@ -7,7 +7,7 @@ import Control.Monad.Eff
 import Control.Monad.Eff.Console
 import Data.Foldable (foldl)
 import Data.String
-import Data.Traversable (for, sequence)
+import Data.Traversable (for)
 import DOM
 import Global
 import qualified Control.Monad.Eff.JQuery as J

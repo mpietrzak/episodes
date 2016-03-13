@@ -5,9 +5,6 @@
 
 module Foundation where
 
-
--- import Control.Applicative ((<$>))
-import Control.Monad (forM_)
 import Data.Text (Text)
 import Data.Time (getCurrentTime)
 import Data.Time.Zones (TZ)
@@ -22,9 +19,6 @@ import Yesod.Auth
 import Yesod.Auth.BrowserId
 import Yesod.Auth.GoogleEmail2
 import Yesod.Core.Types (Logger)
--- import Yesod.Default.Util (addStaticContentExternal)
--- import Yesod.PureScript
--- import Yesod.Static
 import Yesod.EmbeddedStatic
 
 import qualified Data.Map as M
@@ -38,9 +32,6 @@ import Episodes.Time (NamedTimeZone)
 import Model
 import Settings (
     appShouldLogAll,
-    -- appStaticDir,
-    -- combineScripts,
-    -- combineStylesheets,
     development,
     widgetFile,
     AppSettings (..))

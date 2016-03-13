@@ -67,6 +67,7 @@ import Episodes.Handler.ShowEdit (
     postShowEditEditSeasonR )
 import Episodes.Handler.Users
 import Episodes.Handler.API (
+    getApiGetShowsR,
     postSetEpisodeStatusR,
     postSetSeasonCollapseR,
     postSetShowSubscriptionStatusR)

@@ -102,6 +102,13 @@ tr.not-subscribed .unsubscribe-show {
     display: none;
 }
 
+table.shows {
+    margin-top: 8pt;
+}
+
+table.shows a.subscribe-show, table.shows a.unsubscribe-show {
+    margin-right: 8pt;
+}
 
 /* Episode links */
 

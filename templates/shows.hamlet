@@ -1,22 +1,7 @@
 
 <h2>Shows
 
+<div class=container>
+    <input type="text" id="query" style="width: 80%">
 
-
-<div class="row">
-    $forall (columnTitle, columnClass) <- zip (map T.pack ["Not Subscribed", "All", "Subscribed"]) (map T.pack ["not-subscribed", "all", "subscribed"])
-        <div class="col-xs-4 #{columnClass}">
-            <h3>#{columnTitle}
-
-            <table>
-                <tbody>
-                    $forall Entity key val <- showEntities
-                        $with isSubscribed <- S.member key subscribedShowKeys
-                            $with showId <- toPathPiece key
-                                $with statusClass <- forceText $ choose isSubscribed "subscribed" "not-subscribed"
-                                    <tr class="episodes-show #{statusClass} show-#{showId}">
-                                        <td>
-                                            <input type="hidden" name="show-id" class="show-id" value="#{showId}">
-                                            <a href="#" class="subscribe-show btn btn-default btn-xs btn-success">+
-                                            <a href="#" class="unsubscribe-show btn btn-default btn-xs btn-danger">-
-                                            <a href="@{ShowDetailsR key}">#{showTitle val}
+    <div id="shows">

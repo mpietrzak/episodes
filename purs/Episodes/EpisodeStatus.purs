@@ -4,26 +4,26 @@ module Episodes.EpisodeStatus (
 ) where
 
 
-import Prelude
+import Prelude (Unit, unit, return, bind, ($), (++))
 import Control.Monad.Eff
 import Control.Monad.Eff.Console (CONSOLE(), log)
-import Data.Int (fromString)
-import Data.Maybe
+import Data.Maybe (Maybe(Just, Nothing))
 import DOM (DOM())
-import qualified Control.Monad.Eff.JQuery as J
+import Control.Monad.Eff.JQuery as J
 
-import qualified Episodes.Common as C
+import Episodes.Common as C
 
 
 -- Assumes there's a hidden input.episode-id inside closest .episode.
+getCheckboxEpisodeId :: forall e. J.JQuery -> Eff (dom :: DOM | e) (Maybe String)
 getCheckboxEpisodeId checkbox = do
     x0 <- J.closest ".episode" checkbox
     x1 <- J.find ".episode-id" x0
     x2 <- C.getValueText x1
-    let mx3 = fromString x2
-    return mx3
+    return $ Just x2
 
 
+getCheckboxStatus :: forall e. J.JQuery -> Eff (dom :: DOM | e) Boolean
 getCheckboxStatus checkbox = C.is ":checked" checkbox
 
 

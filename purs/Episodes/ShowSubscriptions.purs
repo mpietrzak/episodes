@@ -1,41 +1,41 @@
 
 module Episodes.ShowSubscriptions (
-    main
+    bindButtonActions
 ) where
 
 
-import Prelude
-import Global
-import Control.Apply ((*>))
-import Control.Monad
+import Prelude (Unit, unit, return, bind, show, (++), ($), (/=))
+import Global (readInt)
 import Control.Monad.Eff
 import Control.Monad.Eff.Console (CONSOLE(), log)
-import Data.Maybe
-import DOM
-import qualified Control.Monad.Eff.JQuery as J
-import qualified Data.String as S
-import qualified Data.BigInt as BI
+import Data.Maybe (Maybe(Just, Nothing))
+import DOM (DOM)
+import Control.Monad.Eff.JQuery as J
+import Data.String as S
 
-import Episodes.Common
+import Episodes.Common as C
 
 
 -- | Extract ShowId (Number) from subscription link (JQuery).
 getSubscriptionLinkShowId :: forall e. J.JQuery -> Eff (console :: CONSOLE, dom :: DOM | e) (Maybe Number)
 getSubscriptionLinkShowId link = do
     x0 <- J.closest ".episodes-show" link
+    log $ "getSubscriptionLinkShowId: closest .episodes-show: " ++ (show (C.size x0))
     x1 <- J.find ".show-id" x0
-    x2 <- getValueText x1
+    log $ "getSubscriptionLinkShowId: .show-id: " ++ (show (C.size x1))
+    x2 <- C.getValueText x1
+    log $ "getSubscriptionLinkShowId: x2: " ++ x2
     let x3 = readInt 10 x2
     return $ Just x3
 
 
-onSetSubscriptionStatusDone :: forall e. JQueryXmlHttpData -> String -> JQueryXmlHttpRequest -> Eff (console :: CONSOLE | e) Unit
+onSetSubscriptionStatusDone :: forall e. C.JQueryXmlHttpData -> String -> C.JQueryXmlHttpRequest -> Eff (console :: CONSOLE | e) Unit
 onSetSubscriptionStatusDone _ s _ = do
     log $ "onSetSubscriptionStatusDone: " ++ s
     return unit
 
 
-onSetSubscriptionStatusFail :: forall e. JQueryXmlHttpRequest -> String -> String -> Eff (console :: CONSOLE | e) Unit
+onSetSubscriptionStatusFail :: forall e. C.JQueryXmlHttpRequest -> String -> String -> Eff (console :: CONSOLE | e) Unit
 onSetSubscriptionStatusFail _ s r = do
     log $ "onSetSubscriptionStatusFail: " ++ s ++ ", " ++ r
     return unit
@@ -44,11 +44,11 @@ onSetSubscriptionStatusFail _ s r = do
 onSubscriptionButtonClick :: forall e. Boolean -> J.JQueryEvent -> J.JQuery -> Eff (console :: CONSOLE, dom :: DOM | e) Unit
 onSubscriptionButtonClick status e target = do
     J.preventDefault e
-    ma <- getAuthId
+    ma <- C.getAuthId
     case ma of
         Nothing -> do
             log "not logged in"
-            redirect "/auth/login"
+            C.redirect "/auth/login"
             return unit
         Just _ -> do
             log $ "auth id: " ++ show ma
@@ -57,18 +57,18 @@ onSubscriptionButtonClick status e target = do
                 Nothing -> log $ "can't find show id"
                 Just showId -> do
                     let req = { status: status, showId: showId }
-                    reqJson <- jsonStringify req
+                    reqJson <- C.jsonStringify req
                     let settings = { "data": reqJson
                             , "url": "/api/set-show-subscription-status"
                             , "method": "POST"
                             , "dataType": "json" }
-                    r0 <- ajax settings
-                    r1 <- jqXhrDone r0 onSetSubscriptionStatusDone
-                    r2 <- jqXhrFail r1 onSetSubscriptionStatusFail
+                    r0 <- C.ajax settings
+                    r1 <- C.jqXhrDone r0 onSetSubscriptionStatusDone
+                    r2 <- C.jqXhrFail r1 onSetSubscriptionStatusFail
                     -- three of those
-                    let showsClass = ".show-" ++ (S.takeWhile (/= '.') (show showId)) ++ ".episodes-show"
+                    let showsClass = ".show-" ++ (S.takeWhile (_ /= '.') (show showId)) ++ ".episodes-show"
                     showElements <- J.select showsClass
-                    log $ "found " ++ show (size showElements) ++ " show elements of class " ++ showsClass
+                    log $ "found " ++ show (C.size showElements) ++ " show elements of class " ++ showsClass
                     case status of
                         true -> do
                             J.removeClass "not-subscribed" showElements
@@ -83,23 +83,10 @@ bindButtonActions :: forall e. Eff (console :: CONSOLE, dom :: DOM | e) Unit
 bindButtonActions = do
     subButtons <- J.select ".subscribe-show"
     unsubButtons <- J.select ".unsubscribe-show"
-    case size subButtons of
-        0 -> do
-            log "no sub buttons found"
-        c -> do
-            let bi = BI.fromInt c
-            log $ "found " ++ show bi ++ " sub buttons"
-    on "click" (onSubscriptionButtonClick true) subButtons
-    on "click" (onSubscriptionButtonClick false) unsubButtons
-    log "ShowSubscriptions: bindButtonActions: done"
-    return unit
-
-
-main :: forall eff. Eff (console :: CONSOLE, dom :: DOM | eff) Unit
-main = do
-    J.ready $ do
-        log "ShowSubscriptions: main"
-        bindButtonActions
-        log "ShowSubscriptions: done"
+    case C.size subButtons of
+        0 -> log "no sub buttons found"
+        _ -> return unit
+    C.on "click" (onSubscriptionButtonClick true) subButtons
+    C.on "click" (onSubscriptionButtonClick false) unsubButtons
     return unit
 
