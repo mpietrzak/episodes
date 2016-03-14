@@ -89,6 +89,8 @@ selectPopularEpisodesSql = [st|
         episode
         join season on (episode.season = season.id)
         join show on (season.show = show.id)
+    where
+        show.public
     order by episode.view_count desc
     limit ?
 |]
@@ -107,7 +109,8 @@ selectPopularShowsEpisodesByMonthSql = [st|
         join season on (episode.season = season.id)
         join show on (season.show = show.id)
     where
-        episode.air_date_time >= ?
+        and show.public
+        and episode.air_date_time >= ?
         and episode.air_date_time <= ?
         and show.id in (
             select show.id
@@ -402,13 +405,19 @@ getRecentlyPopularEpisodes sampleSize cnt = rawSql _sql _params
                 select ??, ??, ??
                 from
                     (
-                        select id, count(*) as c
+                        select id, count(1) as c
                         from
                             (
                                 select episode_status.episode as id
-                                from episode_status
-                                where episode_status.status = 'seen'
-                                order by modified desc
+                                from
+                                    episode_status
+                                    join episode on (episode.id = episode_status.episode)
+                                    join season on (season.id = episode.season)
+                                    join show on (show.id = season.show)
+                                where
+                                    episode_status.status = 'seen'
+                                    and show.public
+                                order by episode_status.modified desc
                                 limit ?
                             ) as recent_episode_status
                         group by id

@@ -12,6 +12,7 @@ cabal-dev/
 cabal.sandbox.config
 config/client_session_key.aes
 dist*
+episodes.js
 episodes.sublime-project
 episodes.sublime-workspace
 node_modules
