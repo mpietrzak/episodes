@@ -74,8 +74,6 @@ data AppSettings = AppSettings
     -- Example app-specific configuration values.
     , appCopyright              :: Text
     -- ^ Copyright text to appear in the footer of the page
-    , appAnalytics              :: Text
-    -- ^ Google Analytics code
     , appUpdateInterval         :: Int
     , appUpdateCount            :: Int
 
@@ -105,7 +103,6 @@ instance FromJSON AppSettings where
         appSkipCombining          <- o .:? "skip-combining"   .!= defaultDev
 
         appCopyright              <- o .: "copyright"
-        appAnalytics              <- o .: "analytics"
 
         appUpdateInterval         <- o .: "update-interval"
         appUpdateCount            <- o .: "update-count"

@@ -116,7 +116,6 @@ instance Yesod App where
         app <- getYesod
         mmsg <- getMessage
         ma <- maybeAuth
-        let googleAnalyticsCode = appAnalytics $ appSettings app
 
         currentRoute <- getCurrentRoute
         let forceText = id :: Text -> Text
