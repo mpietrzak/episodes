@@ -252,7 +252,8 @@ main = do
     ref <- R.newRef Nothing
     J.ready $ do
         bindEvents ref
-        maybeSearch ref
+        queryBox <- J.select "#query"
+        when (C.size queryBox > 0) $ maybeSearch ref
     return unit
 
 

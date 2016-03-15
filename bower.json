@@ -14,7 +14,6 @@
     "purescript-globals": "0.2.2",
     "purescript-jquery": "0.6.0",
     "purescript-maybe": ">=0.3.5",
-    "purescript-refs": "0.2.0",
-    "purescript-format": ">=0.1"
+    "purescript-refs": "0.2.0"
   }
 }
