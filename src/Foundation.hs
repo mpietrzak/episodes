@@ -60,6 +60,39 @@ mkYesodData "App" $(parseRoutesFile "config/routes")
 
 type Form x = Html -> MForm (HandlerT App IO) (FormResult x, Widget)
 
+
+isAuthorizedForShowEdit showId = do
+    ma <- maybeAuth
+    ms <- runDB $ DB.getShowById showId
+    case ms of
+        Nothing -> return Authorized
+        Just _show -> case ma of
+            Nothing -> return $ Unauthorized ""
+            Just _a -> return $ if (not (showPublic _show)) && (showAddedBy _show) == (Just (entityKey _a))
+                    then Authorized
+                    else Unauthorized ""
+
+
+isAuthorizedForShowView showId = do
+    ma <- maybeAuth
+    ms <- runDB $ DB.getShowById showId
+    case ms of
+        Nothing -> return Authorized
+        Just _show -> case ma of
+            Nothing -> return Authorized
+            Just _a -> return $ if (showPublic _show) || (showAddedBy _show) == (Just (entityKey _a))
+                then Authorized
+                else Unauthorized ""
+
+
+-- | Does not check if user owns given change…
+isAuthorizedForShowChange = do
+    ma <- maybeAuth
+    case ma of
+        Nothing -> return (Unauthorized "")
+        Just _a -> return Authorized
+
+
 -- Please see the documentation for the Yesod typeclass. There are a number
 -- of settings which can be configured by overriding methods here.
 instance Yesod App where
@@ -114,41 +147,23 @@ instance Yesod App where
     isAuthorized (AuthR _) _ = return Authorized
     isAuthorized FaviconR _ = return Authorized
     isAuthorized RobotsR _ = return Authorized
-    isAuthorized (ShowDetailsR showId) _ = do
-        ma <- maybeAuth
-        ms <- runDB $ DB.getShowById showId
-        case ms of
-            Nothing -> return Authorized
-            Just _show -> case ma of
-                Nothing -> return $ if (showPublic _show) then Authorized else AuthenticationRequired
-                Just _a -> return $ if (showPublic _show) || (showAddedBy _show) == (Just (entityKey _a))
-                        then Authorized
-                        else Unauthorized ""
+    isAuthorized (ShowDetailsR showId) _w = isAuthorizedForShowView showId
+    isAuthorized (ShowEditR showId) _w = isAuthorizedForShowEdit showId
+    isAuthorized (ShowEditAddSeasonsR showId) _w = isAuthorizedForShowEdit showId
+    isAuthorized (ShowEditDeleteSeasonR showId _) _w = isAuthorizedForShowEdit showId
+    isAuthorized (ShowEditEditSeasonR showId _) _w = isAuthorizedForShowEdit showId
+    isAuthorized (ShowEditAddEpisodesR showId _) _w = isAuthorizedForShowEdit showId
+    isAuthorized (EditEpisodeR showId _ _) _w = isAuthorizedForShowEdit showId
+    isAuthorized (ShowEditDeleteEpisodeR showId _ _) _w = isAuthorizedForShowEdit showId
+    isAuthorized (ShowChangesR showId) _w = isAuthorizedForShowChange
+    isAuthorized (ShowChangesAddEpisodeR showId) _w = isAuthorizedForShowChange
+    isAuthorized (ShowChangesDeleteSeasonR showId) _ = isAuthorizedForShowChange
+
     -- Default to Authorized for now.
     isAuthorized _ _ = return Authorized
 
-    -- -- This function creates static content files in the static folder
-    -- -- and names them based on a hash of their content. This allows
-    -- -- expiration dates to be set far in the future without worry of
-    -- -- users receiving stale content.
-    -- addStaticContent ext mime content = do
-    --     master <- getYesod
-    --     let staticDir = appStaticDir $ appSettings master
-    --     addStaticContentExternal
-    --         minifym
-    --         genFileName
-    --         staticDir
-    --         (StaticR . flip StaticRoute [])
-    --         ext
-    --         mime
-    --         content
-    --   where
-    --     -- Generate a unique filename based on the content itself
-    --     genFileName lbs = "autogen-" ++ base64md5 lbs
-
     addStaticContent = embedStaticContent appStatic StaticR mini
         where mini = if development then Right else minifym
-
 
     -- What messages should be logged. The following includes all messages when
     -- in development, and warnings and errors in production.
