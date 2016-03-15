@@ -93,6 +93,15 @@ isAuthorizedForShowChange = do
         Just _a -> return Authorized
 
 
+isAuthorizedToAcceptChanges = do
+    ma <- maybeAuth
+    case ma of
+        Nothing -> return (Unauthorized "")
+        Just _a -> return $ if (canAcceptChanges (entityVal _a))
+            then Authorized
+            else Unauthorized ""
+
+
 -- Please see the documentation for the Yesod typeclass. There are a number
 -- of settings which can be configured by overriding methods here.
 instance Yesod App where
@@ -155,9 +164,14 @@ instance Yesod App where
     isAuthorized (ShowEditAddEpisodesR showId _) _w = isAuthorizedForShowEdit showId
     isAuthorized (EditEpisodeR showId _ _) _w = isAuthorizedForShowEdit showId
     isAuthorized (ShowEditDeleteEpisodeR showId _ _) _w = isAuthorizedForShowEdit showId
-    isAuthorized (ShowChangesR showId) _w = isAuthorizedForShowChange
-    isAuthorized (ShowChangesAddEpisodeR showId) _w = isAuthorizedForShowChange
-    isAuthorized (ShowChangesDeleteSeasonR showId) _ = isAuthorizedForShowChange
+    isAuthorized (ShowChangesR _) _w = isAuthorizedForShowChange
+    isAuthorized (ShowChangesAddEpisodeR _) _w = isAuthorizedForShowChange
+    isAuthorized (ShowChangesDeleteSeasonR _ _) _ = isAuthorizedForShowChange
+    isAuthorized (ShowChangesEditEpisodeR _ _ _) _ = isAuthorizedForShowChange
+    isAuthorized (ShowChangesDeleteEpisodeR _ _ _) _ = isAuthorizedForShowChange
+    isAuthorized ShowChangesReviewR _ = isAuthorizedToAcceptChanges
+    isAuthorized (ShowChangesAcceptR _) _ = isAuthorizedToAcceptChanges
+    isAuthorized (ShowChangesRejectR _) _ = isAuthorizedToAcceptChanges
 
     -- Default to Authorized for now.
     isAuthorized _ _ = return Authorized
