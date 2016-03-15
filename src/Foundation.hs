@@ -61,6 +61,7 @@ mkYesodData "App" $(parseRoutesFile "config/routes")
 type Form x = Html -> MForm (HandlerT App IO) (FormResult x, Widget)
 
 
+isAuthorizedForShowEdit :: ShowId -> HandlerT App IO AuthResult
 isAuthorizedForShowEdit showId = do
     ma <- maybeAuth
     ms <- runDB $ DB.getShowById showId
@@ -73,6 +74,7 @@ isAuthorizedForShowEdit showId = do
                     else Unauthorized ""
 
 
+isAuthorizedForShowView :: ShowId -> HandlerT App IO AuthResult
 isAuthorizedForShowView showId = do
     ma <- maybeAuth
     ms <- runDB $ DB.getShowById showId
@@ -86,6 +88,7 @@ isAuthorizedForShowView showId = do
 
 
 -- | Does not check if user owns given change…
+isAuthorizedForShowChange :: HandlerT App IO AuthResult
 isAuthorizedForShowChange = do
     ma <- maybeAuth
     case ma of
@@ -93,6 +96,8 @@ isAuthorizedForShowChange = do
         Just _a -> return Authorized
 
 
+
+isAuthorizedToAcceptChanges :: HandlerT App IO AuthResult
 isAuthorizedToAcceptChanges = do
     ma <- maybeAuth
     case ma of
