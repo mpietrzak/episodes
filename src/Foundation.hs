@@ -35,6 +35,7 @@ import Settings (
     development,
     widgetFile,
     AppSettings (..))
+import qualified Episodes.DB as DB
 
 
 -- | The site argument for your application. This can be a good place to
@@ -110,11 +111,19 @@ instance Yesod App where
     -- The page to be redirected to when authentication is required.
     authRoute _ = Just $ AuthR LoginR
 
-    -- TODO: use this for navbar
-    -- Routes not requiring authentication.
     isAuthorized (AuthR _) _ = return Authorized
     isAuthorized FaviconR _ = return Authorized
     isAuthorized RobotsR _ = return Authorized
+    isAuthorized (ShowDetailsR showId) _ = do
+        ma <- maybeAuth
+        ms <- runDB $ DB.getShowById showId
+        case ms of
+            Nothing -> return Authorized
+            Just _show -> case ma of
+                Nothing -> return $ if (showPublic _show) then Authorized else AuthenticationRequired
+                Just _a -> return $ if (showPublic _show) || (showAddedBy _show) == (Just (entityKey _a))
+                        then Authorized
+                        else Unauthorized ""
     -- Default to Authorized for now.
     isAuthorized _ _ = return Authorized
 
