@@ -79,15 +79,19 @@ instance Yesod App where
         let forceText = id :: Text -> Text
         let onCurrentRoute _r _t _f = if currentRoute == Just _r then _t else _f
         let navbarItemClass _r = forceText $ onCurrentRoute _r "active" ""
+        let _navbarAlways _ma _route = True
+        let _navbarCanAcceptChanges _ma _route = case _ma of
+                Nothing -> False
+                Just _a -> canAcceptChanges (entityVal _a)
         let navbarItems = [
-                    ("Calendar" :: Text, CalendarR),
-                    ("Last Episodes", LastEpisodesR),
-                    ("Shows", ShowsR),
-                    ("Add Show", AddShowR),
-                    ("Stats", StatsR),
-                    ("ICal", ICalPageR),
-                    ("Export", ExportMainR)
-                ]
+                ("Calendar" :: Text, CalendarR,  _navbarAlways),
+                ("Last Episodes", LastEpisodesR, _navbarAlways),
+                ("Shows",    ShowsR,             _navbarAlways),
+                ("Add Show", AddShowR,           _navbarAlways),
+                ("Stats",    StatsR,             _navbarAlways),
+                ("ICal",     ICalPageR,          _navbarAlways),
+                ("Export",   ExportMainR,        _navbarAlways),
+                ("Review Changes", ShowChangesReviewR, _navbarCanAcceptChanges) ]
 
         pc <- widgetToPageContent $ do
             addScript $ StaticR js_jquery_2_1_4_min_js
@@ -106,6 +110,7 @@ instance Yesod App where
     -- The page to be redirected to when authentication is required.
     authRoute _ = Just $ AuthR LoginR
 
+    -- TODO: use this for navbar
     -- Routes not requiring authentication.
     isAuthorized (AuthR _) _ = return Authorized
     isAuthorized FaviconR _ = return Authorized

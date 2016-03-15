@@ -12,11 +12,9 @@
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
             <ul class="nav navbar-nav">
 
-                $forall (navbarTitle, navbarRoute) <- navbarItems
-                    <li class=#{navbarItemClass navbarRoute}><a href="@{navbarRoute}">#{navbarTitle}</a></li>
-                $maybe a <- ma
-                    $if canAcceptChanges (entityVal a)
-                        <li><a href="@{ShowChangesReviewR}">Review Changes</a></li>
+                $forall (navbarTitle, navbarRoute, navbarAuth) <- navbarItems
+                    $if navbarAuth ma navbarRoute
+                        <li class=#{navbarItemClass navbarRoute}><a href="@{navbarRoute}">#{navbarTitle}</a></li>
 
             <ul class="nav navbar-nav navbar-right">
                 $maybe a <- ma
