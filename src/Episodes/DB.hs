@@ -109,15 +109,11 @@ selectPopularShowsEpisodesByMonthSql = [st|
         join season on (episode.season = season.id)
         join show on (season.show = show.id)
     where
-        and show.public
+        show.public
         and episode.air_date_time >= ?
         and episode.air_date_time <= ?
-        and show.id in (
-            select show.id
-            from show
-            order by subscription_count desc
-            limit ?
-        )
+    order by show.subscription_count desc
+    limit ?
 |]
 
 
