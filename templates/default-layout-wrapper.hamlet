@@ -5,6 +5,7 @@ $doctype 5
         <meta charset="UTF-8">
         <title>#{pageTitle pc}
         <meta name="viewport" content="width=device-width,initial-scale=1">
+        <meta name="google-site-verification" content="MjvIS_0uJfVKGnS8aOT01QOTL8noCkwAbW_X5bWwpmQ" />
         <link rel="icon" href="@{StaticR img_favicon_png}">
         ^{pageHead pc}
     <body>
