@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | Common stuff used in many places, utility functions only, no business logic.
+-- Common sits above Foundation and above DB, but below handlers.
 module Episodes.Common (
     choose,
     defaultUserEpisodeLinks,
@@ -10,13 +11,11 @@ module Episodes.Common (
     formatTime,
     formatEpisodeCode,
     getUserEpisodeLinks,
-    getUserTimeZone,
-    hashPassword
+    getUserTimeZone
 ) where
 
 
 import Prelude
-import Crypto.PBKDF.ByteString (sha1PBKDF2)
 import Data.Text (Text)
 import Formatting
 import Formatting.Time
@@ -88,7 +87,7 @@ forceText :: Text -> Text
 forceText = id
 
 
--- | Anothrer helper for hamlet, to force given type.
+-- | Another helper for hamlet, to force given type.
 forceLazyText :: TL.Text -> TL.Text
 forceLazyText = id
 
@@ -114,24 +113,3 @@ formatInTimeZone :: TZ.TZ -> Data.Time.UTCTime -> TL.Text
 formatInTimeZone _tz _t = format (dateDash % " " % hms) _lt _lt
     where
         _lt = TZ.utcToLocalTimeTZ _tz _t
-
-
-hashPassword :: BS.ByteString -> BS.ByteString -> BS.ByteString
-hashPassword salt password = hashBS
-    where
-        rounds = 400
-        hashlen = 24
-        -- pbkdf2.py salt is $p5k2$$<raw-salt>
-        pbkdf2Salt = BS.intercalate "$" ["", "p5k2", "", salt]
-        passHashBytes = sha1PBKDF2 password pbkdf2Salt rounds hashlen
-        _trhc c = case c of
-            '+' -> '.'
-            _ -> c
-        hashBS = BS.intercalate "$" [
-                "",
-                "p5k2",
-                "",
-                salt,
-                BS.map _trhc $ BSB64.encode passHashBytes
-            ]
-

@@ -41,6 +41,7 @@ import Model
 import Settings (widgetFile)
 import qualified Episodes.Common as EC
 import qualified Episodes.Time as ET
+import qualified Episodes.Utils as EU
 
 
 data ProfileForm = ProfileForm { profileFormTimezone :: Text
@@ -217,7 +218,7 @@ postProfilePasswordR = do
     case passFormResult of
         FormSuccess passFormValues -> do
             let newPass = passwordFormPassword passFormValues
-            let newPassHash = TE.decodeUtf8 $ EC.hashPassword "test" $ TE.encodeUtf8 newPass
+            let newPassHash = TE.decodeUtf8 $ EU.hashPassword "test" $ TE.encodeUtf8 newPass
             let _cu = entityVal auth
             let _nu = _cu { accountPassword = Just newPassHash }
             runDB $ replace authId _nu

@@ -19,6 +19,7 @@ library
                      Episodes.Cache
                      Episodes.Common
                      Episodes.DB
+                     Episodes.DB.Account
                      Episodes.DB.ShowChanges
                      Episodes.DB.Shows
                      Episodes.Format
@@ -36,6 +37,7 @@ library
                      Episodes.StaticFiles
                      Episodes.Time
                      Episodes.Trace
+                     Episodes.Utils
                      Foundation
                      Model
                      Settings

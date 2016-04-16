@@ -9,7 +9,6 @@ module Episodes.DB (
     addShowEpisodes,
     addShowSeasons,
     checkPassword,
-    createAccount,
     createEpisode,
     createSeason,
     deleteEmptySeasons,
@@ -323,7 +322,7 @@ addShowEpisodes :: MonadIO m => UTCTime -> ShowId -> Int -> Int -> SqlPersistT m
 addShowEpisodes _now _showId _seasonNumber _episodeCount = do
     mseason <- getBy $ UniqueShowSeasonNumber _showId _seasonNumber
     case mseason of
-        Just (Entity seasonId season) -> do
+        Just (Entity seasonId _season) -> do
             update _showId [ShowModified =. _now]
             nextEpisodeNumber <- do
                 _rows <- rawSql "select max(number) from episode where season = ?" [toPersistValue seasonId]
@@ -732,24 +731,6 @@ updateEpisodeStatus accountId episodeKey now status = do
         Just subscriptionId -> updateShowSubscriptionLastNextEpisode subscriptionId
         _ -> return ()
     return ()
-
-
-createAccount :: MonadIO m
-              => Text -> Maybe Text -> UTCTime -> SqlPersistT m (Key Account)
-createAccount usernameOrEmail mPassword now = do
-    let (_username, _email) = if T.any ((==) '@') usernameOrEmail
-            then (Nothing, Just usernameOrEmail)
-            else (Just usernameOrEmail, Nothing)
-    let acc = Account { accountNickname = _username
-                      , accountEmail = _email
-                      , accountPassword = mPassword
-                      , accountAdmin = False
-                      , accountAccessedApprox = now
-                      , accountViews = 0
-                      , accountCreated = now
-                      , accountModified = now }
-    accId <- insert acc
-    return accId
 
 
 -- | Check if given user/pass match with what is stored in DB.

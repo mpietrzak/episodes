@@ -2,15 +2,12 @@
 <h2>Episodes: Login or Create Account
 
 <div class="container">
-    <h4>Mozilla Persona
-    <p>
-        Mozilla Persona is privacy sensitive identity management solution created by non-profit that created Firefox.
-        Mozilla Persona acts like a proxy between the web application (Episodes in this case) and actual identity provider.
-        This way Episodes knows as little as possible about you.
-        This is the preferred way to sing up and login to Episodes.
-        Click button below to Sign Up or Log In.
 
-    ^{pluginPersona}
+    <h4>Episodes login/password
+
+    <p>This is the preferred way to login to Episodes.
+
+    ^{pluginEpisodes}
 
     <hr>
 
@@ -24,12 +21,12 @@
 
     <hr>
 
-    <h4>Episodes login/password
+    <h4>Mozilla Persona
     <p>
-        If you already have account, then you can login using existing login and password.
-        Currently there's no way to create account this way though.
-        To use this auth method, you'd have to first create account using one of the two methods above,
-        and then you'd have to create password on "profile" page.
-        We'll add a way to sign up this way in future. Stay tuned.
+        Mozilla Persona is deprecated and will be removed soon.
+        You can switch to login/password auth by setting password in your profile.
 
-    ^{pluginEpisodes}
+    ^{pluginPersona}
+
+
+

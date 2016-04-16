@@ -5,6 +5,7 @@
 
 module Foundation where
 
+import Data.Maybe (isJust)
 import Data.Text (Text)
 import Data.Time (getCurrentTime)
 import Data.Time.Zones (TZ)
@@ -25,7 +26,8 @@ import qualified Data.Map as M
 import qualified Data.Text as T
 
 import Episodes.Auth (authEpisodes)
-import Episodes.DB (getAccountByEmail, checkPassword, createAccount)
+import Episodes.DB (getAccountByEmail, checkPassword)
+import Episodes.DB.Account (createAccount)
 import Episodes.Permissions (canAcceptChanges)
 import Episodes.StaticFiles
 import Episodes.Time (NamedTimeZone)
@@ -213,25 +215,31 @@ instance YesodAuth App where
     -- Where to send a user after logout
     logoutDest _ = HomeR
 
+    -- | Get AccountId by creds.
+    -- Note that we can't really check creds here, because different plugins use
+    -- different auth mechanisms: e.g. Google Account auth will not pass password here.
     getAuthId creds = runDB $ do
         let ident = credsIdent creds
         let getter = if T.any ('@' ==) ident
                 then getAccountByEmail -- getBy . UniqueAccountEmail . Just
-                else getBy . UniqueAccountNickname . Just
+                else getBy . UniqueAccountNickname . Just -- TODO: call via Episodes.DB
         _mAccEntity <- getter ident
         case _mAccEntity of
             Just (Entity _id _) -> return $ Just _id
             _ -> do
                 now <- liftIO getCurrentTime
-                _id <- createAccount ident Nothing now
-                return (Just _id)
+                createAccount now ident Nothing
 
-    authPlugins _app = [ authBrowserId def
-                       , authGoogleEmail _id _secret
-                       , authEpisodes checkPassword ]
+    authPlugins _app = [ authEpisodes _createAccount checkPassword
+                       , authBrowserId def
+                       , authGoogleEmail _id _secret ]
         where
             _id = appGoogleAuthClientId $ appSettings _app
             _secret = appGoogleAuthClientSecret $ appSettings _app
+            _createAccount u p = do
+                now <- liftIO getCurrentTime
+                ma <- runDB $ createAccount now u (Just p)
+                return $ isJust ma
 
     authHttpManager = getHttpManager
 
@@ -240,15 +248,10 @@ instance YesodAuth App where
         lift $ authLayout $ do
             setTitle $ text "Episodes: Login"
             master <- getYesod
-            -- mapM_ (flip apLogin tp) (authPlugins master)
             let _plugins = map (flip apLogin tp) $ authPlugins master
-            let pluginPersona = _plugins !! 0
-            let pluginGoogle = _plugins !! 1
-            let pluginEpisodes = _plugins !! 2
-            $(widgetFile "auth")
-            -- forM_ plugins $ \plug -> do
-            --     let _login = apLogin plug
-            --     _login tp
+            case _plugins of
+                [pluginEpisodes, pluginPersona, pluginGoogle] -> $(widgetFile "auth")
+                _ -> permissionDenied "Invalid auth configuration"
 
 
 instance YesodAuthPersist App
