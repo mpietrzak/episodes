@@ -70,7 +70,7 @@ library
                  , bytestring                    >= 0.9
                  , cassava                       >= 0.4.2
                  , classy-prelude
-                 , classy-prelude-yesod          >= 0.12.4
+                 , classy-prelude-yesod          >= 0.12.7
                  , conduit                       >= 1.0
                  , containers                    >= 0.5
                  , data-default
@@ -115,7 +115,7 @@ library
                  , x509-validation
                  , xml-conduit
                  , yaml                          >= 0.8.15
-                 , yesod                         >= 1.4.1.4
+                 , yesod                         >= 1.4.3
                  , yesod-core                    >= 1.4.9
                  , yesod-auth                    >= 1.4.5
                  , yesod-static                  >= 1.5.0.3
