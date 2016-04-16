@@ -23,7 +23,6 @@ import Control.Monad.Eff.JQuery as J
 import Control.Monad.Eff.Ref as R
 import DOM (DOM())
 import Network.HTTP.Affjax as AFX
-import Text.Format as TF
 
 import Episodes.Common as C
 import Episodes.ShowSubscriptions as ESS
@@ -115,12 +114,12 @@ showShows shows = do
                 row <- J.create "<tr>"
                 td <- J.create "<td>"
                 J.addClass "episodes-show" row
-                J.addClass ("show-" ++ _showIdString) row
+                J.addClass ("show-" ++ _show.showId) row
                 J.addClass _statusClass row
                 showIdInput <- J.create "<input>"
                 J.setAttr "type" "hidden" showIdInput
                 J.setAttr "class" "show-id" showIdInput
-                J.setAttr "value" _showIdString showIdInput
+                J.setAttr "value" _show.showId showIdInput
                 J.append showIdInput td
                 btn1 <- _makeSubscriptionButton true
                 btn2 <- _makeSubscriptionButton false
@@ -128,12 +127,11 @@ showShows shows = do
                 J.append btn2 td
                 link <- J.create "<a>"
                 J.appendText _show.showTitle link
-                J.setAttr "href" ("/show/" ++ _showIdString) link
+                J.setAttr "href" ("/show/" ++ _show.showId) link
                 J.append link td
                 J.append td row
                 return row
             where
-                _showIdString = TF.format (TF.precision 0) _show.showId
                 _statusClass = case _show.showSubscribed of
                                     true -> "subscribed"
                                     false -> "not-subscribed"

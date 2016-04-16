@@ -66,7 +66,7 @@ onSubscriptionButtonClick status e target = do
                     r1 <- C.jqXhrDone r0 onSetSubscriptionStatusDone
                     r2 <- C.jqXhrFail r1 onSetSubscriptionStatusFail
                     -- three of those
-                    let showsClass = ".show-" ++ (S.takeWhile (_ /= '.') (show showId)) ++ ".episodes-show"
+                    let showsClass = ".show-" ++ (S.takeWhile (\c -> c /= '.') (show showId)) ++ ".episodes-show"
                     showElements <- J.select showsClass
                     log $ "found " ++ show (C.size showElements) ++ " show elements of class " ++ showsClass
                     case status of

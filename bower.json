@@ -10,10 +10,10 @@
     "purescript-affjax": ">=0.13.0",
     "purescript-console": ">=0.1.1",
     "purescript-exceptions": ">=0.3.4",
-    "purescript-functions": "0.1.0",
-    "purescript-globals": "0.2.2",
-    "purescript-jquery": "0.6.0",
+    "purescript-functions": ">=0.1.0",
+    "purescript-globals": ">=0.2.2",
+    "purescript-jquery": ">=0.6.1",
     "purescript-maybe": ">=0.3.5",
-    "purescript-refs": "0.2.0"
+    "purescript-refs": ">=0.2.0"
   }
 }

@@ -46,7 +46,6 @@ foreign import jqXhrDone :: forall eff. JQueryXmlHttpRequest -> JQueryXmlHttpReq
 foreign import jqXhrFail :: forall eff. JQueryXmlHttpRequest -> JQueryXmlHttpRequestFailHandler -> Eff (dom :: DOM | eff) JQueryXmlHttpRequest
 foreign import jsonStringify :: forall eff x. x -> Eff eff String
 foreign import jQueryFadeIn :: forall eff. Int -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
-foreign import jQueryFadeOut :: forall eff. Int -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
 foreign import jQueryFadeOut' :: forall eff eff' a. Int -> Eff eff' a -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
 foreign import last :: forall eff. J.JQuery -> Eff (dom :: DOM | eff) J.JQuery
 foreign import nextUntil :: forall eff. String -> J.JQuery -> Eff (dom :: DOM | eff) J.JQuery

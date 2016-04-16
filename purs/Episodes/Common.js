@@ -83,14 +83,6 @@ exports.jQueryFadeIn = function(duration) {
     };
 };
 
-exports.jQueryFadeOut = function(duration) {
-    return function (ob) {
-        return function() {
-            return ob.fadeOut(duration);
-        }
-    };
-};
-
 exports["jQueryFadeOut'"] = function(duration) {
     return function(act) {
         return function (ob) {
@@ -99,16 +91,6 @@ exports["jQueryFadeOut'"] = function(duration) {
             }
         };
     }
-};
-
-exports.jQueryFadeOut$prime = function(duration) {
-    return function(act) {
-        return function(ob) {
-            return function() {
-                return ob.fadeOut(duration, act);
-            };
-        };
-    };
 };
 
 exports.last = function(jq) {
