@@ -63,6 +63,7 @@ import Episodes.Handler.ShowEdit (
     postShowEditAddSeasonsR,
     postShowEditDeleteEpisodeR,
     postShowEditDeleteSeasonR,
+    postShowEditPublishShowR,
     postEditEpisodeR,
     postShowEditEditSeasonR )
 import Episodes.Handler.Users

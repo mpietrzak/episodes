@@ -85,6 +85,11 @@ ShowChange
     created UTCTime
     modified UTCTime
 
+ShowChangePublishShow
+    change ShowChangeId
+    created UTCTime
+    modified UTCTime
+
 ShowChangeDeleteSeason
     change ShowChangeId
     seasonNumber Int

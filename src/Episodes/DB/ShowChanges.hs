@@ -6,6 +6,7 @@ module Episodes.DB.ShowChanges (
     addShowChangeDeleteEpisode,
     addShowChangeDeleteSeason,
     addShowChangeEditEpisode,
+    addShowChangePublishShow,
     getCurrentShowChange,
     getDeleteEpisodeChanges,
     getDeleteSeasonChanges,
@@ -33,8 +34,7 @@ import Yesod.Core (logDebug)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 
-import Model ( Account
-             , AccountId
+import Model ( AccountId
              , Episode(Episode)
              , EpisodeId
              , SeasonId
@@ -109,6 +109,21 @@ addShowChange _now _accId _showId =
                             , showChangeModified = _now }
 
 
+addShowChangePublishShow :: MonadIO m => UTCTime -> M.AccountId -> M.ShowId -> SqlPersistT m ()
+addShowChangePublishShow _now _accountId _showId = do
+    update _showId [M.ShowSubmitted =. True, M.ShowModified =. _now]
+    _showChangeKey <- insert M.ShowChange { M.showChangeShow = _showId
+                                          , M.showChangeAuthor = _accountId
+                                          , M.showChangeSubmitted = True
+                                          , M.showChangeAccepted = False
+                                          , M.showChangeRejected = False
+                                          , M.showChangeCreated = _now
+                                          , M.showChangeModified = _now }
+    insert_ M.ShowChangePublishShow { M.showChangePublishShowChange = _showChangeKey
+                                    , M.showChangePublishShowCreated = _now
+                                    , M.showChangePublishShowModified = _now }
+
+
 getEditEpisodeChanges :: MonadIO m => M.ShowChangeId -> SqlPersistT m [Entity M.ShowChangeEditEpisode]
 getEditEpisodeChanges _showChangeId = selectList [M.ShowChangeEditEpisodeChange ==. _showChangeId] []
 
@@ -142,34 +157,39 @@ groupMap l kf = M.fromList _tups
         _l2t _l = (kf (head _l), _l)
 
 
-getShowChangesForAccept :: MonadIO m => AccountId -> Int -> SqlPersistT m [ ( Entity ShowChange
-                                                                            , Entity Account
-                                                                            , Entity M.Show
-                                                                            , [ Entity ShowChangeDeleteSeason ]
-                                                                            , [ Entity ShowChangeDeleteEpisode ]
-                                                                            , [ Entity ShowChangeEditEpisode ] ) ]
+getShowChangesForAccept :: MonadIO m => M.AccountId -> Int -> SqlPersistT m [ ( Entity M.ShowChange
+                                                                             , Entity M.Account
+                                                                             , Entity M.Show
+                                                                             , [ Entity M.ShowChangePublishShow ]
+                                                                             , [ Entity M.ShowChangeDeleteSeason ]
+                                                                             , [ Entity M.ShowChangeDeleteEpisode ]
+                                                                             , [ Entity M.ShowChangeEditEpisode ] ) ]
 getShowChangesForAccept _accountId _count = do
         -- TODO: don't use maps :<
         -- we could get data in sorted form from db, then we could zip it in O(n) (one pass over those lists)
         -- but data size is so small that it does not make practical sense at this point to sort more.
 
         -- 1. entities
+        _pses <- rawSql (_sql "show_change_publish_show") []
         _dses <- rawSql (_sql "show_change_delete_season") []
         _dees <- rawSql (_sql "show_change_delete_episode") []
         _eees <- rawSql (_sql "show_change_edit_episode") []
         -- 2. maps :<
-        let _mds = groupMap _dses (showChangeDeleteSeasonChange . entityVal)
-        let _mde = groupMap _dees (showChangeDeleteEpisodeChange . entityVal)
-        let _mee = groupMap _eees (showChangeEditEpisodeChange . entityVal)
+        let _mps = groupMap _pses (M.showChangePublishShowChange . entityVal)
+        let _mds = groupMap _dses (M.showChangeDeleteSeasonChange . entityVal)
+        let _mde = groupMap _dees (M.showChangeDeleteEpisodeChange . entityVal)
+        let _mee = groupMap _eees (M.showChangeEditEpisodeChange . entityVal)
         -- 3. changes with author and show entities
         _chaes <- rawSql _sqlChanges []
         -- 4. finally zip them using maps
         return $ map (\(_che, _ae, _se) -> ( _che -- change entity
                                            , _ae  -- account entity
                                            , _se  -- show entity
-                                           , M.findWithDefault [] (entityKey _che) _mds
-                                           , M.findWithDefault [] (entityKey _che) _mde
-                                           , M.findWithDefault [] (entityKey _che) _mee ))
+                                           , M.findWithDefault [] (entityKey _che) _mps -- publish show
+                                           , M.findWithDefault [] (entityKey _che) _mds -- delete season
+                                           , M.findWithDefault [] (entityKey _che) _mde -- delete episode
+                                           , M.findWithDefault [] (entityKey _che) _mee -- edit episode
+                                           ))
                      _chaes
     where
         -- sql to select [(change, author, show)]
@@ -184,7 +204,7 @@ getShowChangesForAccept _accountId _count = do
                 and show_change.accepted = false
                 and show_change.rejected = false
             |]
-        -- sql to select change element (deletes, edits)
+        -- sql to select change element (deletes, edits, ...)
         _sql _table = sformat
           (
               "select ?? from show_change join " % text %
@@ -200,6 +220,9 @@ submitShowChange :: MonadIO m => UTCTime -> ShowChangeId -> SqlPersistT m ()
 submitShowChange _now _showChangeId = update _showChangeId [ M.ShowChangeSubmitted =. True
                                                            , M.ShowChangeModified =. _now ]
 
+
+_acceptShowChangePublishShow :: MonadIO m => M.ShowId -> SqlPersistT m ()
+_acceptShowChangePublishShow _showId = update _showId [ M.ShowPublic =. True ]
 
 
 -- | Delete episodes that belong to given change.
@@ -356,6 +379,7 @@ acceptShowChange _now _showChangeId = do
                                    , M.ShowLocal =. True ]
                     update _showChangeId [ M.ShowChangeAccepted =. True
                                          , M.ShowChangeModified =. _now ]
+                    _acceptShowChangePublishShow _showId
                     _acceptShowChangeEditEpisodes _now _showChangeId _showId
                     _acceptShowChangeDeleteEpisodes _showChangeId
                     _acceptShowChangeDeleteSeasons _showChangeId

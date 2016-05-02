@@ -11,7 +11,7 @@
         <th>Show
         <th>Changes
         <th>Actions
-    $forall (changeEnt, accountEnt, showEnt, delSeasonEnts, delEpisodeEnts, editEpisodeEnts) <- changesData
+    $forall (changeEnt, accountEnt, showEnt, publishShowEnts, delSeasonEnts, delEpisodeEnts, editEpisodeEnts) <- changesData
         $with (_c, _a) <- (entityVal changeEnt, entityVal accountEnt)
             <tr>
                 <td>#{formatTime $ showChangeCreated _c}
@@ -27,18 +27,31 @@
                     $with (Entity _ _show) <- showEnt
                         #{showTitle _show}
                 <td>
-                    $if isEmpty delSeasonEnts delEpisodeEnts editEpisodeEnts
+                    $if isEmpty (publishShowEnts, delSeasonEnts, delEpisodeEnts, editEpisodeEnts)
                         <i>no changes
                     $else
-                        <ul>
+                        $if isOne (publishShowEnts, delSeasonEnts, delEpisodeEnts, editEpisodeEnts)
+                            $forall (Entity _ publishShow) <- publishShowEnts
+                                Make show public
                             $forall (Entity _ delSeason) <- delSeasonEnts
-                                <li>Delete season #{showChangeDeleteSeasonSeasonNumber delSeason}
+                                Delete season #{showChangeDeleteSeasonSeasonNumber delSeason}
                             $forall (Entity _ delEp) <- delEpisodeEnts
-                                <li>Delete episode #{showChangeDeleteEpisodeSeasonNumber delEp} #{showChangeDeleteEpisodeEpisodeNumber delEp}
+                                Delete episode #{showChangeDeleteEpisodeSeasonNumber delEp} #{showChangeDeleteEpisodeEpisodeNumber delEp}
                             $forall (Entity _ editEp) <- editEpisodeEnts
-                                <li>
-                                    Edit episode #{showChangeEditEpisodeSeasonNumber editEp} #{showChangeEditEpisodeEpisodeNumber editEp}:
-                                    title: #{showChangeEditEpisodeTitle editEp}
+                                Edit episode #{showChangeEditEpisodeSeasonNumber editEp} #{showChangeEditEpisodeEpisodeNumber editEp}:
+                                title: #{showChangeEditEpisodeTitle editEp}
+                        $else
+                            <ul>
+                                $forall (Entity _ publishShow) <- publishShowEnts
+                                    <li>Make show public
+                                $forall (Entity _ delSeason) <- delSeasonEnts
+                                    <li>Delete season #{showChangeDeleteSeasonSeasonNumber delSeason}
+                                $forall (Entity _ delEp) <- delEpisodeEnts
+                                    <li>Delete episode #{showChangeDeleteEpisodeSeasonNumber delEp} #{showChangeDeleteEpisodeEpisodeNumber delEp}
+                                $forall (Entity _ editEp) <- editEpisodeEnts
+                                    <li>
+                                        Edit episode #{showChangeEditEpisodeSeasonNumber editEp} #{showChangeEditEpisodeEpisodeNumber editEp}:
+                                        title: #{showChangeEditEpisodeTitle editEp}
                 <td>
                     <a class="btn btn-primary btn-xs" role="button" href="@{ShowChangesAcceptR (entityKey changeEnt)}">Accept
                     <a class="btn btn-danger btn-xs" role="button" href="@{ShowChangesRejectR (entityKey changeEnt)}">Reject

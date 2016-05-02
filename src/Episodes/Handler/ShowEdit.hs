@@ -12,6 +12,7 @@ module Episodes.Handler.ShowEdit (
     getShowEditR,
     postShowEditAddSeasonsR,
     postShowEditAddEpisodesR,
+    postShowEditPublishShowR,
     postEditEpisodeR,
     postShowEditEditSeasonR,
     postShowEditDeleteEpisodeR,
@@ -80,6 +81,7 @@ import Model (
 import Settings (widgetFile)
 import qualified Data.Text as T
 import qualified Episodes.DB as DB
+import qualified Episodes.DB.ShowChanges as DBSC
 import qualified Episodes.Permissions as P
 
 
@@ -333,3 +335,10 @@ postShowEditDeleteSeasonR _showId _seasonNumber = do
             redirect $ ShowEditR _showId
         _ -> getShowEditDeleteSeasonR _showId _seasonNumber
 
+
+postShowEditPublishShowR :: ShowId -> Handler Html
+postShowEditPublishShowR _showId = do
+    (_accountId, _show) <- checkCanEdit _showId
+    _now <- liftIO $ getCurrentTime
+    runDB $ DBSC.addShowChangePublishShow _now _accountId _showId
+    redirect $ ShowDetailsR _showId

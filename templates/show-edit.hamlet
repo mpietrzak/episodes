@@ -3,6 +3,8 @@
 
 <p>
     <a href="@{ShowEditAddSeasonsR showId}">Add Seasons
+    <form method=post action=@{ShowEditPublishShowR showId}>
+        <button>Publish show
 
 <ul>
     $forall (Entity seasonId season) <- seasonEntities

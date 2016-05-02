@@ -13,6 +13,7 @@
 /show/#ShowId                      ShowDetailsR                             GET
 /show/#ShowId/edit                 ShowEditR                                GET
 /show/#ShowId/add-seasons          ShowEditAddSeasonsR                      GET POST
+/show/#ShowId/publish              ShowEditPublishShowR                     POST
 /show/#ShowId/season/#Int/delete   ShowEditDeleteSeasonR                    GET POST
 /show/#ShowId/season/#Int/edit     ShowEditEditSeasonR                      GET POST
 /show/#ShowId/season/#Int/add-episodes ShowEditAddEpisodesR                 GET POST

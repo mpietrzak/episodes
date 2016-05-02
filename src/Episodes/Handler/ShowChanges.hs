@@ -249,9 +249,13 @@ getShowChangesReviewR :: Handler Html
 getShowChangesReviewR = do
     _accountId <- requireAuthId
     changesData <- runDB $ DBC.getShowChangesForAccept _accountId 1024
-    let isEmpty _ds _de _ee = case (_ds, _de, _ee) of
-            ([], [], []) -> True
+    let isEmpty changeData = case changeData of
+            ([], [], [], []) -> True
             _ -> False
+    let isOne (_ps, _ds, _de, _ee) = ( (length _ps)
+                                     + (length _ds)
+                                     + (length _de)
+                                     + (length _ee) ) == 1
     defaultLayout $ do
         setTitle $ text "Episodes: Review Changes"
         $(widgetFile "changes/review")
