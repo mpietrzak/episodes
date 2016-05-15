@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Application (
@@ -114,7 +113,13 @@ makeFoundation appSettings = do
     -- logging function. To get out of this loop, we initially create a
     -- temporary foundation without a real connection pool, get a log function
     -- from there, and then create the real foundation.
-    let mkFoundation appConnPool = App {..}
+    let mkFoundation appConnPool = App { appCommonTimeZoneMap = appCommonTimeZoneMap
+                                       , appCommonTimeZones = appCommonTimeZones
+                                       , appConnPool = appConnPool
+                                       , appHttpManager = appHttpManager
+                                       , appLogger = appLogger
+                                       , appSettings = appSettings
+                                       , appStatic = appStatic }
         tempFoundation = mkFoundation $ error "connPool forced in tempFoundation"
         logFunc = messageLoggerSource tempFoundation appLogger
 

@@ -91,7 +91,6 @@ library
                  , network                       >= 2.6.1
                  , network-uri                   >= 2.6.0.3
                  , old-locale
-                 , options
                  , parsec
                  , pbkdf                         >= 1.1
                  , persistent                    >= 2.2.1
