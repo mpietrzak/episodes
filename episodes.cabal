@@ -72,10 +72,10 @@ library
                  , bytestring                    >= 0.9
                  , cassava                       >= 0.4.2
                  , classy-prelude
-                 , classy-prelude-yesod          >= 0.12.7
+                 , classy-prelude-yesod          >= 1
                  , conduit                       >= 1.0
                  , containers                    >= 0.5
-                 , data-default
+                 , data-default                  >= 0.6
                  , directory                     >= 1.1
                  , fast-logger                   >= 2.2
                  , file-embed
@@ -117,8 +117,8 @@ library
                  , xml-conduit
                  , yaml                          >= 0.8.15
                  , yesod                         >= 1.4.3
-                 , yesod-core                    >= 1.4.9
-                 , yesod-auth                    >= 1.4.5
+                 , yesod-core                    >= 1.4.22
+                 , yesod-auth                    >= 1.4.13
                  , yesod-static                  >= 1.5.0.3
                  , yesod-form                    >= 1.4.4.1
 
