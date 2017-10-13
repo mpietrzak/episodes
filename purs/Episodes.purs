@@ -1,12 +1,12 @@
 
 module Episodes (main) where
 
-import Prelude (Unit, bind)
+import Prelude
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Exception (EXCEPTION)
+import Control.Monad.Eff.Now (NOW)
 import Control.Monad.Eff.Ref as R
-import Data.Date as DD
 import DOM (DOM)
 import Network.HTTP.Affjax (AJAX)
 
@@ -21,7 +21,7 @@ main :: forall eff. Eff (
             dom :: DOM,
             console :: CONSOLE,
             err :: EXCEPTION,
-            now :: DD.Now,
+            now :: NOW,
             ref :: R.REF | eff) Unit
 main = do
     EL.main

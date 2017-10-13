@@ -1,23 +1,5 @@
---
--- PostgreSQL database dump
---
 
-SET statement_timeout = 0;
-SET lock_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = on;
-SET check_function_bodies = false;
-SET client_min_messages = warning;
-
-SET search_path = public, pg_catalog;
-
-SET default_tablespace = '';
-
-SET default_with_oids = false;
-
---
--- Name: account; Type: TABLE; Schema: public; Owner: -; Tablespace: 
---
+-- This should not be a DB dump.
 
 CREATE TABLE account (
     id bigint NOT NULL,
@@ -52,7 +34,7 @@ ALTER SEQUENCE account_id_seq OWNED BY account.id;
 
 
 --
--- Name: episode; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+-- Name: episode; Type: TABLE; Schema: public; Owner: -; Tablespace:
 --
 
 CREATE TABLE episode (
@@ -87,7 +69,7 @@ ALTER SEQUENCE episode_id_seq OWNED BY episode.id;
 
 
 --
--- Name: episode_status; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+-- Name: episode_status; Type: TABLE; Schema: public; Owner: -; Tablespace:
 --
 
 CREATE TABLE episode_status (
@@ -120,7 +102,7 @@ ALTER SEQUENCE episode_status_id_seq OWNED BY episode_status.id;
 
 
 --
--- Name: profile; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+-- Name: profile; Type: TABLE; Schema: public; Owner: -; Tablespace:
 --
 
 CREATE TABLE profile (
@@ -154,7 +136,7 @@ ALTER SEQUENCE profile_id_seq OWNED BY profile.id;
 
 
 --
--- Name: season; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+-- Name: season; Type: TABLE; Schema: public; Owner: -; Tablespace:
 --
 
 CREATE TABLE season (
@@ -186,7 +168,7 @@ ALTER SEQUENCE season_id_seq OWNED BY season.id;
 
 
 --
--- Name: show; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+-- Name: show; Type: TABLE; Schema: public; Owner: -; Tablespace:
 --
 
 CREATE TABLE show (
@@ -221,7 +203,7 @@ ALTER SEQUENCE show_id_seq OWNED BY show.id;
 
 
 --
--- Name: subscription; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+-- Name: subscription; Type: TABLE; Schema: public; Owner: -; Tablespace:
 --
 
 CREATE TABLE subscription (
@@ -302,7 +284,7 @@ ALTER TABLE ONLY subscription ALTER COLUMN id SET DEFAULT nextval('subscription_
 
 
 --
--- Name: account_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+-- Name: account_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace:
 --
 
 ALTER TABLE ONLY account
@@ -310,7 +292,7 @@ ALTER TABLE ONLY account
 
 
 --
--- Name: episode_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+-- Name: episode_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace:
 --
 
 ALTER TABLE ONLY episode
@@ -318,7 +300,7 @@ ALTER TABLE ONLY episode
 
 
 --
--- Name: episode_status_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+-- Name: episode_status_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace:
 --
 
 ALTER TABLE ONLY episode_status
@@ -326,7 +308,7 @@ ALTER TABLE ONLY episode_status
 
 
 --
--- Name: profile_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+-- Name: profile_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace:
 --
 
 ALTER TABLE ONLY profile
@@ -334,7 +316,7 @@ ALTER TABLE ONLY profile
 
 
 --
--- Name: season_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+-- Name: season_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace:
 --
 
 ALTER TABLE ONLY season
@@ -342,7 +324,7 @@ ALTER TABLE ONLY season
 
 
 --
--- Name: show_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+-- Name: show_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace:
 --
 
 ALTER TABLE ONLY show
@@ -350,7 +332,7 @@ ALTER TABLE ONLY show
 
 
 --
--- Name: subscription_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+-- Name: subscription_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace:
 --
 
 ALTER TABLE ONLY subscription
@@ -358,7 +340,7 @@ ALTER TABLE ONLY subscription
 
 
 --
--- Name: unique_account_email; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+-- Name: unique_account_email; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace:
 --
 
 ALTER TABLE ONLY account
@@ -366,7 +348,7 @@ ALTER TABLE ONLY account
 
 
 --
--- Name: unique_account_nickname; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+-- Name: unique_account_nickname; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace:
 --
 
 ALTER TABLE ONLY account
@@ -374,7 +356,7 @@ ALTER TABLE ONLY account
 
 
 --
--- Name: unique_episode_status_account_episode; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+-- Name: unique_episode_status_account_episode; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace:
 --
 
 ALTER TABLE ONLY episode_status
@@ -382,7 +364,7 @@ ALTER TABLE ONLY episode_status
 
 
 --
--- Name: unique_profile_account; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+-- Name: unique_profile_account; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace:
 --
 
 ALTER TABLE ONLY profile
@@ -390,7 +372,7 @@ ALTER TABLE ONLY profile
 
 
 --
--- Name: unique_profile_cookie; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+-- Name: unique_profile_cookie; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace:
 --
 
 ALTER TABLE ONLY profile
@@ -398,7 +380,7 @@ ALTER TABLE ONLY profile
 
 
 --
--- Name: unique_season_episode_number; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+-- Name: unique_season_episode_number; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace:
 --
 
 ALTER TABLE ONLY episode
@@ -406,7 +388,7 @@ ALTER TABLE ONLY episode
 
 
 --
--- Name: unique_show_season_number; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+-- Name: unique_show_season_number; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace:
 --
 
 ALTER TABLE ONLY season
@@ -414,7 +396,7 @@ ALTER TABLE ONLY season
 
 
 --
--- Name: unique_show_t_v_rage_id; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+-- Name: unique_show_t_v_rage_id; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace:
 --
 
 ALTER TABLE ONLY show
@@ -422,7 +404,7 @@ ALTER TABLE ONLY show
 
 
 --
--- Name: unique_subscription_account_show; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+-- Name: unique_subscription_account_show; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace:
 --
 
 ALTER TABLE ONLY subscription
@@ -430,70 +412,70 @@ ALTER TABLE ONLY subscription
 
 
 --
--- Name: account_email_i; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+-- Name: account_email_i; Type: INDEX; Schema: public; Owner: -; Tablespace:
 --
 
 CREATE UNIQUE INDEX account_email_i ON account USING btree (email);
 
 
 --
--- Name: account_nickname_i; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+-- Name: account_nickname_i; Type: INDEX; Schema: public; Owner: -; Tablespace:
 --
 
 CREATE UNIQUE INDEX account_nickname_i ON account USING btree (nickname);
 
 
 --
--- Name: episode_air_date_time_i; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+-- Name: episode_air_date_time_i; Type: INDEX; Schema: public; Owner: -; Tablespace:
 --
 
 CREATE INDEX episode_air_date_time_i ON episode USING btree (air_date_time);
 
 
 --
--- Name: episode_season_i; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+-- Name: episode_season_i; Type: INDEX; Schema: public; Owner: -; Tablespace:
 --
 
 CREATE INDEX episode_season_i ON episode USING btree (season);
 
 
 --
--- Name: episode_title_i; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+-- Name: episode_title_i; Type: INDEX; Schema: public; Owner: -; Tablespace:
 --
 
 CREATE INDEX episode_title_i ON episode USING btree (title);
 
 
 --
--- Name: show_last_update_i; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+-- Name: show_last_update_i; Type: INDEX; Schema: public; Owner: -; Tablespace:
 --
 
 CREATE INDEX show_last_update_i ON show USING btree (last_update);
 
 
 --
--- Name: show_next_update_i; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+-- Name: show_next_update_i; Type: INDEX; Schema: public; Owner: -; Tablespace:
 --
 
 CREATE INDEX show_next_update_i ON show USING btree (next_update);
 
 
 --
--- Name: show_subscription_count_i; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+-- Name: show_subscription_count_i; Type: INDEX; Schema: public; Owner: -; Tablespace:
 --
 
 CREATE INDEX show_subscription_count_i ON show USING btree (subscription_count);
 
 
 --
--- Name: show_title_i; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+-- Name: show_title_i; Type: INDEX; Schema: public; Owner: -; Tablespace:
 --
 
 CREATE INDEX show_title_i ON show USING btree (title);
 
 
 --
--- Name: show_tv_rage_id_i; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+-- Name: show_tv_rage_id_i; Type: INDEX; Schema: public; Owner: -; Tablespace:
 --
 
 CREATE UNIQUE INDEX show_tv_rage_id_i ON show USING btree (tv_rage_id);
@@ -555,7 +537,102 @@ ALTER TABLE ONLY subscription
     ADD CONSTRAINT subscription_show_fkey FOREIGN KEY (show) REFERENCES show(id);
 
 
---
--- PostgreSQL database dump complete
---
+create table season_collapse (
+    id serial8 primary key unique,
+    account int8 not null,
+    season int8 not null,
+    collapsed boolean not null
+);
 
+create table show_change (
+    id serial8 primary key unique,
+    show int8 not null,
+    author int8 not null,
+    submitted boolean not null,
+    accepted boolean not null,
+    rejected boolean not null,
+    created timestamp with time zone not null,
+    modified timestamp with time zone not null
+);
+
+create table show_change_publish_show (
+    id serial8 primary key unique,
+    change int8 not null,
+    created timestamp with time zone not null,
+    modified timestamp with time zone not null
+);
+
+create table show_change_delete_season (
+    id serial8 primary key unique,
+    change int8 not null,
+    season_number int8 not null,
+    created timestamp with time zone not null,
+    modified timestamp with time zone not null
+);
+
+create table show_change_delete_episode (
+    id serial8 primary key unique,
+    change int8 not null,
+    season_number int8 not null,
+    episode_number int8 not null,
+    created timestamp with time zone not null,
+    modified timestamp with time zone not null
+);
+
+create table show_change_edit_episode (
+    id serial8 primary key unique,
+    change int8 not null,
+    season_number int8 not null,
+    episode_number int8 not null,
+    title varchar not null,
+    air_date_time timestamp with time zone not null,
+    created timestamp with time zone not null,
+    modified timestamp with time zone not null
+);
+
+alter table show alter column next_update drop not null;
+
+alter table show alter column last_update drop not null;
+
+alter table show add column public boolean not null;
+
+alter table show add column submitted boolean not null;
+
+alter table show add column added_by int8 null;
+
+alter table show add constraint show_added_by_fkey foreign key(added_by) references account(id);
+
+alter table show add column local boolean not null;
+
+alter table season_collapse add constraint season_collapse_account_fkey foreign key(account) references account(id);
+
+alter table season_collapse add constraint season_collapse_season_fkey foreign key(season) references season(id);
+
+alter table season_collapse add constraint unique_season_collapse_season_account unique(account,season);
+
+alter table episode alter column air_date_time drop not null;
+
+alter table subscription add column next_episode int8 null;
+
+alter table subscription add constraint subscription_next_episode_fkey foreign key(next_episode) references episode(id);
+
+alter table subscription add column last_episode int8 null;
+
+alter table subscription add constraint subscription_last_episode_fkey foreign key(last_episode) references episode(id);
+
+alter table show_change add constraint show_change_show_fkey foreign key(show) references show(id);
+
+alter table show_change add constraint show_change_author_fkey foreign key(author) references account(id);
+
+alter table show_change_publish_show
+    add constraint show_change_publish_show_change_fkey
+        foreign key(change) references show_change(id);
+
+alter table show_change_delete_season
+    add constraint show_change_delete_season_change_fkey foreign key(change) references show_change(id);
+
+alter table show_change_delete_episode
+    add constraint show_change_delete_episode_change_fkey foreign key(change) references show_change(id);
+
+alter table show_change_edit_episode
+    add constraint show_change_edit_episode_change_fkey foreign key(change) references show_change(id);

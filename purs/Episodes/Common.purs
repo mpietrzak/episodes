@@ -3,13 +3,13 @@ module Episodes.Common
 where
 
 
-import Prelude
-import Control.Monad.Eff.Console
-import Control.Monad.Eff
-import Data.Maybe
+import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Console (CONSOLE)
+import Control.Monad.Eff.JQuery as J
+import Data.Maybe (Maybe(Just, Nothing))
 import Data.String.Regex (Regex())
-import DOM
-import qualified Control.Monad.Eff.JQuery as J
+import DOM (DOM)
+import Prelude
 
 
 -- | PureScript version of Ajax Settings as documented here: http://api.jquery.com/jquery.ajax/#jQuery-ajax-settings
@@ -19,11 +19,11 @@ data AjaxSettings = AjaxSettings { ajaxData :: Maybe String }
 
 
 -- | As returned by $.ajax.
-foreign import data JQueryXmlHttpRequest :: *
+foreign import data JQueryXmlHttpRequest :: Type
 
 
 -- | Wraps data in handler in $.ajax callbacks.
-foreign import data JQueryXmlHttpData :: *
+foreign import data JQueryXmlHttpData :: Type
 
 
 defaultAjaxSettings :: AjaxSettings
@@ -90,6 +90,6 @@ getAuthId = do
     case _cnt of
             1 -> do
                 _authId <- getValueText _authIdInput
-                return (Just _authId)
-            _ -> return Nothing
+                pure (Just _authId)
+            _ -> pure Nothing
 

@@ -2,19 +2,19 @@
 module Episodes.EpisodeLinks where
 
 
-import Prelude
-import Control.Monad.Eff
-import Control.Monad.Eff.Console
+import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Console (CONSOLE, log)
+import Control.Monad.Eff.JQuery as J
+import Data.Either (Either(Left, Right))
 import Data.Foldable (foldl)
-import Data.String
-import Data.Traversable (for)
-import DOM
-import Global
-import qualified Control.Monad.Eff.JQuery as J
-import qualified Data.String.Regex as DSR
+import Data.String (Pattern(Pattern), Replacement(Replacement), replace)
+import Data.String.Regex as DSR
+import Data.Traversable (for, for_)
+import DOM (DOM)
+import Global (readInt)
+import Prelude
 
-
-import qualified Episodes.Common as C
+import Episodes.Common as C
 
 
 type EpisodeInfo = { showTitle :: String
@@ -33,10 +33,10 @@ formatEpisodeLink :: EpisodeInfo -> String -> String
 formatEpisodeLink _ei _linkTemplate = _fmt _linkTemplate
     where
         -- list of replacing functions
-        _f = [replace "{{episode.title}}" _ei.episodeTitle,
-              replace "{{episode.code}}" _ei.episodeCode,
-              replace "{{episode.season}}" (show _ei.episodeSeasonNumber),
-              replace "{{show.title}}" _ei.showTitle]
+        _f = [replace (Pattern "{{episode.title}}") (Replacement _ei.episodeTitle),
+              replace (Pattern "{{episode.code}}") (Replacement _ei.episodeCode),
+              replace (Pattern "{{episode.season}}") (Replacement (show _ei.episodeSeasonNumber)),
+              replace (Pattern "{{show.title}}") (Replacement _ei.showTitle)]
         -- formatting function as a composition of list of functions
         _fmt = foldl (>>>) id _f
 
@@ -44,8 +44,9 @@ formatEpisodeLink _ei _linkTemplate = _fmt _linkTemplate
 formatEpisodeLinks :: EpisodeInfo -> String -> Array String
 formatEpisodeLinks _episodeInfo _linksFormat = map (formatEpisodeLink _episodeInfo) linkPatterns
     where
-        _r = DSR.regex "[\\r\\n]+" (DSR.parseFlags "")
-        linkPatterns = C.split _r _linksFormat
+        linkPatterns = case DSR.regex "[\\r\\n]+" (DSR.parseFlags "") of
+            Right _r -> C.split _r _linksFormat
+            Left _ -> []
 
 
 -- | Assumes there's a hidden input.episode-id inside closest .episode.
@@ -55,7 +56,7 @@ getParentEpisodeId el = do
     x1 <- J.find ".episode-id" x0
     x2 <- C.getValueText x1
     let x3 = readInt 10 x2
-    return x3
+    pure x3
 
 
 -- | Get user links as a list of String, assumes there's hidden
@@ -64,7 +65,7 @@ getUserEpisodeLinks :: forall eff. Eff (dom :: DOM, console :: CONSOLE | eff) St
 getUserEpisodeLinks = do
     _linksInput <- J.select "#user-episode-links"
     _links <- C.getValueText _linksInput
-    return _links
+    pure _links
 
 
 -- | Mouse over tr: show "more" link.
@@ -73,7 +74,7 @@ onEpisodeMouseEnter _e _j = do
     _moreLink <- J.find "a.episode-links" _j
     -- C.animate {"opacity": 1} 100 _moreLink
     J.css {visibility: "visible"} _moreLink
-    return unit
+    pure unit
 
 
 onEpisodeMouseLeave :: forall e. J.JQueryEvent -> J.JQuery -> Eff (console :: CONSOLE, dom :: DOM | e) Unit
@@ -81,7 +82,7 @@ onEpisodeMouseLeave _e _j = do
     _moreLink <- J.find "a.episode-links" _j
     -- C.animate {"opacity": 0} 100 _moreLink
     J.css {visibility: "hidden"} _moreLink
-    return unit
+    pure unit
 
 
 -- | Get episode data from DOM.
@@ -89,31 +90,33 @@ getEpisodeInfo :: forall e. J.JQuery -> Eff (dom :: DOM, console :: CONSOLE | e)
 getEpisodeInfo _el = do
     episodeTitle <- J.find "input.episode-title" _el >>= C.getValueText
     showTitle <- J.find "input.episode-show-title" _el >>= C.getValueText
-    episodeSeasonNumber <- J.find "input.episode-show-title" _el >>= C.getValueText >>= \t -> return (readInt 10 t)
-    episodeNumber <- J.find "input.episode-number" _el >>= C.getValueText >>= \t -> return (readInt 10 t)
+    episodeSeasonNumber <- J.find "input.episode-show-title" _el >>= C.getValueText >>= \t -> pure (readInt 10 t)
+    episodeNumber <- J.find "input.episode-number" _el >>= C.getValueText >>= \t -> pure (readInt 10 t)
     episodeCode <- J.find "input.episode-code" _el >>= C.getValueText
-    episodeTVRageId <- J.find "input.episode-tvrageid" _el >>= C.getValueText >>= \t -> return (readInt 10 t)
+    episodeTVRageId <- J.find "input.episode-tvrageid" _el >>= C.getValueText >>= \t -> pure (readInt 10 t)
     let ei = { showTitle: showTitle
              , episodeTitle: episodeTitle
              , episodeSeasonNumber: episodeSeasonNumber
              , episodeNumber: episodeNumber
              , episodeCode: episodeCode
              , episodeTVRageId: episodeTVRageId }
-    return ei
+    pure ei
 
 
 createEpisodeLink :: forall e. String -> Eff (dom :: DOM, console :: CONSOLE | e) J.JQuery
-createEpisodeLink _href = J.create "<a>"
-    >>= J.setText _href
-    >>= J.setAttr "href" _href
-    >>= J.setAttr "target" "_blank"
+createEpisodeLink _href = do
+    e <- J.create "<a>"
+    J.setText _href e
+    J.setAttr "href" _href e
+    J.setAttr "target" "_blank" e
+    pure e
 
 
 onEpisodeLinksDivLeave :: forall e. J.JQueryEvent -> J.JQuery -> Eff (dom :: DOM, console :: CONSOLE | e) Unit
 onEpisodeLinksDivLeave _e _div = do
     log "leave links div"
-    C.jQueryFadeOut' 100 (J.remove _div) _div
-    return unit
+    _ <- C.jQueryFadeOut' 100 (J.remove _div) _div
+    pure unit
 
 
 -- | Episode "more" link was clicked, we need to format and show links for this episode.
@@ -136,16 +139,18 @@ onEpisodeLinkClick _linksTemplate _e _j = do
     _div <- J.create "<div>"
     _ul <- J.create "<ul>"
     _links <- for _episodeLinks createEpisodeLink
-    log $ "_links formatted: " ++ show _episodeLinks
+    log $ "_links formatted: " <> show _episodeLinks
     let _addLink _link = do
             _li <- J.create "<li>"
             J.append _link _li
             J.append _li _ul
-    for _links _addLink
+    for_ _links _addLink
     J.append _ul _div
     let _infoText = "You can change those links in profile preferences."
-    let _appendTo = flip J.append
-    J.create "<p>" >>= J.addClass "info" >>= J.setText _infoText >>= _appendTo _div
+    p <- J.create "<p>"
+    J.addClass "info" p
+    J.setText _infoText p
+    J.append p _div
 
     let _divCss = {
                 border: "1px solid black",
@@ -163,22 +168,22 @@ onEpisodeLinkClick _linksTemplate _e _j = do
     _parent <- J.parent _j
     J.append _div _outerDiv
     J.append _outerDiv _parent
-    C.jQueryFadeIn 50 _outerDiv
-    C.on "mouseleave" onEpisodeLinksDivLeave _outerDiv
+    _ <- C.jQueryFadeIn 50 _outerDiv
+    _ <- C.on "mouseleave" onEpisodeLinksDivLeave _outerDiv
 
-    return unit
+    pure unit
 
 
 bindEvents :: forall eff. String -> Eff (dom :: DOM, console :: CONSOLE | eff) Unit
 bindEvents _linksTemplate = do
     _episodes <- J.select "tr.episode"
     _episodeMoreLink <- J.select "tr.episode a.episode-links"
-    C.on "mouseenter" onEpisodeMouseEnter _episodes
-    C.on "mouseleave" onEpisodeMouseLeave _episodes
-    C.on "click" (onEpisodeLinkClick _linksTemplate) _episodeMoreLink
+    _ <- C.on "mouseenter" onEpisodeMouseEnter _episodes
+    _ <- C.on "mouseleave" onEpisodeMouseLeave _episodes
+    _ <- C.on "click" (onEpisodeLinkClick _linksTemplate) _episodeMoreLink
     log "EpisodeLinks: bindEvents: done"
-    return unit
+    pure unit
 
 
 main :: forall eff. Eff (dom :: DOM, console :: CONSOLE | eff) Unit
-main = J.ready (getUserEpisodeLinks >>= bindEvents) >>= \_ -> return unit
+main = J.ready (getUserEpisodeLinks >>= bindEvents) >>= \_ -> pure unit
