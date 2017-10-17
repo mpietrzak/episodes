@@ -331,7 +331,7 @@ addShowEpisodes _now _showId _seasonNumber _episodeCount = do
                         Just c -> c + 1
                         Nothing -> 1
                     _ -> 1
-            forM_ [0.._episodeCount] $ \i -> insert_ $ Episode { episodeTitle = sformat
+            forM_ [0.._episodeCount-1] $ \i -> insert_ $ Episode { episodeTitle = sformat
                                                                                     ("Season " % int % " Episode " % int)
                                                                                     _seasonNumber
                                                                                     (nextEpisodeNumber + i),
@@ -354,7 +354,7 @@ addShowSeasons now showId _count = do
                 Just _i -> _i + 1
                 Nothing -> 1
             _ -> 1
-    forM_ [0.._count] $ \i -> insert_ Season { seasonNumber = nextSeasonNumber + i,
+    forM_ [0.._count-1] $ \i -> insert_ Season { seasonNumber = nextSeasonNumber + i,
                                                seasonShow = showId,
                                                seasonCreated = now,
                                                seasonModified = now }
